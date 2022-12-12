@@ -16,3 +16,9 @@ media
 !.vscode/launch.json 
 !.vscode/extensions.json 
 .history
+
+# Virtual Environment files #
+env/
+
+# Pycharm files #
+.idea/

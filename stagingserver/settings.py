@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-jq**bq4fw)y*z%eshlkg9f0fc(*k2-5i0b41#i^1#2@@1d&wol
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost']
 
 
 # Application definition
@@ -36,8 +36,18 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'django.contrib.sites',
     'django.contrib.staticfiles',
+    
     'main.apps.MainConfig',
+    'accounts.apps.AccountsConfig',
+    'crispy_forms',
+    'crispy_bootstrap5',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.github',
+    'allauth.socialaccount.providers.gitlab',
 ]
 
 MIDDLEWARE = [
@@ -63,6 +73,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.request',
             ],
         },
     },
@@ -122,3 +133,33 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+SITE_ID = 1
+
+SOCIALACCOUNT_PROVIDERS = {
+    # https://django-allauth.readthedocs.io/en/latest/providers.html#github
+    # https://docs.github.com/en/developers/apps/building-oauth-apps/scopes-for-oauth-apps
+    'github': {
+        'SCOPE': [
+            'user',
+            'repo',
+        ],
+    },
+    # https://django-allauth.readthedocs.io/en/latest/providers.html#gitlab
+    # https://docs.gitlab.com/ee/integration/oauth_provider.html
+    'gitlab': {
+        'GITLAB_URL': 'https://git.iris.nitk.ac.in',
+        'SCOPE': ['read_api', 'read_user', 'read_repository'],
+    },
+}
