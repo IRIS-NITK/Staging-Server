@@ -40,14 +40,15 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     'main.apps.MainConfig',
-    'accounts.apps.AccountsConfig',
     'crispy_forms',
     'crispy_bootstrap5',
+    "allauth_ui",
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.github',
     'allauth.socialaccount.providers.gitlab',
+    "widget_tweaks",
 ]
 
 MIDDLEWARE = [
@@ -163,3 +164,16 @@ SOCIALACCOUNT_PROVIDERS = {
         'SCOPE': ['read_api', 'read_user', 'read_repository'],
     },
 }
+
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+
+EMAIL_HOST = 'smtp.sendgrid.net' #
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'apikey' # this is exactly the value 'apikey'
+EMAIL_HOST_PASSWORD = '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'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+DEFAULT_FROM_EMAIL = 'abdullahrafi51766@gmail.com'
+
+SOCIALACCOUNT_STORE_TOKENS = True
