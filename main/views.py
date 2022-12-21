@@ -15,6 +15,8 @@ def home(response):
     else:
         g = Github(gh_access_token_set.first().__str__())
         print("1", g.get_user().login)
+        for repo in g.get_user().get_orgs():
+                print(repo.name)
 
     gl_access_token_set = SocialToken.objects.filter(account__user=response.user, account__provider='gitlab')
     if (len(gl_access_token_set) == 0):
@@ -25,3 +27,5 @@ def home(response):
         gl.auth()
         print("2", gl.user.emails.list())
     return render(response, "main/home.html")
+
+    
