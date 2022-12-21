@@ -1,0 +1,62 @@
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+  
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'api/deploy.css' %}">
+    <link rel="shortcut icon" href="{%  static 'favicon.ico' %}">
+  </head>
+  <body>
+        <div class="card" style="margin: 30px;">
+            <div class="card-header"></div>
+            <form class="card-body form-inline" action="" method="post">
+                {% csrf_token %}
+                <div class="input-group mx-2 mb-2">
+                    <div class="input-group-prepend">
+                        <label class="input-group-text" for="Orgselect">Organisation</label>
+                    </div>
+                    <select class="custom-select" id="orgselect" name="orgselect" required>
+                        <option selected disabled>Choose...</option>
+                        {% for no,org in orgs_name.items %}
+                        <option value="{{org}}">{{org}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="input-group mx-2 mb-2">
+                    <div class="input-group-prepend">
+                        <label class="input-group-text" for="repos">Repos</label>
+                    </div>
+                    <select class="custom-select" id="repos" name="repos" required>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-success mx-2 mb-2">Deploy</button>
+            </form>
+        </div>
+    </div>
+    <script>
+
+        $("#orgselect").change(function(){
+            
+            var org = document.getElementById('orgselect').value;
+            
+            $.ajax({                     
+                url: '/getrepos',                    
+                data: {
+                  'org': org     
+                },
+                success: function (data) {   
+                 $("#repos").html(data); 
+                }
+              });
+        });
+
+
+    </script>
+  </body>
