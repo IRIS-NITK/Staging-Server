@@ -69,6 +69,43 @@ def getrepos(request):
         for i in obj.get_repos():
             repos[val] = i.name
             val+=1
-            
-    return render(request,'response.html',{'repos':repos})
 
+    return render(request,'response.html',{'dictionary':repos})
+
+@login_required(login_url='/accounts/login/')
+def getbranches(request):
+
+    gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
+    g = Github(gh_access_token_set.first().__str__())
+    o = list(g.get_user().get_orgs())
+
+    organisation = request.GET.get('org')
+    repo = request.GET.get('repo')
+    branches={}
+    val=1
+
+    if organisation == g.get_user().login:
+        repo_obj = ""
+        for i in g.get_user().get_repos():
+            if i.name == repo:
+                repo_obj = i
+        for i in repo_obj.get_branches():
+            branches[val]=i.name
+            val+=1
+    else:
+        obj = g.get_user().get_orgs()
+        org_obj=""
+        repo_obj=""
+        for i in obj:
+            if i.name == organisation:
+                org_obj = i 
+                break
+        for i in org_obj.get_repos():
+            if i.name == repo:
+                repo_obj = i 
+                break
+        for i in repo_obj.get_branches():
+            branches[val]=i.name
+            val+=1
+
+    return render(request,'response.html',{'dictionary':branches})

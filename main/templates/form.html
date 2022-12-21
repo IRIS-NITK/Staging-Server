@@ -36,12 +36,18 @@
                     </select>
                 </div>
                 
+                <div class="input-group mx-2 mb-2">
+                    <div class="input-group-prepend">
+                        <label class="input-group-text" for="branches">Branches</label>
+                    </div>
+                    <select class="custom-select" id="branches" name="branches" required>
+                    </select>
+                </div>
                 <button type="submit" class="btn btn-success mx-2 mb-2">Deploy</button>
             </form>
         </div>
     </div>
     <script>
-
         $("#orgselect").change(function(){
             
             var org = document.getElementById('orgselect').value;
@@ -56,7 +62,25 @@
                 }
               });
         });
+    </script>
+    <script>
+        $("#repos").change(function(){
+
+            var org = document.getElementById('orgselect').value;
+            var repo =document.getElementById('repos').value;
+
+            $.ajax({                     
+                url: '/getbranches',                    
+                data: {
+                  'repo': repo ,
+                  'org' : org    
+                },
+                success: function (data) {   
+                 $("#branches").html(data); 
+                }
+              });
 
 
+        });
     </script>
   </body>

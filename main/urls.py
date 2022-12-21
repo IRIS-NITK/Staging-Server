@@ -20,5 +20,6 @@ from . import views
 urlpatterns = [
     path('', views.home, name="home"),
     path('githubform',views.form,name="form"),
-    path('getrepos',views.getrepos,name="repos")
+    path('getrepos',views.getrepos,name="repos"),
+    path('getbranches',views.getbranches,name="branches")
 ]
