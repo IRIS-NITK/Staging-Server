@@ -21,8 +21,6 @@ Folder structure
 
 """
 
-
-
 from subprocess import PIPE, run
 import os
 

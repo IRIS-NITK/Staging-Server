@@ -4,7 +4,7 @@ from allauth.socialaccount.models import SocialToken
 from github import Github
 import gitlab,json
 from django.http import HttpResponse
-from django.core.paginator import Paginator
+from django.shortcuts import render,redirect
 
 # Create your views here.
 @login_required(login_url='/accounts/login/')
@@ -30,22 +30,55 @@ def home(response):
         print("2", gl.user.emails.list())
     return render(response, "main/home.html")
 
+
 @login_required(login_url='/accounts/login/')
-def form(request):
+def form_wrapper(request):
 
-    gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
-    g = Github(gh_access_token_set.first().__str__())
-    name = g.get_user().login
-    o = list(g.get_user().get_orgs())
-    orgs_name = {}
-    val = 2
-    orgs_name[1] = g.get_user().login
-    for i in o:
-        orgs_name[val] = i.name
-        val+=1
+    social = request.POST.get('social')
+    if(social == "Github"):
+        gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
+        if (len(gh_access_token_set) == 0):
+            return redirect("socialaccount_connections")
+        else:
+            return redirect("form",social)
+    else:
+        gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
+        if (len(gl_access_token_set) == 0):
+            return redirect("socialaccount_connections")
+        else:
+            return redirect("form",social)
 
-    return render(request,'form.html',{'orgs_name':orgs_name})
 
+@login_required(login_url='/accounts/login/')
+def form(request,social):
+
+    account__provider = social
+    
+
+    if social == "Github":
+        gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
+        g = Github(gh_access_token_set.first().__str__())
+        name = g.get_user().login
+        o = list(g.get_user().get_orgs())
+        val = 2
+        orgs_name = {}
+        orgs_name[1] = g.get_user().login
+        for i in o:
+            orgs_name[val] = i.name
+            val+=1
+        return render(request,'form.html',{'orgs_name':orgs_name})
+    else:
+        gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
+        gl = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
+        gl.auth()
+        projects = gl.projects.list(get_all=True)
+        repos = {}
+        val = 1
+        for i in projects:
+            repos[val] = i.name
+            val+=1
+        return render(request,'gitlabform.html',{'repos':repos})
+    
 @login_required(login_url='/accounts/login/')
 def getrepos(request):
     gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
@@ -109,3 +142,33 @@ def getbranches(request):
             val+=1
 
     return render(request,'response.html',{'dictionary':branches})
+
+@login_required(login_url='/accounts/login')
+def getIRISbranches(request):
+    repo = request.GET.get('repo')
+    gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
+    gl = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
+    gl.auth()
+    repo_obj = ""
+    for i in gl.projects.list(get_all=True):
+        if i.name == repo:
+            repo_obj = i 
+            break
+
+    branches = repo_obj.branches.list(get_all=True)
+    branches_dictionary = {}
+    val = 1
+    for i in branches:
+        branches_dictionary[val] = i.name
+        val+=1
+
+    return render(request,'response.html',{'dictionary':branches_dictionary})
+
+
+@login_required(login_url='/accounts/login/')
+def deploy(request):
+    org_name = request.POST.get('orgselect')
+    repo_name = request.POST.get('repos')
+    branch = request.POST.get('branches')
+    
+    return HttpResponse("hi")

@@ -1,5 +1,11 @@
 {% block content %}
 	<h1>Home</h1>
-	<a href="{% url "form" %}">Github</a>
-	
+	<form action={% url 'form_wrap' %} method="post">
+		{% csrf_token %}
+	<button name="social" value="Github">Github</button>
+	</form>
+		<form action={% url 'form_wrap' %} method="post">
+			{% csrf_token %}
+		<button name="social" value="Gitlab">Gitlab</button>
+	</form>
 {% endblock %}
