@@ -7,7 +7,7 @@ from django.conf import settings
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'stagingserver.settings')
 
 app=Celery('stagingserver')
-
+ 
 app.conf.enable_utc= False
 
 app.conf.update(timezone= 'Asia/Kolkata')

@@ -5,7 +5,8 @@ from github import Github
 import gitlab,json
 from django.http import HttpResponse
 from django.shortcuts import render,redirect
-
+from main.tasks.services import deploy_from_git
+from django.core import serializers
 # Create your views here.
 @login_required(login_url='/accounts/login/')
 def home(response):
@@ -26,7 +27,10 @@ def home(response):
     else:
         # Python Gitlab: https://python-gitlab.readthedocs.io/en/stable/
         gl = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
-        gl.auth()
+        try:
+            gl.auth()
+        except:
+            return redirect("socialaccount_connections")
         print("2", gl.user.emails.list())
     return render(response, "main/home.html")
 
@@ -122,6 +126,7 @@ def getbranches(request):
         for i in g.get_user().get_repos():
             if i.name == repo:
                 repo_obj = i
+                break
         for i in repo_obj.get_branches():
             branches[val]=i.name
             val+=1
@@ -170,5 +175,31 @@ def deploy(request):
     org_name = request.POST.get('orgselect')
     repo_name = request.POST.get('repos')
     branch = request.POST.get('branches')
-    
+    social  = request.POST.get('social_provider')
+    token_obj = SocialToken.objects.filter(account__user= request.user, account__provider=social)
+    token = json.loads(serializers.serialize('json', token_obj))[0]['fields']['token']
+    gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
+    g = Github(gh_access_token_set.first().__str__())
+    obj = g.get_user().get_orgs()
+    org_obj=""
+    repo_obj=""
+    if org_name == g.get_user().login:
+        for i in g.get_user().get_repos():
+            if i.name == repo_name:
+                repo_obj = i
+                break
+    else:
+        obj = g.get_user().get_orgs()
+        org_obj=""
+        repo_obj=""
+        for i in obj:
+            if i.name == organisation:
+                org_obj = i 
+                break
+        for i in org_obj.get_repos():
+            if i.name == repo_name:
+                repo_obj = i 
+                break
+    url = repo_obj.clone_url
+    deploy_from_git.delay(token,url,social,org_name,repo_name,branch)
     return HttpResponse("hi")
