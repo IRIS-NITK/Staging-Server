@@ -178,28 +178,31 @@ def deploy(request):
     social  = request.POST.get('social_provider')
     token_obj = SocialToken.objects.filter(account__user= request.user, account__provider=social)
     token = json.loads(serializers.serialize('json', token_obj))[0]['fields']['token']
-    gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
-    g = Github(gh_access_token_set.first().__str__())
-    obj = g.get_user().get_orgs()
     org_obj=""
     repo_obj=""
-    if org_name == g.get_user().login:
-        for i in g.get_user().get_repos():
-            if i.name == repo_name:
-                repo_obj = i
-                break
-    else:
+    if social == "github":
+        gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
+        g = Github(gh_access_token_set.first().__str__())
         obj = g.get_user().get_orgs()
-        org_obj=""
-        repo_obj=""
-        for i in obj:
-            if i.name == organisation:
-                org_obj = i 
-                break
-        for i in org_obj.get_repos():
-            if i.name == repo_name:
-                repo_obj = i 
-                break
-    url = repo_obj.clone_url
+        if org_name == g.get_user().login:
+            for i in g.get_user().get_repos():
+                if i.name == repo_name:
+                    repo_obj = i
+                    break
+        else:
+            obj = g.get_user().get_orgs()
+            org_obj=""
+            repo_obj=""
+            for i in obj:
+                if i.name == organisation:
+                    org_obj = i 
+                    break
+            for i in org_obj.get_repos():
+                if i.name == repo_name:
+                    repo_obj = i 
+                    break
+        url = repo_obj.clone_url
+    else:
+        url = "https://git.iris.nitk.ac.in/IRIS-NITK/"+repo_name+".git"
     deploy_from_git.delay(token,url,social,org_name,repo_name,branch)
     return HttpResponse("hi")

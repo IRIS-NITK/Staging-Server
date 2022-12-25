@@ -76,6 +76,7 @@ def pull_git(url, org_name, repo_name):
         return True, res.stdout.decode('utf-8')
     else:
         os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}")
+        f = open(log_file,"a")
         f.write("Org does not exist, cloning it for the first time\n")
         res = run(
             ['git', 'clone', url],
@@ -171,14 +172,15 @@ def start_web_container(org_name, repo_name, branch_name, docker_image, internal
     external_port = find_free_port()
     print(external_port)
     f = open(log_file,"a")
-
+    container_name = "iris_dev"+branch_name
     if dest_code_dir:
         f.write("Mounting code in container and starting it\n")
         res = run(
             [
                 'docker', 'run', '-d', # run in detached mode
                 '-p', f'{external_port}:{internal_port}', # expose port
-                f'-v "{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{src_code_dir}:{dest_code_dir}"', # bind mount
+                f'-v "{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{src_code_dir}:{dest_code_dir}"',
+                "--name",container_name, # bind mount
                 f'{docker_image}'
             ],
             stdout=PIPE,
@@ -187,7 +189,7 @@ def start_web_container(org_name, repo_name, branch_name, docker_image, internal
     else:
         print("Starting container")
         res = run(
-            ['docker', 'run', '-d', '-p', f"{external_port}:{internal_port}", docker_image],
+            ['docker', 'run', '-d', '-p', f"{external_port}:{internal_port}", "--name", container_name, docker_image],
             stdout=PIPE,
             stderr=PIPE
         )
@@ -204,8 +206,6 @@ def start_web_container(org_name, repo_name, branch_name, docker_image, internal
 @shared_task(bind=True)
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None,DEFAULT_BRANCH = "main"):
     
-    if social == "gitlab":
-        url = "https://git.iris.nitk.ac.in/IRIS-NITK/{repo_name}.git"
 
     if branch_name == None:
         branch_name = "main"
