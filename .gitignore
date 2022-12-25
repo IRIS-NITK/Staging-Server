@@ -6,7 +6,7 @@ __pycache__
 db.sqlite3
 media
 venv
-
+.env
 *.py[cod] 
 *$py.class
 
