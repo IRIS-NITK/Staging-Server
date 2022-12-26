@@ -11,7 +11,7 @@
   <body>
         <div class="card" style="margin: 30px;">
             <div class="card-header"></div>
-            <form class="card-body form-inline" action={% url "deploy" %} method="POST">
+            <form class="card-body form-inline" action={% url "deploy_wrap" %} method="POST">
                 {% csrf_token %}
                 <div class="input-group mx-2 mb-2">
                     <div class="input-group-prepend">

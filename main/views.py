@@ -32,7 +32,7 @@ def home(response):
         try:
             gl.auth()
         except:
-            return redirect("socialaccount_connections")
+            return redirect("account_login")
         print("2", gl.user.emails.list())
     return render(response, "main/home.html")
 
@@ -77,7 +77,10 @@ def form(request,social):
     else:
         gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
         gl = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
-        gl.auth()
+        try:
+            gl.auth()
+        except:
+            return redirect("account_login")
         projects = gl.projects.list(get_all=True)
         repos = {}
         val = 1
@@ -158,7 +161,10 @@ def getIRISbranches(request):
     repo = request.GET.get('repo')
     gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
     gl = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
-    gl.auth()
+    try:
+        gl.auth()
+    except:
+        return redirect("account_login")
     repo_obj = ""
     for i in gl.projects.list(get_all=True):
         if i.name == repo:
@@ -174,13 +180,13 @@ def getIRISbranches(request):
 
     return render(request,'response.html',{'dictionary':branches_dictionary})
 
+@login_required(login_url='/accounts/login/')
+def deploy_wrapper(request):
+    return redirect('deploy',org_name = request.POST.get('orgselect'),repo_name = request.POST.get('repos'),branch = request.POST.get('branches'),social  = request.POST.get('social_provider'))
+
 
 @login_required(login_url='/accounts/login/')
-def deploy(request):
-    org_name = request.POST.get('orgselect')
-    repo_name = request.POST.get('repos')
-    branch = request.POST.get('branches')
-    social  = request.POST.get('social_provider')
+def deploy(request,org_name,repo_name,branch,social):
     token_obj = SocialToken.objects.filter(account__user= request.user, account__provider=social)
     token = json.loads(serializers.serialize('json', token_obj))[0]['fields']['token']
     org_obj=""
@@ -199,7 +205,7 @@ def deploy(request):
             org_obj=""
             repo_obj=""
             for i in obj:
-                if i.name == organisation:
+                if i.name == org_name:
                     org_obj = i 
                     break
             for i in org_obj.get_repos():
@@ -210,22 +216,18 @@ def deploy(request):
     else:
         url = "https://git.iris.nitk.ac.in/IRIS-NITK/"+repo_name+".git"
     
-    
-    isthere = False
     try:
         instance = RunningInstance.objects.get(social=social,organisation=org_name,repo_name=repo_name,branch= branch)
-        # instance.owner = request.user.username
+        instance.owner = request.user.username
         instance.update_time = time.time()
         instance.reponame = repo_name
         instance.save()
-        isthere = True
     except ObjectDoesNotExist:
         instance = RunningInstance(
            branch=branch, owner=request.user.username, status=RunningInstance.STATUS_PENDING,repo_name =repo_name,organisation=org_name,social=social
         )
         instance.save()
-    if isthere == False :
-        deploy_from_git.delay(token,url,social,org_name,repo_name,branch)
+    deploy_from_git.delay(token,url,social,org_name,repo_name,branch)
     instances = RunningInstance.objects.filter(social=social,organisation=org_name)
     return render(request,'display.html',{'instances':instances})
 
@@ -234,8 +236,12 @@ def deploy(request):
 def logs(request,branch,reponame,orgname):
     PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
     DEFAULT_BRANCH = "main"
-    log_file_name = f'{PATH_TO_HOME_DIR}/{orgname}/{reponame}/{branch}/{branch}'+".txt"
-    f = open(log_file_name,"r")
-    data = f.read()
-    context ={'data': data}
-    return render(request,'log.html',context)
+    try:
+        log_file_name = f'{PATH_TO_HOME_DIR}/{orgname}/{reponame}/{DEFAULT_BRANCH}/{branch}'+".txt"
+        print(log_file_name)
+        f = open(log_file_name,"r")
+        data = f.read()
+        context ={'data': data}
+        return render(request,'log.html',context)
+    except :
+        return render(request,'failure.html')

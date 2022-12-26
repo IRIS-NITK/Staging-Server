@@ -54,9 +54,7 @@ def pull_git(url, org_name, repo_name):
                 cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}"
             )
             if res.returncode != 0:
-                f.write(res.stderr.decode('utf-8')+"\n")
                 return False,res.stderr.decode('utf-8')
-            f.write(res.stdout.decode('utf-8')+"\n")
             return True,res.stdout.decode('utf-8')
         else:
             # repo does not exist , could be a new repo , so clone it
@@ -70,9 +68,7 @@ def pull_git(url, org_name, repo_name):
                 cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}"
             )
             if res.returncode != 0:
-                f.write(res.stderr.decode('utf-8')+"\n")
                 return False, res.stderr.decode('utf-8')
-        f.write(res.stdout.decode('utf-8')+"\n")
         return True, res.stdout.decode('utf-8')
     else:
         os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}")
@@ -85,9 +81,7 @@ def pull_git(url, org_name, repo_name):
             cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}"
         )
         if res.returncode != 0:
-            f.write(res.stderr.decode('utf-8')+"\n")
             return False, res.stderr.decode('utf-8')
-        f.write(res.stdout.decode('utf-8')+"\n")
         return True, res.stdout.decode('utf-8')
 
 
@@ -101,9 +95,7 @@ def get_git_branches(repo_name, org_name):
         cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}"
     )
     if res.returncode != 0:
-        f.write(res.stderr.decode('utf-8')+"\n")
         return False, res.stderr.decode('utf-8')
-    f.write(res.stdout.decode('utf-8')+"\n")
     return True, res.stdout.decode('utf-8')
 
 def checkout_git_branch(repo_name, org_name, branch_name):
@@ -116,9 +108,7 @@ def checkout_git_branch(repo_name, org_name, branch_name):
         cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}"
     )
     if res.returncode != 0:
-        f.write(res.stderr.decode('utf-8')+"\n")
         return False, res.stderr.decode('utf-8')
-    f.write(res.stdout.decode('utf-8')+"\n")
     return True, res.stdout.decode('utf-8')
 
 def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind_path, db_env_variables, network_name):
@@ -160,7 +150,7 @@ def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind
 
  
 
-def start_web_container(org_name, repo_name, branch_name, docker_image, internal_port = 3000, src_code_dir = None, dest_code_dir = None):
+def start_web_container(container_name,org_name, repo_name, branch_name, docker_image, internal_port = 3000, src_code_dir = None, dest_code_dir = None):
     """
     src_code_dir : code that needs to be mounted in the container , path is relative to one folder outside the git repo
     internal_port : port on which the container is running
@@ -170,11 +160,9 @@ def start_web_container(org_name, repo_name, branch_name, docker_image, internal
     # src_code_dir is a list of directories that need to be bind mounted in the container
     # This command is run in the branch of the git repo
     external_port = find_free_port()
-    print(external_port)
-    f = open(log_file,"a")
-    container_name = "iris_dev"+branch_name
     running_instance = RunningInstance.objects.get(branch=branch_name,repo_name=repo_name,organisation=org_name)
     if dest_code_dir:
+        f = open(log_file,"a")
         f.write("Mounting code in container and starting it\n")
         res = run(
             [
@@ -188,7 +176,6 @@ def start_web_container(org_name, repo_name, branch_name, docker_image, internal
             stderr=PIPE,
         )
     else:
-        f.write("Starting container")
         res = run(
             ['docker', 'run', '-d', '-p', f"{external_port}:{internal_port}", "--name", container_name, docker_image],
             stdout=PIPE,
@@ -206,22 +193,23 @@ def start_web_container(org_name, repo_name, branch_name, docker_image, internal
 
 @shared_task(bind=True)
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None,DEFAULT_BRANCH = "main"):
-    
 
-    if branch_name == None:
-        branch_name = "main"
     global log_file
     log_file = PATH_TO_HOME_DIR+"/"+org_name+"/"+repo_name+"/"+DEFAULT_BRANCH+"/"+branch_name+".txt"
 
     # pull git repo
     result,msg = pull_git(url,repo_name=repo_name, org_name=org_name)
-
+    f = open(log_file,'a')
+    f.write(msg)
     if not result:
         return False, msg 
+
 
     # get branches
     res, branches  = get_git_branches(repo_name, org_name=org_name)
     if not res:
+        f = open(log_file,'a')
+        f.write(branches)
         return False, branches
         
     
@@ -231,6 +219,8 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     
     # checkout branch
     res = checkout_git_branch(repo_name, branch_name=branch_name, org_name=org_name)
+    f = open(log_file,'a')
+    f.write(res[1])
     if not res[0]:
         return False, res[1]
     
@@ -252,18 +242,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
                 stdout=PIPE,
                 stderr=PIPE
             )
-    #copy log_file to particular directory
-    source = PATH_TO_HOME_DIR+"/"+org_name+"/"+repo_name+"/"+DEFAULT_BRANCH+"/"+branch_name+".txt"
-    dest = PATH_TO_HOME_DIR+"/"+org_name+"/"+repo_name+"/"+branch_name+"/"
-    res = run(
-            ['cp', source, f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/"],
-                stdout=PIPE,
-                stderr=PIPE
-            )
-    
-    if res.returncode!=0:
-        print(res.stdout.decode('utf-8'))
-
+        
     image_name = ""
     docker_image = ""
     if social == 'gitlab':
@@ -283,18 +262,43 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
         )
         if res.returncode != 0:
-            return False, res.stderr.decode('utf-8')
+            f = open(log_file,'a')
+            f.write(res.stdout.decode('utf-8')+"\n")
+            return
+    
     
     # # org_name, repo_name, branch_name, docker_image, external_port, internal_port = 80, src_code_dir = None, dest_code_dir = None
-    res, container_id = start_web_container(
-        org_name=org_name,
-        repo_name=repo_name,
-        branch_name=branch_name,
-        docker_image=docker_image,
-        internal_port=internal_port,
-        src_code_dir=src_code_dir,
-        dest_code_dir=dest_code_dir
-    )
-    if not res:
-        return False, container_id
-    return True, container_id
+    container_name = "iris_dev"+branch_name
+    checkcontainerexists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
+    f = open(log_file,'a')
+    if checkcontainerexists.returncode !=0:
+        f.write("Starting Container")
+        res, container_id = start_web_container(
+            container_name=container_name,
+            org_name=org_name,
+            repo_name=repo_name,
+            branch_name=branch_name,
+            docker_image=docker_image,
+            internal_port=internal_port,
+            src_code_dir=src_code_dir,
+            dest_code_dir=dest_code_dir
+        )
+    else:
+        f.write("Removing Exisiting Container"+"\n")
+        f.write("Starting Container"+"\n")
+        res1 = run(["docker","rm",container_name],stdout=PIPE,stderr=PIPE)
+        if res1.returncode == 0:
+            res, container_id = start_web_container(
+            container_name=container_name,
+            org_name=org_name,
+            repo_name=repo_name,
+            branch_name=branch_name,
+            docker_image=docker_image,
+            internal_port=internal_port,
+            src_code_dir=src_code_dir,
+            dest_code_dir=dest_code_dir
+            )
+        else:
+            return
+            
+

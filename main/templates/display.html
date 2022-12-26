@@ -1,13 +1,3 @@
-{% comment %} {%for i in info1%}
-<ul>
-  <li>{{i.task_id}}</li>
-  <li>{{i.status}}</li>
-  <li>{{i.result}}</li>
-</ul>
-{%endfor%} {% endcomment %}
-
-
-
 <head>
     <title>IRIS Dev Server</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
   
     {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'api/deploy.css' %}">
+    <link rel="stylesheet" type="text/css" href="">
     <link rel="shortcut icon" href="{%  static 'favicon.ico' %}">
   </head>
   <body>
@@ -42,7 +32,7 @@
                         </div>
                         <div class="control-buttons">
                             <button type="submit" class="btn btn-outline-primary btn-sm mx-1"
-                                onclick="location.href=''">Redeploy</button>
+                                onclick="location.href='{% url 'deploy' org_name=instance.organisation repo_name=instance.repo_name branch=instance.branch social=instance.social%}'">Redeploy</button>
                             <button type="button" class="btn btn-outline-info btn-sm mx-1"
                                 onclick="location.href='{% url 'logs' orgname=instance.organisation reponame=instance.repo_name branch=instance.branch %}'">Logs</button>
                             <button type="button" class="btn btn-outline-danger btn-sm mx-1"

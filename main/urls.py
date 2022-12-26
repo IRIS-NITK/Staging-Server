@@ -17,6 +17,7 @@ Including another URLconf
 from django.urls import path
 from . import views
 
+
 urlpatterns = [
     path('', views.home, name="home"),
     path('form_wrapper',views.form_wrapper,name="form_wrap"),
@@ -24,6 +25,8 @@ urlpatterns = [
     path('getrepos',views.getrepos,name="repos"),
     path('getbranches',views.getbranches,name="branches"),
     path('getIRISbranches',views.getIRISbranches,name="IRISbranches"),
-    path('deploy',views.deploy,name="deploy"),
-    path("deploy/<branch>/<reponame>/<orgname>/logs",views.logs,name="logs"),
+    path('deploy',views.deploy_wrapper,name="deploy_wrap"),
+    path("logs/<orgname>/<reponame>/<branch>",views.logs,name="logs"),
+    path('deploy/<org_name>/<repo_name>/<branch>/<social>',views.deploy,name="deploy"),
+    
 ]
