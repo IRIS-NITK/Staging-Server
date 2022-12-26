@@ -173,6 +173,7 @@ def start_web_container(org_name, repo_name, branch_name, docker_image, internal
     print(external_port)
     f = open(log_file,"a")
     container_name = "iris_dev"+branch_name
+    running_instance = RunningInstance.objects.get(branch=branch_name,repo_name=repo_name,organisation=org_name)
     if dest_code_dir:
         f.write("Mounting code in container and starting it\n")
         res = run(
@@ -187,19 +188,19 @@ def start_web_container(org_name, repo_name, branch_name, docker_image, internal
             stderr=PIPE,
         )
     else:
-        print("Starting container")
+        f.write("Starting container")
         res = run(
             ['docker', 'run', '-d', '-p', f"{external_port}:{internal_port}", "--name", container_name, docker_image],
             stdout=PIPE,
             stderr=PIPE
         )
         if res.returncode != 0:
-            # running_instance.status = RunningInstance.STATUS_ERROR
+            running_instance.status = RunningInstance.STATUS_ERROR
             return False, res.stderr.decode('utf-8')
-        # else:
-        #     running_instance.status = RunningInstance.STATUS_SUCCESS
+        else:
+            running_instance.status = RunningInstance.STATUS_SUCCESS
     # return container id
-    # running_instance.save() 
+    running_instance.save() 
     return True, res.stdout.decode('utf-8')
 
 

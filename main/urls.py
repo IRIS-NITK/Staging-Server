@@ -24,5 +24,6 @@ urlpatterns = [
     path('getrepos',views.getrepos,name="repos"),
     path('getbranches',views.getbranches,name="branches"),
     path('getIRISbranches',views.getIRISbranches,name="IRISbranches"),
-    path('deploy',views.deploy,name="deploy")
+    path('deploy',views.deploy,name="deploy"),
+    path("deploy/<branch>/<reponame>/<orgname>/logs",views.logs,name="logs"),
 ]

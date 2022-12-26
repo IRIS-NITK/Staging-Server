@@ -2,11 +2,13 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from allauth.socialaccount.models import SocialToken
 from github import Github
-import gitlab,json
+import gitlab,json,time,os
 from django.http import HttpResponse
 from django.shortcuts import render,redirect
 from main.tasks.services import deploy_from_git
 from django.core import serializers
+from django.core.exceptions import ObjectDoesNotExist
+from main.models import RunningInstance
 # Create your views here.
 @login_required(login_url='/accounts/login/')
 def home(response):
@@ -70,7 +72,8 @@ def form(request,social):
         for i in o:
             orgs_name[val] = i.name
             val+=1
-        return render(request,'form.html',{'orgs_name':orgs_name})
+        instances = RunningInstance.objects.filter(social=social,organisation=orgs_name)
+        return render(request,'form.html',{'instances':instances,'orgs_name':orgs_name})
     else:
         gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
         gl = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
@@ -81,7 +84,9 @@ def form(request,social):
         for i in projects:
             repos[val] = i.name
             val+=1
-        return render(request,'gitlabform.html',{'repos':repos})
+        instances = RunningInstance.objects.filter(owner=request.user.username)
+        print(instances)
+        return render(request,'gitlabform.html',{'instances':instances,'repos':repos})
     
 @login_required(login_url='/accounts/login/')
 def getrepos(request):
@@ -204,5 +209,33 @@ def deploy(request):
         url = repo_obj.clone_url
     else:
         url = "https://git.iris.nitk.ac.in/IRIS-NITK/"+repo_name+".git"
-    deploy_from_git.delay(token,url,social,org_name,repo_name,branch)
-    return HttpResponse("hi")
+    
+    
+    isthere = False
+    try:
+        instance = RunningInstance.objects.get(social=social,organisation=org_name,repo_name=repo_name,branch= branch)
+        # instance.owner = request.user.username
+        instance.update_time = time.time()
+        instance.reponame = repo_name
+        instance.save()
+        isthere = True
+    except ObjectDoesNotExist:
+        instance = RunningInstance(
+           branch=branch, owner=request.user.username, status=RunningInstance.STATUS_PENDING,repo_name =repo_name,organisation=org_name,social=social
+        )
+        instance.save()
+    if isthere == False :
+        deploy_from_git.delay(token,url,social,org_name,repo_name,branch)
+    instances = RunningInstance.objects.filter(social=social,organisation=org_name)
+    return render(request,'display.html',{'instances':instances})
+
+
+@login_required(login_url='/accounts/login/')
+def logs(request,branch,reponame,orgname):
+    PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
+    DEFAULT_BRANCH = "main"
+    log_file_name = f'{PATH_TO_HOME_DIR}/{orgname}/{reponame}/{branch}/{branch}'+".txt"
+    f = open(log_file_name,"r")
+    data = f.read()
+    context ={'data': data}
+    return render(request,'log.html',context)
