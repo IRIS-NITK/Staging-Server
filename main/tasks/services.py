@@ -152,7 +152,7 @@ def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind
 
  
 
-def start_container(org_name, repo_name, branch_name, docker_image, external_port, container_name = None, internal_port = 3000, docker_network = None, volumes = {}, env_variables = {}):
+def start_container(container_name, org_name, repo_name, branch_name, docker_image, external_port, container_name = None, internal_port = 3000, docker_network = None, volumes = {}, env_variables = {}):
     """
     Generalised function to start a container for any service
     """
@@ -177,8 +177,12 @@ def start_container(org_name, repo_name, branch_name, docker_image, external_por
         stderr=PIPE,
         cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}"
     )
+    running_instance = RunningInstance.objects.get(branch=branch_name,repo_name=repo_name,organisation=org_name)
     if res.returncode != 0:
+        running_instance.status = RunningInstance.STATUS_ERROR
         return False, res.stderr.decode('utf-8')
+    else:
+        running_instance.status = RunningInstance.STATUS_SUCCESS
     return True, res.stdout.decode('utf-8') 
 
 def create_network(network_name):
@@ -266,6 +270,8 @@ def attach_container_to_network(container_id, network_name):
         return False, res.stderr.decode('utf-8')
     return True, res.stdout.decode('utf-8')
 =======
+
+
 def stop_container(branch_name,repo_name,org_name):
     yield "Stopping the app"
     container_name = "iris_dev"+branch_name
@@ -366,6 +372,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             repo_name=repo_name,
             branch_name=branch_name,
             docker_image=docker_image,
+            external_port=external_port
             internal_port=internal_port,
             src_code_dir=src_code_dir,
             dest_code_dir=dest_code_dir
@@ -381,6 +388,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             repo_name=repo_name,
             branch_name=branch_name,
             docker_image=docker_image,
+            external_port=external_port,
             internal_port=internal_port,
             src_code_dir=src_code_dir,
             dest_code_dir=dest_code_dir
