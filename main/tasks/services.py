@@ -218,7 +218,7 @@ def stop_container(branch_name,repo_name,org_name):
         yield res.stderr.decode('utf-8')
 
 @shared_task(bind=True)
-def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None,DEFAULT_BRANCH = "main"):
+def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "main"):
 
     global log_file
     log_file = PATH_TO_HOME_DIR+"/"+org_name+"/"+repo_name+"/"+DEFAULT_BRANCH+"/"+branch_name+".txt"
@@ -263,11 +263,17 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
                 stderr=PIPE
             )
         else:
-            res = run(
-                ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}/{src_code_dir}", f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{src_code_dir}"],
-                stdout=PIPE,
-                stderr=PIPE
-            )
+            if len(src_code_dir) != len(dest_code_dir):
+                return False, "Error in mounting the files, incorrect mapping"
+            for src_folder, dest_folder in zip(src_code_dir, dest_code_dir):
+                res = run(
+                    ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}/{src_folder}", f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{dest_folder}"],
+                    stdout=PIPE,
+                    stderr=PIPE
+                )
+                if res.returncode != 0:
+                    return False, "Error while mounting code, incorrect mapping\n" + res.stderr.decode('utf-8')
+    
         
     image_name = ""
     docker_image = ""
@@ -308,22 +314,32 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             docker_image=docker_image,
             external_port=external_port,
             internal_port=internal_port,
+            volumes=volumes
         )
     else:
         f.write("Removing Exisiting Container"+"\n")
+        res1 = run(
+            ["docker","rm",container_name],
+            stdout=PIPE,
+            stderr=PIPE
+        )
+
+        if res1.returncode != 0:
+            f.write("\nError : \n",res1.stderr.decode('utf-8')+"\n")
+            return False, res1.stderr.decode('utf-8')
+
         f.write("Starting Container"+"\n")
-        res1 = run(["docker","rm",container_name],stdout=PIPE,stderr=PIPE)
-        if res1.returncode == 0:
-            res, container_id = start_container(
-            container_name=container_name,
-            org_name=org_name,
-            repo_name=repo_name,
-            branch_name=branch_name,
-            docker_image=docker_image,
-            external_port=external_port,
-            internal_port=internal_port,
-            )
-        else:
-            return
+
+        res, container_id = start_container(
+        container_name=container_name,
+        org_name=org_name,
+        repo_name=repo_name,
+        branch_name=branch_name,
+        docker_image=docker_image,
+        external_port=external_port,
+        internal_port=internal_port,
+        volumes=volumes
+        )
+
 
 
