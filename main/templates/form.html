@@ -1,4 +1,51 @@
 <head>
+    <title>IRIS Dev Server</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+  
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="">
+    <link rel="shortcut icon" href="{%  static 'favicon.ico' %}">
+  </head>
+  <body>
+    <div class="container-fluid">
+        <div class="card" style="margin: 30px;">
+            <div class="card-header">IRIS, NITK Staging Server</div>
+              <div class="card-body">
+                <ul class="list-group list-group-flush">
+                {% for instance in instances %}
+                    <div class="list-group-item status">
+                        <div style="display: flex; align-items: center; ">
+                            <a 
+                            class="mx-2" target="_blank" 
+                            style="display: flex; align-items: center;">
+                            {{instance.branch}}
+                        </a>
+                            <span class="ml-4" style="display: flex; align-items: center;"><i>{{instance.owner}}</i></span>
+                            <span class="ml-4" style="display: flex; align-items: center;">[{{instance.update_time}}]</span> 
+                            <span class="badge badge-warning mx-2" style="height: 18px;">{{instance.status}}</span>
+                        </div>
+                        <div class="control-buttons">
+                            <button type="submit" class="btn btn-outline-primary btn-sm mx-1"
+                                onclick="location.href='{% url 'deploy' org_name=instance.organisation repo_name=instance.repo_name branch=instance.branch social=instance.social%}'">Redeploy</button>
+                            <button type="button" class="btn btn-outline-info btn-sm mx-1"
+                                onclick="location.href='{% url 'logs' orgname=instance.organisation reponame=instance.repo_name branch=instance.branch %}'">Logs</button>
+                            <button type="button" class="btn btn-outline-danger btn-sm mx-1"
+                                onclick="location.href='{% url 'stop' orgname=instance.organisation reponame=instance.repo_name branch=instance.branch%}'">Stop</button>
+                        </div>
+                    </div>
+                {% endfor %}
+                </ul>
+            </div>
+        </div> 
+    </div>
+  </body>
+<head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">

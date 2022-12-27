@@ -3,12 +3,17 @@ from django.contrib.auth.decorators import login_required
 from allauth.socialaccount.models import SocialToken
 from github import Github
 import gitlab,json,time,os
-from django.http import HttpResponse
+from django.http import HttpResponse,StreamingHttpResponse
 from django.shortcuts import render,redirect
-from main.tasks.services import deploy_from_git
+from main.tasks.services import deploy_from_git,stop_container
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from main.models import RunningInstance
+from django.template import Context, loader
+
+response_header = loader.get_template("response_header.html")
+response_footer = loader.get_template("response_footer.html")
+
 # Create your views here.
 @login_required(login_url='/accounts/login/')
 def home(response):
@@ -59,8 +64,6 @@ def form_wrapper(request):
 def form(request,social):
 
     account__provider = social
-    
-
     if social == "Github":
         gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
         g = Github(gh_access_token_set.first().__str__())
@@ -88,7 +91,6 @@ def form(request,social):
             repos[val] = i.name
             val+=1
         instances = RunningInstance.objects.filter(owner=request.user.username)
-        print(instances)
         return render(request,'gitlabform.html',{'instances':instances,'repos':repos})
     
 @login_required(login_url='/accounts/login/')
@@ -229,7 +231,8 @@ def deploy(request,org_name,repo_name,branch,social):
         instance.save()
     deploy_from_git.delay(token,url,social,org_name,repo_name,branch)
     instances = RunningInstance.objects.filter(social=social,organisation=org_name)
-    return render(request,'display.html',{'instances':instances})
+    # return render(request,'display.html',{'instances':instances})
+    return redirect('form',social=social)
 
 
 @login_required(login_url='/accounts/login/')
@@ -245,3 +248,24 @@ def logs(request,branch,reponame,orgname):
         return render(request,'log.html',context)
     except :
         return render(request,'failure.html')
+
+@login_required(login_url='/accounts/login/')
+def stop(request,orgname,reponame,branch):
+    def generate_stream():
+        yield response_header.render({"purpose": "stopping"})
+        yield "<pre><code >"
+        try:
+            instance = RunningInstance.objects.get(branch=branch,repo_name=reponame,organisation=orgname)
+            yield from stop_container(branch,reponame,orgname)
+            yield "</code></pre>"
+            instance.delete()
+        except ObjectDoesNotExist:
+            yield "</code></pre>"
+            yield response_footer.render(
+                    {"status_message": "The server failed to stop properly"}
+                )
+    response = StreamingHttpResponse(generate_stream())
+    del response["Content-Length"]
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
+    return response
