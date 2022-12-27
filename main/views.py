@@ -241,7 +241,6 @@ def logs(request,branch,reponame,orgname):
     DEFAULT_BRANCH = "main"
     try:
         log_file_name = f'{PATH_TO_HOME_DIR}/{orgname}/{reponame}/{DEFAULT_BRANCH}/{branch}'+".txt"
-        print(log_file_name)
         f = open(log_file_name,"r")
         data = f.read()
         context ={'data': data}

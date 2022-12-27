@@ -152,7 +152,7 @@ def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind
 
  
 
-def start_container(container_name, org_name, repo_name, branch_name, docker_image, external_port, container_name = None, internal_port = 3000, docker_network = None, volumes = {}, env_variables = {}):
+def start_container(container_name, org_name, repo_name, branch_name, docker_image, external_port, internal_port = 3000, docker_network = None, volumes = {}, env_variables = {}):
     """
     Generalised function to start a container for any service
     """
@@ -300,23 +300,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     f = open(log_file,'a')
     if check_container_exists.returncode !=0:
         f.write("Starting Container")
-        res, container_id = start_web_container(
-            container_name=container_name,
-            org_name=org_name,
-            repo_name=repo_name,
-            branch_name=branch_name,
-            docker_image=docker_image,
-            external_port=external_port
-            internal_port=internal_port,
-            src_code_dir=src_code_dir,
-            dest_code_dir=dest_code_dir
-        )
-    else:
-        f.write("Removing Exisiting Container"+"\n")
-        f.write("Starting Container"+"\n")
-        res1 = run(["docker","rm",container_name],stdout=PIPE,stderr=PIPE)
-        if res1.returncode == 0:
-            res, container_id = start_web_container(
+        res, container_id = start_container(
             container_name=container_name,
             org_name=org_name,
             repo_name=repo_name,
@@ -324,8 +308,20 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             docker_image=docker_image,
             external_port=external_port,
             internal_port=internal_port,
-            src_code_dir=src_code_dir,
-            dest_code_dir=dest_code_dir
+        )
+    else:
+        f.write("Removing Exisiting Container"+"\n")
+        f.write("Starting Container"+"\n")
+        res1 = run(["docker","rm",container_name],stdout=PIPE,stderr=PIPE)
+        if res1.returncode == 0:
+            res, container_id = start_container(
+            container_name=container_name,
+            org_name=org_name,
+            repo_name=repo_name,
+            branch_name=branch_name,
+            docker_image=docker_image,
+            external_port=external_port,
+            internal_port=internal_port,
             )
         else:
             return
