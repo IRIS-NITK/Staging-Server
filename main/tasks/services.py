@@ -62,6 +62,7 @@ def pull_git(url, org_name, repo_name):
             os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}")
             f = open(log_file,"a")
             f.write("Repo does not exist, cloning it for the first time\n")
+            print(url)
             res = run(
                 ['git', 'clone', url],
                 stdout=PIPE,
@@ -151,47 +152,6 @@ def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind
 
  
 
-def start_web_container(container_name,org_name, repo_name, branch_name, docker_image, internal_port = 3000, src_code_dir = None, dest_code_dir = None):
-    """
-    src_code_dir : code that needs to be mounted in the container , path is relative to one folder outside the git repo
-    internal_port : port on which the container is running
-    external_port : port on which the container is to be exposed
-
-    """
-    # src_code_dir is a list of directories that need to be bind mounted in the container
-    # This command is run in the branch of the git repo
-    external_port = find_free_port()
-    running_instance = RunningInstance.objects.get(branch=branch_name,repo_name=repo_name,organisation=org_name)
-    if dest_code_dir:
-        f = open(log_file,"a")
-        f.write("Mounting code in container and starting it\n")
-        res = run(
-            [
-                'docker', 'run', '-d', # run in detached mode
-                '-p', f'{external_port}:{internal_port}', # expose port
-                f'-v "{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{src_code_dir}:{dest_code_dir}"',
-                "--name",container_name, # bind mount
-                f'{docker_image}'
-            ],
-            stdout=PIPE,
-            stderr=PIPE,
-        )
-    else:
-        res = run(
-            ['docker', 'run', '-d', '-p', f"{external_port}:{internal_port}", "--name", container_name, docker_image],
-            stdout=PIPE,
-            stderr=PIPE
-        )
-        if res.returncode != 0:
-            running_instance.status = RunningInstance.STATUS_ERROR
-            return False, res.stderr.decode('utf-8')
-        else:
-            running_instance.status = RunningInstance.STATUS_SUCCESS
-    # return container id
-    running_instance.save() 
-    return True, res.stdout.decode('utf-8')
-
-
 def start_container(org_name, repo_name, branch_name, docker_image, external_port, container_name = None, internal_port = 3000, docker_network = None, volumes = {}, env_variables = {}):
     """
     Generalised function to start a container for any service
@@ -243,6 +203,79 @@ def attach_container_to_network(container_id, network_name):
     if res.returncode != 0:
         return False, res.stderr.decode('utf-8')
     return True, res.stdout.decode('utf-8')
+
+def stop_container(branch_name,repo_name,org_name):
+    yield "Stopping the app"
+    container_name = "iris_dev"+branch_name
+    res = run(["docker","rm","-f",container_name],stdout=PIPE,stderr=PIPE)
+    if res.returncode == 0:
+        yield res.stdout.decode('utf-8')
+    else:
+        yield res.stderr.decode('utf-8')
+
+<<<<<<< Updated upstream
+def start_container(org_name, repo_name, branch_name, docker_image, external_port, container_name = None, internal_port = 3000, docker_network = None, volumes = {}, env_variables = {}):
+    """
+    Generalised function to start a container for any service
+    """
+    command = ["docker", "run"]
+    command.extend(["-d", "-p", f"{external_port}:{internal_port}"])
+    for src, dest in volumes.items():
+        command.extend(["-v", f"{src}:{dest}"])
+    for k, v in env_variables.items():
+        command.extend(["--env", f"{k}={v}"])
+    if container_name:
+        command.extend(["--name", container_name])
+    if docker_network:
+        command.extend(["--network", docker_network])
+    command.extend(["--detach"]) 
+    # command.extend(["--rm"]) # uncomment this to remove container after it stops
+
+    command.extend([docker_image])
+
+    res = run(
+        command,
+        stdout=PIPE,
+        stderr=PIPE,
+        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}"
+    )
+    if res.returncode != 0:
+        return False, res.stderr.decode('utf-8')
+    return True, res.stdout.decode('utf-8') 
+
+def create_network(network_name):
+    res = run(
+        ["docker", "network", "create", network_name],
+        stdout=PIPE,
+        stderr=PIPE,
+    )
+    if res.returncode != 0:
+        return False, res.stderr.decode('utf-8')
+    return True, res.stdout.decode('utf-8')
+
+def attach_container_to_network(container_id, network_name):
+    """
+    Attach a container to a network, can use either container name or container id
+    """
+    res = run(
+        ["docker", "network", "connect", network_name, container_id],
+        stdout=PIPE,
+        stderr=PIPE,
+    )
+    if res.returncode != 0:
+        return False, res.stderr.decode('utf-8')
+    return True, res.stdout.decode('utf-8')
+=======
+def stop_container(branch_name,repo_name,org_name):
+    yield "Stopping the app"
+    container_name = "iris_dev"+branch_name
+    res = run(["docker","rm","-f",container_name],stdout=PIPE,stderr=PIPE)
+    if res.returncode == 0:
+        yield res.stdout.decode('utf-8')
+    else:
+        yield res.stderr.decode('utf-8')
+
+>>>>>>> Stashed changes
 
 @shared_task(bind=True)
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None,DEFAULT_BRANCH = "main"):
@@ -323,6 +356,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     # # org_name, repo_name, branch_name, docker_image, external_port, internal_port = 80, src_code_dir = None, dest_code_dir = None
     container_name = "iris_dev"+branch_name
     check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
+    external_port = find_free_port()
     f = open(log_file,'a')
     if check_container_exists.returncode !=0:
         f.write("Starting Container")
@@ -353,5 +387,5 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             )
         else:
             return
-            
+
 
