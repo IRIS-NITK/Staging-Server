@@ -26,7 +26,7 @@ urlpatterns = [
     path('getbranches',views.getbranches,name="branches"),
     path('getIRISbranches',views.getIRISbranches,name="IRISbranches"),
     path('deploy',views.deploy_wrapper,name="deploy_wrap"),
-    path("logs/<orgname>/<reponame>/<branch>",views.logs,name="logs"),
+    path("logs/<orgname>/<reponame>/<branch>/<social>",views.logs,name="logs"),
     path('deploy/<org_name>/<repo_name>/<branch>/<social>',views.deploy,name="deploy"),
     path('stop/<social>/<orgname>/<reponame>/<branch>',views.stop,name='stop'),
 ]

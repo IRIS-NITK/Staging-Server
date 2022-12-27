@@ -183,6 +183,7 @@ def start_container(container_name, org_name, repo_name, branch_name, docker_ima
         return False, res.stderr.decode('utf-8')
     else:
         running_instance.status = RunningInstance.STATUS_SUCCESS
+    running_instance.save()
     return True, res.stdout.decode('utf-8') 
 
 def create_network(network_name):
@@ -229,7 +230,6 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     f.write(msg)
     if not result:
         return False, msg 
-
 
     # get branches
     res, branches  = get_git_branches(repo_name, org_name=org_name)
@@ -305,6 +305,8 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     external_port = find_free_port()
     f = open(log_file,'a')
     if check_container_exists.returncode !=0:
+        #create container under newtork="abc"
+        #create database container under network ='abc'
         f.write("Starting Container")
         res, container_id = start_container(
             container_name=container_name,
