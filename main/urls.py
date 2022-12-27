@@ -28,5 +28,5 @@ urlpatterns = [
     path('deploy',views.deploy_wrapper,name="deploy_wrap"),
     path("logs/<orgname>/<reponame>/<branch>",views.logs,name="logs"),
     path('deploy/<org_name>/<repo_name>/<branch>/<social>',views.deploy,name="deploy"),
-    path('stop/<orgname>/<reponame>/<branch>',views.stop,name='stop'),
+    path('stop/<social>/<orgname>/<reponame>/<branch>',views.stop,name='stop'),
 ]

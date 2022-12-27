@@ -36,7 +36,7 @@
                             <button type="button" class="btn btn-outline-info btn-sm mx-1"
                                 onclick="location.href='{% url 'logs' orgname=instance.organisation reponame=instance.repo_name branch=instance.branch %}'">Logs</button>
                             <button type="button" class="btn btn-outline-danger btn-sm mx-1"
-                            onclick="location.href='{% url 'stop' orgname=instance.organisation reponame=instance.repo_name branch=instance.branch%}'">Stop</button>
+                            onclick="location.href='{% url 'stop' social=instance.social orgname=instance.organisation reponame=instance.repo_name branch=instance.branch%}'">Stop</button>
                         </div>
                     </div>
                 {% endfor %}

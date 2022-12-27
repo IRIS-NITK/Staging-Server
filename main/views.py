@@ -19,14 +19,14 @@ response_footer = loader.get_template("response_footer.html")
 def home(response):
     # Example of how to get the access token for a particular provider
     # PyGithub: https://pygithub.readthedocs.io/en/latest/introduction.html
-    gh_access_token_set = SocialToken.objects.filter(account__user=response.user, account__provider='github')
-    if (len(gh_access_token_set) == 0):
-        print("No Github Access Token")
-    else:
-        g = Github(gh_access_token_set.first().__str__())
-        print("1", g.get_user().login)
-        for repo in g.get_user().get_orgs():
-                print(repo.name)
+    # gh_access_token_set = SocialToken.objects.filter(account__user=response.user, account__provider='github')
+    # if (len(gh_access_token_set) == 0):
+    #     print("No Github Access Token")
+    # else:
+    #     g = Github(gh_access_token_set.first().__str__())
+    #     print("1", g.get_user().login)
+    #     for repo in g.get_user().get_orgs():
+    #             print(repo.name)
 
     gl_access_token_set = SocialToken.objects.filter(account__user=response.user, account__provider='gitlab')
     if (len(gl_access_token_set) == 0):
@@ -37,7 +37,7 @@ def home(response):
         try:
             gl.auth()
         except:
-            return redirect("account_login")
+            return redirect("account_logout")
         print("2", gl.user.emails.list())
     return render(response, "main/home.html")
 
@@ -249,7 +249,7 @@ def logs(request,branch,reponame,orgname):
         return render(request,'failure.html')
 
 @login_required(login_url='/accounts/login/')
-def stop(request,orgname,reponame,branch):
+def stop(request,social,orgname,reponame,branch):
     def generate_stream():
         yield response_header.render({"purpose": "stopping"})
         yield "<pre><code >"
@@ -258,10 +258,17 @@ def stop(request,orgname,reponame,branch):
             yield from stop_container(branch,reponame,orgname)
             yield "</code></pre>"
             instance.delete()
+            yield response_footer.render(
+                    {"status_message": "The server was stopped successfully",
+                    'social':social
+                    }
+                )
         except ObjectDoesNotExist:
             yield "</code></pre>"
             yield response_footer.render(
-                    {"status_message": "The server failed to stop properly"}
+                    {"status_message": "The server failed to stop properly",
+                    'social':social
+                    }
                 )
     response = StreamingHttpResponse(generate_stream())
     del response["Content-Length"]
