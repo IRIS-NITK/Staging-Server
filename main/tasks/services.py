@@ -18,6 +18,7 @@ Folder structure
     ├── org2
     └── usr1
 
+All functions return a tuple (success, message), the message is either the container id or the error message/logs 
 """
 from subprocess import PIPE, run
 import os
@@ -190,6 +191,32 @@ def start_web_container(container_name,org_name, repo_name, branch_name, docker_
     running_instance.save() 
     return True, res.stdout.decode('utf-8')
 
+def start_container(org_name, repo_name, branch_name, docker_image, external_port, container_name = None, internal_port = 3000, docker_network = None, volumes = {}, env_variables = {}):
+
+    command = ["docker", "run"]
+    command.extend(["-d", "-p", f"{external_port}:{internal_port}"])
+    for src, dest in volumes.items():
+        command.extend(["-v", f"{src}:{dest}"])
+    for k, v in env_variables.items():
+        command.extend(["--env", f"{k}={v}"])
+    if container_name:
+        command.extend(["--name", container_name])
+    if docker_network:
+        command.extend(["--network", docker_network])
+    command.extend(["--detach"]) 
+    # command.extend(["--rm"]) # uncomment this to remove container after it stops
+
+    command.extend([docker_image])
+
+    res = run(
+        command,
+        stdout=PIPE,
+        stderr=PIPE,
+        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}"
+    )
+    if res.returncode != 0:
+        return False, res.stderr.decode('utf-8')
+    return True, res.stdout.decode('utf-8') 
 
 @shared_task(bind=True)
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None,DEFAULT_BRANCH = "main"):
