@@ -191,8 +191,11 @@ def start_web_container(container_name,org_name, repo_name, branch_name, docker_
     running_instance.save() 
     return True, res.stdout.decode('utf-8')
 
-def start_container(org_name, repo_name, branch_name, docker_image, external_port, container_name = None, internal_port = 3000, docker_network = None, volumes = {}, env_variables = {}):
 
+def start_container(org_name, repo_name, branch_name, docker_image, external_port, container_name = None, internal_port = 3000, docker_network = None, volumes = {}, env_variables = {}):
+    """
+    Generalised function to start a container for any service
+    """
     command = ["docker", "run"]
     command.extend(["-d", "-p", f"{external_port}:{internal_port}"])
     for src, dest in volumes.items():
@@ -217,6 +220,29 @@ def start_container(org_name, repo_name, branch_name, docker_image, external_por
     if res.returncode != 0:
         return False, res.stderr.decode('utf-8')
     return True, res.stdout.decode('utf-8') 
+
+def create_network(network_name):
+    res = run(
+        ["docker", "network", "create", network_name],
+        stdout=PIPE,
+        stderr=PIPE,
+    )
+    if res.returncode != 0:
+        return False, res.stderr.decode('utf-8')
+    return True, res.stdout.decode('utf-8')
+
+def attach_container_to_network(container_id, network_name):
+    """
+    Attach a container to a network, can use either container name or container id
+    """
+    res = run(
+        ["docker", "network", "connect", network_name, container_id],
+        stdout=PIPE,
+        stderr=PIPE,
+    )
+    if res.returncode != 0:
+        return False, res.stderr.decode('utf-8')
+    return True, res.stdout.decode('utf-8')
 
 @shared_task(bind=True)
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None,DEFAULT_BRANCH = "main"):
@@ -279,9 +305,9 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         docker_image = image_name.lower()
     # start container 
 
-    checkimageexists = run(["docker","image","inspect",docker_image],stdout=PIPE,stderr=PIPE)
+    check_image_exists = run(["docker","image","inspect",docker_image],stdout=PIPE,stderr=PIPE)
 
-    if checkimageexists.returncode != 0:
+    if check_image_exists.returncode != 0:
         res = run(
             ['docker', 'build', '-t', docker_image, "."],
             stdout=PIPE,
@@ -296,9 +322,9 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     
     # # org_name, repo_name, branch_name, docker_image, external_port, internal_port = 80, src_code_dir = None, dest_code_dir = None
     container_name = "iris_dev"+branch_name
-    checkcontainerexists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
+    check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
     f = open(log_file,'a')
-    if checkcontainerexists.returncode !=0:
+    if check_container_exists.returncode !=0:
         f.write("Starting Container")
         res, container_id = start_web_container(
             container_name=container_name,
