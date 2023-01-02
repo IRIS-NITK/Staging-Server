@@ -26,7 +26,7 @@ from celery import shared_task
 from main.models import RunningInstance
 # from app.getport import find_free_port
 from allauth.socialaccount.models import SocialToken
-import sys
+import shutil
 from dotenv import load_dotenv
 from main.tasks.findfreeport import find_free_port
 
@@ -220,7 +220,7 @@ def attach_container_to_network(container_id, network_name):
         return False, res.stderr.decode('utf-8')
     return True, res.stdout.decode('utf-8')
 
-def stop_container(branch_name,repo_name,org_name):
+def stop_container(branch_name, repo_name, org_name):
     yield "Stopping the app\n"
     container_name = "iris_dev"+branch_name
     res = run(["docker","rm","-f",container_name],stdout=PIPE,stderr=PIPE)
@@ -229,6 +229,70 @@ def stop_container(branch_name,repo_name,org_name):
     else:
         yield res.stderr.decode('utf-8')
 
+def clean_up(org_name, repo_name, remove_container = False, remove_volume = False, remove_network = False, remove_image = False, remove_branch_dir = False, remove_all_dir = False, remove_user_dir = False):
+    """
+    Remove all the containers, volumes, networks and images related to the branch
+    """
+    if remove_container:
+        yield f"Removing container {remove_container}\n"
+        res = run(["docker","rm","-f",remove_container],stdout=PIPE,stderr=PIPE)
+        if res.returncode == 0:
+            yield f"Removed container : {remove_container}\n" + res.stdout.decode('utf-8') 
+        else:
+            yield f"Error in removing container : {remove_container}" + res.stderr.decode('utf-8')
+    
+    if remove_volume:
+        yield f"Removing volume : {remove_volume}\n"
+        res = run(["docker","volume","rm",remove_volume],stdout=PIPE,stderr=PIPE)
+        if res.returncode == 0:
+            yield f"Removed volume : {remove_volume}\n" + res.stdout.decode('utf-8')
+        else:
+            yield f"Error in removing volume : {remove_volume}" + res.stderr.decode('utf-8')
+
+    if remove_network:
+        yield f"Removing network : {remove_network}\n"
+        res = run(["docker","network","rm",remove_network],stdout=PIPE,stderr=PIPE)
+        if res.returncode == 0:
+            yield f"Removed network : {remove_network}\n" + res.stdout.decode('utf-8')
+        else:
+            yield f"Error in removing network : {remove_network}" + res.stderr.decode('utf-8')
+    
+    if remove_image:
+        yield f"Removing image : {remove_image}\n"
+        res = run(["docker","image","rm",remove_image],stdout=PIPE,stderr=PIPE)
+        if res.returncode == 0:
+            yield f"Removed image : {remove_image}\n" + res.stdout.decode('utf-8')
+        else:
+            yield f"Error in removing image : {remove_image}" + res.stderr.decode('utf-8')
+
+    if remove_branch_dir:
+        yield f"Removing branch directory : {remove_branch_dir}\n"
+        try:
+            absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{remove_branch_dir}/{repo_name}"
+            shutil.rmtree(absolute_path)
+            yield f"Removed branch directory : {remove_branch_dir}\n"
+        except Exception as e:
+            yield f"Error in removing branch directory : {remove_branch_dir}\n" + str(e)
+        
+    if remove_all_dir:
+        yield f"Removing all directories : {remove_all_dir}\n"
+        try:
+            absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"
+            shutil.rmtree(absolute_path)
+            yield f"Removed all directories : {remove_all_dir}\n"
+        except Exception as e:
+            yield f"Error in removing all directories : {remove_all_dir}\n" + str(e)
+    
+    if remove_user_dir:
+        yield f"Removing user directory : {remove_user_dir}\n"
+        try:
+            absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}"
+            shutil.rmtree(absolute_path)
+            yield f"Removed user directory : {remove_user_dir}\n"
+        except Exception as e:
+            yield f"Error in removing user directory : {remove_user_dir}\n" + str(e)
+    
+    yield "Clean up complete\n"
 
 @shared_task(bind=True)
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "main"):
