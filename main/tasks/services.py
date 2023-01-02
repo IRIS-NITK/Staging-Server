@@ -21,12 +21,12 @@ Folder structure
 All functions return a tuple (success, message), the message is either the container id or the error message/logs 
 """
 from subprocess import PIPE, run
-import os
+import os, subprocess 
 from celery import shared_task
 from main.models import RunningInstance
 # from app.getport import find_free_port
 from allauth.socialaccount.models import SocialToken
-import shutil
+import sys
 from dotenv import load_dotenv
 from main.tasks.findfreeport import find_free_port
 
@@ -35,9 +35,11 @@ load_dotenv()
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
 DEFAULT_BRANCH = "main" # should be a config ideally
 log_file = ""
+NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 
 
-def pull_git(url, org_name, repo_name):
+def pull_git(url, token, org_name, repo_name):
+    
     # get name of repo
     # repo_name = url.split('/')[-1].split('.')[0]
     # main or master ? -> DEFAULT_BRANCH
@@ -45,18 +47,23 @@ def pull_git(url, org_name, repo_name):
     if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}"):
         # org exists, check if repo exists
         if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):
-            # if repo already exists, we just pull latest changes 
-            f = open(log_file,"a")
-            f.write("Repo already exists, pulling latest changes\n")
-            res = run(
-                ['git', 'pull'],
-                stdout=PIPE,
-                stderr=PIPE,
+
+            with open(log_file, "a") as f:
+                f.write("Repo already exists, pulling latest changes\n")
+
+            # subprocess.run(["git", "config", "http.https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git.extraheader", f"AUTHORIZATION: bearer {token}"])
+            # subprocess.run(["git", "config", "--global", "credential.helper", "store"])
+
+            result = subprocess.run(
+                            ['git', 'pull'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}"
             )
-            if res.returncode != 0:
-                return False,res.stderr.decode('utf-8')
-            return True,res.stdout.decode('utf-8')
+
+            if result.returncode != 0:
+                return False, result.stderr.decode('utf-8')
+            return True, result.stdout.decode('utf-8')
         else:
             # repo does not exist , could be a new repo , so clone it
             os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}")
@@ -127,7 +134,6 @@ def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind
     ])
     
     """
-
     command = ["docker", "run"] 
     if db_name:
         command.extend(["--name", db_name])
@@ -136,7 +142,7 @@ def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind
     if volume_name and volume_bind_path:
         command.extend(["-v", f"{volume_name}:{volume_bind_path}"])
     if db_env_variables:
-        command.extend(["--env", *[f"{k}={v}" for k,v in db_env_variables.items()]])
+        command.extend([*db_env_variables])
     if network_name:
         command.extend(["--network", network_name])
     command.extend(["--detach", "--rm", db_image])
@@ -147,15 +153,19 @@ def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind
         stderr=PIPE,
     )    
     if res.returncode != 0:
+        print(res.stderr.decode('utf-8'))
         return False, res.stderr.decode('utf-8')
     return True, res.stdout.decode('utf-8')
 
- 
 
-def start_container(container_name, org_name, repo_name, branch_name, docker_image, external_port, internal_port = 3000, docker_network = None, volumes = {}, env_variables = {}):
+def start_container(container_name, org_name, repo_name, branch_name, docker_image, external_port, internal_port = 3000, docker_network = "IRIS", volumes = {}, env_variables = {}):
     """
     Generalised function to start a container for any service
     """
+    # volume_args = []
+    # for host_path, container_path in volumes.items():
+    #     volume_args.append(f"{host_path}:{container_path}")
+
     command = ["docker", "run"]
     command.extend(["-d", "-p", f"{external_port}:{internal_port}"])
     for src, dest in volumes.items():
@@ -180,6 +190,7 @@ def start_container(container_name, org_name, repo_name, branch_name, docker_ima
     running_instance = RunningInstance.objects.get(branch=branch_name,repo_name=repo_name,organisation=org_name)
     if res.returncode != 0:
         running_instance.status = RunningInstance.STATUS_ERROR
+        print(res.stderr.decode('utf-8'))
         return False, res.stderr.decode('utf-8')
     else:
         running_instance.status = RunningInstance.STATUS_SUCCESS
@@ -209,7 +220,7 @@ def attach_container_to_network(container_id, network_name):
         return False, res.stderr.decode('utf-8')
     return True, res.stdout.decode('utf-8')
 
-def stop_container(branch_name, repo_name, org_name):
+def stop_container(branch_name,repo_name,org_name):
     yield "Stopping the app\n"
     container_name = "iris_dev"+branch_name
     res = run(["docker","rm","-f",container_name],stdout=PIPE,stderr=PIPE)
@@ -218,84 +229,21 @@ def stop_container(branch_name, repo_name, org_name):
     else:
         yield res.stderr.decode('utf-8')
 
-def clean_up(org_name, repo_name, remove_container = False, remove_volume = False, remove_network = False, remove_image = False, remove_branch_dir = False, remove_all_dir = False, remove_user_dir = False):
-    """
-    Remove all the containers, volumes, networks and images related to the branch
-    """
-    if remove_container:
-        yield f"Removing container {remove_container}\n"
-        res = run(["docker","rm","-f",remove_container],stdout=PIPE,stderr=PIPE)
-        if res.returncode == 0:
-            yield f"Removed container : {remove_container}\n" + res.stdout.decode('utf-8') 
-        else:
-            yield f"Error in removing container : {remove_container}" + res.stderr.decode('utf-8')
-    
-    if remove_volume:
-        yield f"Removing volume : {remove_volume}\n"
-        res = run(["docker","volume","rm",remove_volume],stdout=PIPE,stderr=PIPE)
-        if res.returncode == 0:
-            yield f"Removed volume : {remove_volume}\n" + res.stdout.decode('utf-8')
-        else:
-            yield f"Error in removing volume : {remove_volume}" + res.stderr.decode('utf-8')
-
-    if remove_network:
-        yield f"Removing network : {remove_network}\n"
-        res = run(["docker","network","rm",remove_network],stdout=PIPE,stderr=PIPE)
-        if res.returncode == 0:
-            yield f"Removed network : {remove_network}\n" + res.stdout.decode('utf-8')
-        else:
-            yield f"Error in removing network : {remove_network}" + res.stderr.decode('utf-8')
-    
-    if remove_image:
-        yield f"Removing image : {remove_image}\n"
-        res = run(["docker","image","rm",remove_image],stdout=PIPE,stderr=PIPE)
-        if res.returncode == 0:
-            yield f"Removed image : {remove_image}\n" + res.stdout.decode('utf-8')
-        else:
-            yield f"Error in removing image : {remove_image}" + res.stderr.decode('utf-8')
-
-    if remove_branch_dir:
-        yield f"Removing branch directory : {remove_branch_dir}\n"
-        try:
-            absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{remove_branch_dir}/{repo_name}"
-            shutil.rmtree(absolute_path)
-            yield f"Removed branch directory : {remove_branch_dir}\n"
-        except Exception as e:
-            yield f"Error in removing branch directory : {remove_branch_dir}\n" + str(e)
-        
-    if remove_all_dir:
-        yield f"Removing all directories : {remove_all_dir}\n"
-        try:
-            absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"
-            shutil.rmtree(absolute_path)
-            yield f"Removed all directories : {remove_all_dir}\n"
-        except Exception as e:
-            yield f"Error in removing all directories : {remove_all_dir}\n" + str(e)
-    
-    if remove_user_dir:
-        yield f"Removing user directory : {remove_user_dir}\n"
-        try:
-            absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}"
-            shutil.rmtree(absolute_path)
-            yield f"Removed user directory : {remove_user_dir}\n"
-        except Exception as e:
-            yield f"Error in removing user directory : {remove_user_dir}\n" + str(e)
-    
-    yield "Clean up complete\n"
-
 
 @shared_task(bind=True)
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "main"):
+    
 
     global log_file
     log_file = PATH_TO_HOME_DIR+"/"+org_name+"/"+repo_name+"/"+DEFAULT_BRANCH+"/"+branch_name+".txt"
 
     # pull git repo
-    result,msg = pull_git(url,repo_name=repo_name, org_name=org_name)
+    result,msg = pull_git(url,token,repo_name=repo_name, org_name=org_name)
     f = open(log_file,'a')
     f.write(msg)
     if not result:
         return False, msg 
+
 
     # get branches
     res, branches  = get_git_branches(repo_name, org_name=org_name)
@@ -312,7 +260,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     # checkout branch
     res = checkout_git_branch(repo_name, branch_name=branch_name, org_name=org_name)
     f = open(log_file,'a')
-    f.write(res[1])
+    # f.write(res[1])
     if not res[0]:
         return False, res[1]
     
@@ -343,12 +291,30 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         
     image_name = ""
     docker_image = ""
-    if social == 'gitlab':
-        docker_image = "git-registry.iris.nitk.ac.in/iris-nitk/iris/iris-base-dev"
+    if url == 'https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git':
+        docker_image = "dev-iris23"
     else:
         image_name = org_name+"/"+repo_name+":"+branch_name
         docker_image = image_name.lower()
     # start container 
+    db_image = "mysql:5.7"
+    env_var_args = {
+                "MYSQL_ROOT_PASSWORD": "root",
+                "MYSQL_DATABASE": "dev",
+                "MYSQL_USER": "dev123",
+                "MYSQL_PASSWORD": "dev123",
+    }
+
+    db_env_variables = []
+
+    for key, value in env_var_args.items():
+        db_env_variables.extend(["--env", f"{key}={value}"])
+
+    db_name = "db"
+    f.write("Starting Database Container"+"\n")
+    res, msg = start_db_container(db_image, "db", None, None, None, db_env_variables, "IRIS")
+    f.write(msg+"\n")
+
 
     check_image_exists = run(["docker","image","inspect",docker_image],stdout=PIPE,stderr=PIPE)
 
@@ -366,10 +332,25 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     
     
     # # org_name, repo_name, branch_name, docker_image, external_port, internal_port = 80, src_code_dir = None, dest_code_dir = None
-    container_name = "iris_dev"+branch_name
+    container_name = org_name  + repo_name  + branch_name
     check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
     external_port = find_free_port()
+    
+
+    if org_name == "NITK-IRIS":
+        src = f'{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/' + "config/initializers"
+        res = run(["cp","/home/jokesta/Desktop/nitk_setting.rb",src],stdout=PIPE,stderr=PIPE)
+        res = run(["cp","/home/jokesta/Desktop/secret_token.rb",src],stdout=PIPE,stderr=PIPE)
+        src = f'{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/'
+        dest = "/iris-data/" 
+        volumes = {
+             src : dest,
+        }
+        env_variables = {
+            "RAILS_ENV": "development"
+        }
     f = open(log_file,'a')
+
     if check_container_exists.returncode !=0:
         #create container under newtork="abc"
         #create database container under network ='abc'
@@ -382,18 +363,20 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             docker_image=docker_image,
             external_port=external_port,
             internal_port=internal_port,
-            volumes=volumes
+            volumes=volumes,
+            env_variables=env_variables
         )
+        f.write(container_id+"\n")
     else:
         f.write("Removing Exisiting Container"+"\n")
         res1 = run(
-            ["docker","rm",container_name],
+            ["docker","rm","-f",container_name],
             stdout=PIPE,
             stderr=PIPE
         )
 
         if res1.returncode != 0:
-            f.write("\nError : \n",res1.stderr.decode('utf-8')+"\n")
+            f.write("\nError : \n"+res1.stderr.decode('utf-8')+"\n")
             return False, res1.stderr.decode('utf-8')
 
         f.write("Starting Container"+"\n")
@@ -406,8 +389,17 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         docker_image=docker_image,
         external_port=external_port,
         internal_port=internal_port,
-        volumes=volumes
+        volumes=volumes,
+        env_variables=env_variables
         )
+        
+        f.write(container_id+"\n")
 
+    #nginx config 
 
+    res = run(
+            ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(org_name),str(repo_name),str(branch_name), str(external_port)],
+            stdout=PIPE,
+            stderr=PIPE,
+        )
 

@@ -275,3 +275,18 @@ def stop(request,social,orgname,reponame,branch):
     response["Cache-Control"] = "no-cache"
     response["X-Accel-Buffering"] = "no"
     return response
+
+@login_required(login_url='/accounts/login/')
+def getcontainerlogs(request,social,orgname,reponame,branch):
+    container_name = "iris_dev"+ branch
+    command = ["docker", "logs", "-f", container_name]
+    process = subprocess.Popen(command, stdout=subprocess.PIPE)
+    logs = ""
+    while True:
+        output = process.stdout.readline()
+        if output == b'':
+            break
+        logs += output.decode('utf-8')
+    # template = Template("{{ logs }}")
+    context = {"data": logs,"social":social}
+    return HttpResponse(log_template.render(context))

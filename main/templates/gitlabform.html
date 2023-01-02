@@ -21,8 +21,8 @@
                 {% for instance in instances %}
                     <div class="list-group-item status">
                         <div style="display: flex; align-items: center; ">
-                            <a 
-                            class="mx-2" target="_blank" 
+                            <a href="http://abc-{{ instance.branch | lower}}"
+                            class="mx-2" target="_blank"
                             style="display: flex; align-items: center;">
                             {{instance.branch}}
                         </a>
@@ -35,8 +35,10 @@
                                 onclick="location.href='{% url 'deploy' org_name=instance.organisation repo_name=instance.repo_name branch=instance.branch social=instance.social%}'">Redeploy</button>
                             <button type="button" class="btn btn-outline-info btn-sm mx-1"
                                 onclick="location.href='{% url 'logs' orgname=instance.organisation reponame=instance.repo_name branch=instance.branch social=instance.social%}'">Logs</button>
+                            <button type="button" class="btn btn-outline-info btn-sm mx-1"
+                                onclick="location.href='{% url 'containerlogs' social=instance.social orgname=instance.organisation reponame=instance.repo_name branch=instance.branch %}'">Container Logs</button>    
                             <button type="button" class="btn btn-outline-danger btn-sm mx-1"
-                            onclick="location.href='{% url 'stop' social=instance.social orgname=instance.organisation reponame=instance.repo_name branch=instance.branch%}'">Stop</button>
+                                onclick="location.href='{% url 'stop' social=instance.social orgname=instance.organisation reponame=instance.repo_name branch=instance.branch%}'">Stop</button>
                         </div>
                     </div>
                 {% endfor %}
