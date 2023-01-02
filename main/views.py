@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from allauth.socialaccount.models import SocialToken
 from github import Github
-import gitlab,json,time,os
+import gitlab,json,time,os,subprocess
 from django.http import HttpResponse,StreamingHttpResponse
 from django.shortcuts import render,redirect
 from main.tasks.services import deploy_from_git,stop_container
@@ -13,6 +13,7 @@ from django.template import Context, loader
 
 response_header = loader.get_template("response_header.html")
 response_footer = loader.get_template("response_footer.html")
+log_template = loader.get_template("log.html")
 
 # Create your views here.
 @login_required(login_url='/accounts/login/')
