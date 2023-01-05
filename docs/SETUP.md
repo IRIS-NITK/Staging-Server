@@ -45,3 +45,9 @@
     * Copy the Client ID and a Client secret from Github into Client ID and Secret key
     * Double click on localhost:8000 to move it into **Chosen sites** and click **SAVE**
         ![image-4.png](./images/image-4.png)
+
+# Celery Setup
+
+11. In another terminal in root of your project directory run command 
+
+> `celery -A "name_of_project" worker -l info`
