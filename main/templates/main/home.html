@@ -1,11 +1,12 @@
+{% extends 'base.html' %}
+
+
 {% block content %}
-	<h1>Home</h1>
-	<form action={% url 'form_wrap' %} method="post">
-		{% csrf_token %}
-	<button name="social" value="Github">Github</button>
-	</form>
+
 		<form action={% url 'form_wrap' %} method="post">
 			{% csrf_token %}
-		<button name="social" value="Gitlab">Gitlab</button>
-	</form>
+		<button name="social" value="Gitlab">Connect Gitlab/Github</button>
+		</form>
+
+	
 {% endblock %}

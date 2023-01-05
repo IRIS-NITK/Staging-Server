@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from allauth.socialaccount.models import SocialToken
 from github import Github
-import gitlab,json,time,os,subprocess
+import gitlab,json,time,os
 from django.http import HttpResponse,StreamingHttpResponse
 from django.shortcuts import render,redirect
 from main.tasks.services import deploy_from_git,stop_container
@@ -10,12 +10,25 @@ from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from main.models import RunningInstance
 from django.template import Context, loader
+from .forms import DeployTemplateForm
+from .models import DeployTemplate
 
 response_header = loader.get_template("response_header.html")
 response_footer = loader.get_template("response_footer.html")
-log_template = loader.get_template("log.html")
 
 # Create your views here.
+
+@login_required
+def deploy_template_form(request):
+    if request.method == 'POST':
+        form = DeployTemplateForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('/')
+    else:
+        form = DeployTemplateForm()
+    return render(request, 'template_form.html', {'form': form})
+
 @login_required(login_url='/accounts/login/')
 def home(response):
     # Example of how to get the access token for a particular provider
@@ -40,7 +53,9 @@ def home(response):
         except:
             return redirect("account_logout")
         print("2", gl.user.emails.list())
-    return render(response, "main/home.html")
+    
+    templates = DeployTemplate.objects.all()
+    return render(response, "main/home.html", context={"templates": templates})
 
 
 @login_required(login_url='/accounts/login/')
@@ -65,7 +80,6 @@ def form_wrapper(request):
 def form(request,social):
 
     account__provider = social
-    social = social.capitalize()
     if social == "Github":
         gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
         g = Github(gh_access_token_set.first().__str__())
@@ -77,8 +91,7 @@ def form(request,social):
         for i in o:
             orgs_name[val] = i.name
             val+=1
-        instances = RunningInstance.objects.filter(social='github')
-        print(instances)
+        instances = RunningInstance.objects.filter(social=social,organisation=orgs_name)
         return render(request,'form.html',{'instances':instances,'orgs_name':orgs_name})
     else:
         gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
@@ -278,18 +291,3 @@ def stop(request,social,orgname,reponame,branch):
     response["Cache-Control"] = "no-cache"
     response["X-Accel-Buffering"] = "no"
     return response
-
-@login_required(login_url='/accounts/login/')
-def getcontainerlogs(request,social,orgname,reponame,branch):
-    container_name = "iris_dev"+ branch
-    command = ["docker", "logs", "-f", container_name]
-    process = subprocess.Popen(command, stdout=subprocess.PIPE)
-    logs = ""
-    while True:
-        output = process.stdout.readline()
-        if output == b'':
-            break
-        logs += output.decode('utf-8')
-    # template = Template("{{ logs }}")
-    context = {"data": logs,"social":social}
-    return HttpResponse(log_template.render(context))
