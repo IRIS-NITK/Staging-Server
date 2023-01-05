@@ -42,7 +42,7 @@ INSTALLED_APPS = [
 
     'main.apps.MainConfig',
     'crispy_forms',
-    'crispy_bootstrap5',
+    # 'crispy_bootstrap5',
     "allauth_ui",
     'allauth',
     'allauth.account',
@@ -64,7 +64,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'stagingserver.urls'
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -142,8 +141,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'assests')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-CRISPY_TEMPLATE_PACK = "bootstrap5"
+# CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+# CRISPY_TEMPLATE_PACK = "bootstrap5"
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
