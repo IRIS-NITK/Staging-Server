@@ -36,7 +36,7 @@ PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
 DEFAULT_BRANCH = "main" # should be a config ideally
 log_file = ""
 NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
-
+NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 
 def pull_git(url, token, org_name, repo_name):
     
@@ -224,6 +224,8 @@ def stop_container(branch_name, repo_name, org_name):
     yield "Stopping the app\n"
     container_name = "iris_dev"+branch_name
     res = run(["docker","rm","-f",container_name],stdout=PIPE,stderr=PIPE)
+    yield "Removing Nginx Script\n"
+    res = run(["sudo","bash",NGINX_REMOVE_CONFIG_SCRIPT,branch_name],stdout=PIPE,stderr=PIPE)
     if res.returncode == 0:
         yield res.stdout.decode('utf-8')
     else:
@@ -356,7 +358,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     image_name = ""
     docker_image = ""
     if url == 'https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git':
-        docker_image = "dev-iris23"
+        docker_image = "dev-iris25"
     else:
         image_name = org_name+"/"+repo_name+":"+branch_name
         docker_image = image_name.lower()
@@ -399,7 +401,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     container_name = org_name  + repo_name  + branch_name
     check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
     external_port = find_free_port()
-    
+    env_variables = {}
 
     if org_name == "NITK-IRIS":
         src = f'{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/' + "config/initializers"
@@ -462,7 +464,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     #nginx config 
 
     res = run(
-            ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(org_name),str(repo_name),str(branch_name), str(external_port)],
+            ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT,str(branch_name), str(external_port)],
             stdout=PIPE,
             stderr=PIPE,
         )
