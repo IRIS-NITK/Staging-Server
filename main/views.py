@@ -65,6 +65,7 @@ def form_wrapper(request):
 def form(request,social):
 
     account__provider = social
+    social = social.capitalize()
     if social == "Github":
         gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
         g = Github(gh_access_token_set.first().__str__())
@@ -76,7 +77,8 @@ def form(request,social):
         for i in o:
             orgs_name[val] = i.name
             val+=1
-        instances = RunningInstance.objects.filter(social=social,organisation=orgs_name)
+        instances = RunningInstance.objects.filter(social='github')
+        print(instances)
         return render(request,'form.html',{'instances':instances,'orgs_name':orgs_name})
     else:
         gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
