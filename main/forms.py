@@ -4,7 +4,7 @@ from .models import DeployTemplate
 class DeployTemplateForm(forms.ModelForm):
     class Meta:
         model = DeployTemplate
-        fields = ('name','social_type', 'organisation_or_user', 'git_repo_url', 'access_token', 'default_branch', 'docker_image', 'docker_network', 'docker_volumes', 'internal_port', 'dockerfile_path')
+        fields = ('name','social_type', 'organisation_or_user', 'git_repo_url', 'access_token', 'default_branch', 'docker_image','docker_env_vars', 'docker_network', 'docker_volumes', 'internal_port', 'dockerfile_path')
 
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -15,6 +15,7 @@ class DeployTemplateForm(forms.ModelForm):
             'docker_image': forms.TextInput(attrs={'class': 'form-control'}),
             'docker_network': forms.TextInput(attrs={'class': 'form-control'}),
             'docker_volumes': forms.Textarea(attrs={'class': 'form-control'}),
+            'docker_env_vars': forms.Textarea(attrs={'class': 'form-control'}),
             'internal_port': forms.NumberInput(attrs={'class': 'form-control'}),
             'dockerfile_path': forms.TextInput(attrs={'class': 'form-control'}),
         }

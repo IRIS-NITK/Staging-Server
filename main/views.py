@@ -130,7 +130,7 @@ def form(request,social):
         for i in projects:
             repos[val] = i.name
             val+=1
-        instances = RunningInstance.objects.filter(owner=request.user.username)
+        instances = RunningInstance.objects.all()
         return render(request,'gitlabform.html',{'instances':instances,'repos':repos})
     
 @login_required(login_url='/accounts/login/')
