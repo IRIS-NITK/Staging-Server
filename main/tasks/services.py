@@ -26,7 +26,7 @@ from celery import shared_task
 from main.models import RunningInstance
 # from app.getport import find_free_port
 from allauth.socialaccount.models import SocialToken
-import shutil,git
+import shutil
 from dotenv import load_dotenv
 from main.tasks.findfreeport import find_free_port
 
@@ -295,6 +295,147 @@ def clean_up(org_name, repo_name, remove_container = False, remove_volume = Fals
     yield "Clean up complete\n"
 
 @shared_task(bind=True)
+def deploy_from_git_template(self, token, url, social, org_name, repo_name, branch_name, internal_port, docker_image, dockerfile_path, docker_volumes = {}, docker_env_variables = {}, default_branch = "main", docker_network = None):
+    global log_file
+    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{default_branch}/{branch_name}.txt"
+
+    # pull git repo
+    result,msg = pull_git(url,token,repo_name=repo_name, org_name=org_name)
+    logfile = open(log_file,'a')
+    logfile.write(msg)
+    if not result:
+        logfile.write("Error in pulling git repo\ndeploy_from_git_template->pull_git\n")
+        logfile.close()
+        return False, msg
+    
+    # get branches
+    res, branches  = get_git_branches(repo_name, org_name)
+    logfile.write(branches)
+    if not res:
+        logfile.write("Error in getting branches\nget_git_branches->deploy_from_git_template\n")
+        logfile.close()
+        return False, branches
+    
+    # check if branch exists
+    if branch_name not in branches:
+        logfile.write("Branch does not exist in git repo\n")
+        logfile.close()
+        return False, "Branch does not exist in git repo"
+    
+    # checkout branch
+    res, msg = checkout_git_branch(repo_name, branch_name, org_name)
+    logfile.write(msg)
+    if not res:
+        logfile.write("Error in checking out branch\ndeploy_from_git_template->checkout_git_branch\n")
+        logfile.close()
+        return False, msg
+    
+    # check if branch was already deployed previously
+    if branch_name not in os.listdir(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):
+        # branch was not deployed previously
+        logfile.write("Branch was not deployed previously\n")
+        # create a new directory for the branch
+        logfile.write(f"Creating a new directory for the branch : {PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}\n")
+        os.mkdir(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
+        # copy the code from the default branch to the new branch
+        if len(docker_volumes) == 0:
+            res = run(
+                ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}/", f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/"],
+                stdout=PIPE,
+                stderr=PIPE
+            )
+            if res.returncode != 0:
+                logfile.write("Error while copying code from default branch to new branch\ndeploy_from_git_template->run->cp\n")
+                logfile.close()
+                return False, "Error while copying code from default branch to new branch\n" + res.stderr.decode('utf-8')
+        else:
+            for src_folder, dest_folder in docker_volumes.items():
+                res = run(
+                    ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}/{src_folder}", f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{dest_folder}"],
+                    stdout=PIPE,
+                    stderr=PIPE
+                )
+                if res.returncode != 0:
+                    return False, "Error while mounting code, incorrect mapping\n" + res.stderr.decode('utf-8')
+    
+        
+    if docker_image == None:
+        
+        if dockerfile_path == None:
+            logfile.write("Dockerfile not provided\n")
+            logfile.close()
+            return False, "Dockerfile not provided"
+        logfile.write(f"Docker image not provided, building image from {dockerfile_path}\n")
+        docker_image = f"{org_name}/{repo_name}:{branch_name}"
+        res = run(
+            ['docker', 'build', '-t', docker_image, "."],
+            stdout=PIPE,
+            stderr=PIPE,
+            cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
+        )
+        if res.returncode != 0:
+            logfile.write("Error while building docker image\ndeploy_from_git_template->run->docker build\n")
+            logfile.close()
+            return False, "Error while building docker image\n" + res.stderr.decode('utf-8')
+        else:
+            logfile.write(f"Docker image built successfully\ntagged : {docker_image}\n")
+    
+    logfile.write(f"Starting container {docker_image}\n")
+    
+
+    """
+    start_container(container_name, org_name, repo_name, branch_name, docker_image, external_port, internal_port = 3000, docker_network = "IRIS", volumes = {}, env_variables = {}):
+    """
+    
+    # # org_name, repo_name, branch_name, docker_image, external_port, internal_port = 80, src_code_dir = None, dest_code_dir = None
+    prefix = "iris"
+    container_name = f"{prefix}_{org_name}_{repo_name}_{branch_name}"
+    
+    check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
+
+    external_port = find_free_port()
+    if check_container_exists.returncode == 0:
+        logfile.write(f"Container already exists : {container_name}\n")
+        logfile.write(f"Removing existing container : {container_name}\n")
+        res = run(
+            ["docker","rm","-f",container_name],
+            stdout=PIPE,
+            stderr=PIPE
+        )
+        if res.returncode != 0:
+            logfile.write("Error while removing existing container\ndeploy_from_git_template->run->docker rm\n")
+            logfile.close()
+            return False, "Error while removing existing container\n" + res.stderr.decode('utf-8')
+        logfile.write(f"Existing container removed : {container_name}\n")
+    
+    logfile.write(f"Starting container : {container_name}\n")
+    res, container_id = start_container(
+        container_name=container_name,
+        org_name=org_name,
+        repo_name=repo_name,
+        branch_name=branch_name,
+        docker_image=docker_image,
+        external_port=external_port,
+        internal_port=internal_port,
+        volumes=docker_volumes,
+        env_variables=docker_env_variables,
+        docker_network=docker_network
+    )
+
+    if not res:
+        logfile.write(f"Error while starting container : {container_name}\n")
+        logfile.close()
+        return False, container_id
+    
+    logfile.write(f"Container started successfully \ncontainer name : {container_name}\ncontainer id : {container_id}\n")
+
+    # res = run(
+    #         ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT,str(branch_name), str(external_port)],
+    #         stdout=PIPE,
+    #         stderr=PIPE,
+    #     )
+
+@shared_task(bind=True)
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "main"):
     
 
@@ -464,4 +605,5 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             stdout=PIPE,
             stderr=PIPE,
         )
+
 
