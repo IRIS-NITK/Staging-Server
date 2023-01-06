@@ -5,7 +5,7 @@ from github import Github
 import gitlab,json,time,os,subprocess
 from django.http import HttpResponse,StreamingHttpResponse
 from django.shortcuts import render,redirect
-from main.tasks.services import deploy_from_git,stop_container
+from main.tasks.services import deploy_from_git, stop_container, deploy_from_git_template
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from main.models import RunningInstance
@@ -17,7 +17,6 @@ response_header = loader.get_template("response_header.html")
 response_footer = loader.get_template("response_footer.html")
 log_template = loader.get_template("log.html")
 
-# Create your views here.
 
 @login_required
 def deploy_template_list(request):
@@ -35,6 +34,7 @@ def deploy_template_form(request):
         form = DeployTemplateForm()
     return render(request, 'template_form.html', {'form': form})
 
+@login_required
 def deploy_template_update(request, pk):
     template = DeployTemplate.objects.get(pk=pk)
     if request.method == 'POST':
@@ -46,11 +46,59 @@ def deploy_template_update(request, pk):
         form = DeployTemplateForm(instance=template)
     return render(request, 'template_form.html', {'form': form})
 
+@login_required
 def deploy_template_delete(request, pk):
     template = DeployTemplate.objects.get(pk=pk)
     template.delete()
     return redirect('list_templates')
-    
+
+@login_required  
+def deploy_from_template(request, access_token, social, org_name, repo_name, repo_url, branch_name, internal_port, docker_image, dockerfile_path, docker_volumes, docker_env_variables, default_branch, docker_network):
+    if request.method == 'POST':
+        try:
+            instance = RunningInstance.objects.get(
+                social=social,organisation=org_name,repo_name=repo_name,branch= branch_name
+            )
+            instance.owner = request.user.username
+            instance.update_time = time.time()
+            instance.status = RunningInstance.STATUS_PENDING
+            instance.save()
+        except ObjectDoesNotExist:
+            instance = RunningInstance(
+                social=social,
+                organisation=org_name,
+                repo_name=repo_name,
+                branch= branch_name,
+                owner=request.user.username,
+                update_time=time.time(),
+                status = RunningInstance.STATUS_PENDING
+            )
+            instance.save()
+
+        res, logs = deploy_from_git_template.delay(
+            token = access_token,
+            social = social,
+            org_name = org_name,
+            repo_name = repo_name,
+            repo_url = repo_url,
+            branch_name = branch_name,
+            internal_port = internal_port,
+            docker_image = docker_image,
+            dockerfile_path = dockerfile_path,
+            docker_volumes = docker_volumes,
+            docker_env_variables = docker_env_variables,
+            default_branch = default_branch,
+            docker_network = docker_network
+        )
+
+        if res:
+            instance.status = RunningInstance.STATUS_RUNNING
+            instance.save()
+        else:
+            instance.status = RunningInstance.STATUS_ERROR
+            instance.save()
+    return render(request, 'main/home.html')
+
 @login_required(login_url='/accounts/login/')
 def home(response):
     # Example of how to get the access token for a particular provider
@@ -76,8 +124,7 @@ def home(response):
             return redirect("account_logout")
         print("2", gl.user.emails.list())
     
-    templates = DeployTemplate.objects.all()
-    return render(response, "main/home.html", context={"templates": templates})
+    return render(response, "main/home.html")
 
 
 @login_required(login_url='/accounts/login/')
@@ -261,7 +308,6 @@ def deploy(request,org_name,repo_name,branch,social):
         instance = RunningInstance.objects.get(social=social,organisation=org_name,repo_name=repo_name,branch= branch)
         instance.owner = request.user.username
         instance.update_time = time.time()
-        instance.reponame = repo_name
         instance.save()
     except ObjectDoesNotExist:
         instance = RunningInstance(
