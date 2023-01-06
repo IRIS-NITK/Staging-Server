@@ -153,7 +153,7 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-SITE_ID = 3
+SITE_ID = 2
 
 SOCIALACCOUNT_PROVIDERS = {
     # https://django-allauth.readthedocs.io/en/latest/providers.html#github
