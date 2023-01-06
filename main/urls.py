@@ -30,5 +30,9 @@ urlpatterns = [
     path("logs/<orgname>/<reponame>/<branch>/<social>",views.logs,name="logs"),
     path('deploy/<org_name>/<repo_name>/<branch>/<social>',views.deploy,name="deploy"),
     path('stop/<social>/<orgname>/<reponame>/<branch>',views.stop,name='stop'),
-    path('deploy_template_new/', views.deploy_template_form, name='deploy_template_form')
+
+    path('deploy_template_list', views.deploy_template_list, name="deploy_template_list"),
+    path('deploy_template_new/', views.deploy_template_form, name='deploy_template_form'),
+    path('deploy_template_update/<int:pk>/', views.deploy_template_update, name='deploy_template_update'),
+    path('deploy_template_delete/<int:pk>/', views.deploy_template_delete, name='deploy_template_delete'),
 ]

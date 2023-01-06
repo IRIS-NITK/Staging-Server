@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  {% for template in templates %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <h3 class="card-title">{{ template.name }}</h5>
+        <p class="card-text text-muted">Description: <span class="font-weight-bold text-truncate">{{ template.social_type }}</span></p>
+        <p class="card-text text-muted">Organisation or User: <span class="font-weight-bold text-truncate">{{ template.organisation_or_user }}</span></p>
+        <p class="card-text text-muted">Git URL: <span class="font-weight-bold text-truncate">{{ template.git_repo_url }}</span></p>
+        <p class="card-text text-muted">Default Branch: <span class="font-weight-bold text-truncate">{{ template.default_branch }}</span></p>
+        <p class="card-text text-muted">Docker Image: <span class="font-weight-bold text-truncate">{{ template.docker_image }}</span></p>
+        <p class="card-text text-muted">Docker Network: <span class="font-weight-bold text-truncate">{{ template.docker_network }}</span></p>
+        <p class="card-text text-muted">Docker Volumes: <span class="font-weight-bold text-truncate">{{ template.docker_volumes }}</span></p>
+        <p class="card-text text-muted">Internal Port: <span class="font-weight-bold text-truncate">{{ template.internal_port }}</span></p>
+        <p class="card-text text-muted">Dockerfile Path: <span class="font-weight-bold text-truncate">{{ template.dockerfile_path }}</span></p>
+        <a href="{% url 'deploy_template_update' pk=template.pk %}" class="btn btn-primary">Update</a>
+        <form action="{% url 'deploy_template_delete' pk=template.pk %}" method="post" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+{% endblock %}
