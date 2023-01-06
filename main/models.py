@@ -38,6 +38,7 @@ class DeployTemplate(models.Model):
     docker_image = models.TextField("Docker Image", default="ubuntu:latest", max_length=100)
     docker_network = models.TextField("Docker Network", default="bridge", max_length=100)
     docker_volumes = models.TextField("Docker Volumes", default="{}", max_length=500)
+    docker_env_vars = models.TextField("Docker Environment Variables", default="{}", max_length=500)
     internal_port = models.IntegerField("Internal Port", default="80")
 
     dockerfile_path = models.TextField("Dockerfile Path", blank=True, max_length=100)
