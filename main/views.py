@@ -363,7 +363,8 @@ def stop(request,social,orgname,reponame,branch):
 
 @login_required(login_url='/accounts/login/')
 def getcontainerlogs(request,social,orgname,reponame,branch):
-    container_name = "iris_dev"+ branch
+    prefix = "iris"
+    container_name = f"{prefix}_{orgname}_{reponame}_{branch}" 
     command = ["docker", "logs", "-f", container_name]
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
     logs = ""

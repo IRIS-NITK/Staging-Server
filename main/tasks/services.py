@@ -81,12 +81,15 @@ def pull_git(url, token, org_name, repo_name):
         os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}")
         f = open(log_file,"a")
         f.write("Org does not exist, cloning it for the first time\n")
+        user_name = url.split('/')[3]
+        repo_url = "https://oauth2:"+token+"@github.com/"+user_name+"/"+repo_name+".git"
+        parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}"
+        local_dir = os.path.join(parent_dir, repo_name)
         res = run(
-            ['git', 'clone', url],
-            stdout=PIPE,
-            stderr=PIPE,
-            cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}"
-        )
+                ['git', 'clone', repo_url,local_dir],
+                stdout=PIPE,
+                stderr=PIPE,
+            )
         if res.returncode != 0:
             return False, res.stderr.decode('utf-8')
         return True, res.stdout.decode('utf-8')
@@ -220,8 +223,12 @@ def attach_container_to_network(container_id, network_name):
 
 def stop_container(branch_name, repo_name, org_name):
     yield "Stopping the app\n"
-    container_name = "iris_dev"+branch_name
+    prefix = "iris"
+    container_name = f"{prefix}_{org_name}_{repo_name}_{branch_name}"
     res = run(["docker","rm","-f",container_name],stdout=PIPE,stderr=PIPE)
+    yield "Removing Old Logs\n"
+    file_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{branch_name}"+".txt"
+    res = run(["rm",file_path])
     yield "Removing Nginx Script\n"
     res = run(["sudo","bash",NGINX_REMOVE_CONFIG_SCRIPT,branch_name],stdout=PIPE,stderr=PIPE)
     if res.returncode == 0:
@@ -390,7 +397,6 @@ def deploy_from_git_template(self, token, url, social, org_name, repo_name, bran
     # # org_name, repo_name, branch_name, docker_image, external_port, internal_port = 80, src_code_dir = None, dest_code_dir = None
     prefix = "iris"
     container_name = f"{prefix}_{org_name}_{repo_name}_{branch_name}"
-    
     check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
 
     external_port = find_free_port()
@@ -537,7 +543,8 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     
     
     # # org_name, repo_name, branch_name, docker_image, external_port, internal_port = 80, src_code_dir = None, dest_code_dir = None
-    container_name = org_name  + repo_name  + branch_name
+    prefix = "iris"
+    container_name = f"{prefix}_{org_name}_{repo_name}_{branch_name}"
     check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
     external_port = find_free_port()
     env_variables = {}
@@ -573,7 +580,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         )
         f.write(container_id+"\n")
     else:
-        f.write("Removing Exisiting Container"+"\n")
+        f.write("Removing Exisiting Container"+container_name+"\n")
         res1 = run(
             ["docker","rm","-f",container_name],
             stdout=PIPE,
