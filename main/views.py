@@ -20,6 +20,11 @@ log_template = loader.get_template("log.html")
 # Create your views here.
 
 @login_required
+def deploy_template_list(request):
+    templates = DeployTemplate.objects.filter()
+    return render(request, 'template_list.html', {'templates': templates})
+
+@login_required
 def deploy_template_form(request):
     if request.method == 'POST':
         form = DeployTemplateForm(request.POST)
@@ -30,6 +35,22 @@ def deploy_template_form(request):
         form = DeployTemplateForm()
     return render(request, 'template_form.html', {'form': form})
 
+def deploy_template_update(request, pk):
+    template = DeployTemplate.objects.get(pk=pk)
+    if request.method == 'POST':
+        form = DeployTemplateForm(request.POST, instance=template)
+        if form.is_valid():
+            form.save()
+            return redirect('list_templates')
+    else:
+        form = DeployTemplateForm(instance=template)
+    return render(request, 'template_form.html', {'form': form})
+
+def deploy_template_delete(request, pk):
+    template = DeployTemplate.objects.get(pk=pk)
+    template.delete()
+    return redirect('list_templates')
+    
 @login_required(login_url='/accounts/login/')
 def home(response):
     # Example of how to get the access token for a particular provider

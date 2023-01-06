@@ -29,7 +29,7 @@ class DeployTemplate(models.Model):
         ]
     )
 
-    
+    name = models.TextField("Name", max_length=100)
     organisation_or_user = models.TextField("Organisation or User", max_length=100)
     git_repo_url = models.URLField("Git URL", max_length=200)
     access_token = models.TextField("Access Token", max_length=50)
@@ -41,3 +41,5 @@ class DeployTemplate(models.Model):
     internal_port = models.IntegerField("Internal Port", default="80")
 
     dockerfile_path = models.TextField("Dockerfile Path", blank=True, max_length=100)
+
+    
