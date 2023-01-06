@@ -115,7 +115,6 @@ def form(request,social):
             orgs_name[val] = i.name
             val+=1
         instances = RunningInstance.objects.filter(social='github')
-        print(instances)
         return render(request,'form.html',{'instances':instances,'orgs_name':orgs_name})
     else:
         gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')

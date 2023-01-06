@@ -26,7 +26,7 @@ from celery import shared_task
 from main.models import RunningInstance
 # from app.getport import find_free_port
 from allauth.socialaccount.models import SocialToken
-import shutil
+import shutil,git
 from dotenv import load_dotenv
 from main.tasks.findfreeport import find_free_port
 
@@ -39,7 +39,6 @@ NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 
 def pull_git(url, token, org_name, repo_name):
-    
     # get name of repo
     # repo_name = url.split('/')[-1].split('.')[0]
     # main or master ? -> DEFAULT_BRANCH
@@ -50,9 +49,6 @@ def pull_git(url, token, org_name, repo_name):
 
             with open(log_file, "a") as f:
                 f.write("Repo already exists, pulling latest changes\n")
-
-            # subprocess.run(["git", "config", "http.https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git.extraheader", f"AUTHORIZATION: bearer {token}"])
-            # subprocess.run(["git", "config", "--global", "credential.helper", "store"])
 
             result = subprocess.run(
                             ['git', 'pull'],
@@ -69,12 +65,14 @@ def pull_git(url, token, org_name, repo_name):
             os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}")
             f = open(log_file,"a")
             f.write("Repo does not exist, cloning it for the first time\n")
-            print(url)
+            user_name = url.split('/')[3]
+            repo_url = "https://oauth2:"+token+"@github.com/"+user_name+"/"+repo_name+".git"
+            parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}"
+            local_dir = os.path.join(parent_dir, repo_name)
             res = run(
-                ['git', 'clone', url],
+                ['git', 'clone', repo_url,local_dir],
                 stdout=PIPE,
                 stderr=PIPE,
-                cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}"
             )
             if res.returncode != 0:
                 return False, res.stderr.decode('utf-8')
@@ -358,7 +356,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     image_name = ""
     docker_image = ""
     if url == 'https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git':
-        docker_image = "dev-iris25"
+        docker_image = "dev27"
     else:
         image_name = org_name+"/"+repo_name+":"+branch_name
         docker_image = image_name.lower()
@@ -440,7 +438,6 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             stdout=PIPE,
             stderr=PIPE
         )
-
         if res1.returncode != 0:
             f.write("\nError : \n"+res1.stderr.decode('utf-8')+"\n")
             return False, res1.stderr.decode('utf-8')
@@ -458,7 +455,6 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         volumes=volumes,
         env_variables=env_variables
         )
-        
         f.write(container_id+"\n")
 
     #nginx config 
