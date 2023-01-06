@@ -34,7 +34,7 @@
                             <button type="submit" class="btn btn-outline-primary btn-sm mx-1"
                                 onclick="location.href='{% url 'deploy' org_name=instance.organisation repo_name=instance.repo_name branch=instance.branch social=instance.social%}'">Redeploy</button>
                             <button type="button" class="btn btn-outline-info btn-sm mx-1"
-                                onclick="location.href='{% url 'logs' social=instance.social orgname=instance.organisation reponame=instance.repo_name branch=instance.branch %}'">Logs</button>
+                                onclick="location.href='{% url 'logs' orgname=instance.organisation reponame=instance.repo_name branch=instance.branch social=instance.social%}'">Logs</button>
                             <button type="button" class="btn btn-outline-info btn-sm mx-1"
                                 onclick="location.href='{% url 'containerlogs' social=instance.social orgname=instance.organisation reponame=instance.repo_name branch=instance.branch %}'">Container Logs</button>    
                             <button type="button" class="btn btn-outline-danger btn-sm mx-1"
