@@ -19,6 +19,13 @@
           {% csrf_token %}
           <button type="submit" class="btn btn-danger">Delete</button>
         </form>
+
+        <form action="{% url 'deploy_from_template' pk=template.pk %}" method="post" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success">Deploy</button>
+        </form>
+        <!-- deploy -->
+        
       </div>
     </div>
   {% endfor %}

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!-- table showing 
+
+    branch = models.TextField()
+    owner = models.TextField()
+    create_time = models.DateTimeField(auto_now_add=True)
+    update_time = models.DateTimeField(auto_now=True)
+    status = models.TextField(choices=STATUS_OPTIONS, default=STATUS_PENDING)
+    organisation = models.TextField()
+    repo_name = models.TextField()
+    social = models.TextField()
+    exposed_port = models.IntegerField(default=3000)
+    internal_port = models.IntegerField(default=80)
+
+
+    -->
+    <table class="table" style="text-align: center;">
+        <thead>
+            <tr>
+                <th scope="col">Social</th>
+                <th scope="col">Repository</th>
+                <th scope="col">Branch</th>
+                <th scope="col">Owner</th>
+                <th scope="col">Create Time</th>
+                <th scope="col">Update Time</th>
+                <th scope="col">Status</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+          {% for instance in instances %}
+            <tr>
+                <td>
+                    {% if instance.social == 'github' %}
+                        <img src="/static/github.png" alt="GitHub" width="20" height="20">
+                    {% elif instance.social == 'gitlab' %}
+                        <img src="/static/gitlab.png" alt="GitLab" width="20" height="20">
+                    {% else %}
+                        {{ instance.social }}
+                    {% endif %}
+                </td>
+                <td><a href="http://localhost:{{ instance.exposed_port }}">{{ instance.organisation }}/{{ instance.repo_name }}</a></td>
+                <td>{{ instance.branch }}</td>
+                <td>{{ instance.owner }}</td>
+                <td>{{ instance.create_time }}</td>
+                <td>{{ instance.update_time }}</td>
+                <td>{{ instance.status }}</td>
+                <td>
+                    <form method="post" action="{% url 'deploy_template_stop' instance.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Stop</button>
+                    </form>
+                </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        
+    </table>  
+  
+
+      
+{% endblock %}
