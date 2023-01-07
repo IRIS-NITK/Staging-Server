@@ -33,13 +33,11 @@ import re
 
 load_dotenv()
 # from ..setup import PATH_TO_HOME_DIR
-# PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
+PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
 DEFAULT_BRANCH = "master" # should be a config ideally
 log_file = ""
 NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
-
-PATH_TO_HOME_DIR = "/home/vinayakj02/staging_area"
 
 
 def pull_git(url, token, org_name, repo_name):
