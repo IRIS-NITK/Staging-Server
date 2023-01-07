@@ -29,16 +29,24 @@ from allauth.socialaccount.models import SocialToken
 import shutil
 from dotenv import load_dotenv
 from main.tasks.findfreeport import find_free_port
+import re
 
 load_dotenv()
 # from ..setup import PATH_TO_HOME_DIR
-PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
-DEFAULT_BRANCH = "main" # should be a config ideally
+# PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
+DEFAULT_BRANCH = "master" # should be a config ideally
 log_file = ""
 NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 
+PATH_TO_HOME_DIR = "/home/vinayakj02/staging_area"
+
+
 def pull_git(url, token, org_name, repo_name):
+
+    global log_file
+    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{DEFAULT_BRANCH}.txt"
+    
     # get name of repo
     # repo_name = url.split('/')[-1].split('.')[0]
     # main or master ? -> DEFAULT_BRANCH
@@ -46,9 +54,9 @@ def pull_git(url, token, org_name, repo_name):
     if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}"):
         # org exists, check if repo exists
         if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):
-
-            with open(log_file, "a") as f:
-                f.write("Repo already exists, pulling latest changes\n")
+            
+            f = open(log_file,"a")
+            f.write("Repo already exists, pulling latest changes\n")
 
             result = subprocess.run(
                             ['git', 'pull'],
@@ -63,8 +71,8 @@ def pull_git(url, token, org_name, repo_name):
         else:
             # repo does not exist , could be a new repo , so clone it
             os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}")
-            f = open(log_file,"a")
-            f.write("Repo does not exist, cloning it for the first time\n")
+            # f = open(log_file,"a")
+            # f.write("Repo does not exist, cloning it for the first time\n")
             user_name = url.split('/')[3]
             repo_url = "https://oauth2:"+token+"@github.com/"+user_name+"/"+repo_name+".git"
             parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}"
@@ -74,8 +82,13 @@ def pull_git(url, token, org_name, repo_name):
                 stdout=PIPE,
                 stderr=PIPE,
             )
+            f = open(log_file,'w')
+            f.write("Starting deployment\n")
+            f.write("Repo did not exist, cloning it for the first time\n")
             if res.returncode != 0:
+                f.write("Error while cloning repo\n")
                 return False, res.stderr.decode('utf-8')
+            f.write("Repo cloned successfully\n")
         return True, res.stdout.decode('utf-8')
     else:
         os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}")
@@ -302,10 +315,12 @@ def clean_up(org_name, repo_name, remove_container = False, remove_volume = Fals
     yield "Clean up complete\n"
 
 @shared_task(bind=True)
-def deploy_from_git_template(self, token, url, social, org_name, repo_name, branch_name, internal_port, docker_image, dockerfile_path, docker_volumes = {}, docker_env_variables = {}, default_branch = "main", docker_network = None):
-    global log_file
-    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{default_branch}/{branch_name}.txt"
-
+def deploy_from_git_template(self, token, url, social, org_name, repo_name, branch_name, internal_port, external_port, docker_image, dockerfile_path, docker_volumes = {}, docker_env_variables = {}, default_branch = "main", docker_network = None):
+    # global log_file
+    # log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{default_branch}/{branch_name}.txt"
+    # logfile = open(log_file,'w')
+    # logfile.write("Starting deployment\n")
+    # logfile.close()
     # pull git repo
     result,msg = pull_git(url,token,repo_name=repo_name, org_name=org_name)
     logfile = open(log_file,'a')
@@ -395,11 +410,11 @@ def deploy_from_git_template(self, token, url, social, org_name, repo_name, bran
     """
     
     # # org_name, repo_name, branch_name, docker_image, external_port, internal_port = 80, src_code_dir = None, dest_code_dir = None
-    prefix = "iris"
+    prefix = "iris_template"
     container_name = f"{prefix}_{org_name}_{repo_name}_{branch_name}"
     check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
 
-    external_port = find_free_port()
+    
     if check_container_exists.returncode == 0:
         logfile.write(f"Container already exists : {container_name}\n")
         logfile.write(f"Removing existing container : {container_name}\n")
@@ -613,4 +628,14 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             stderr=PIPE,
         )
 
+def get_repo_name(url):
+    github_match = re.match(r'(?:https?://)?github.com/(.+)/(.+)', url)
+    if github_match:
+        return github_match.group(2)
 
+    gitlab_match = re.match(r'(?:https?://)?gitlab.com/(.+)/(.+)', url)
+    if gitlab_match:
+        return gitlab_match.group(2)
+
+    # Unrecognized URL format
+    return None

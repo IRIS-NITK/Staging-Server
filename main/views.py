@@ -5,7 +5,8 @@ from github import Github
 import gitlab,json,time,os,subprocess
 from django.http import HttpResponse,StreamingHttpResponse
 from django.shortcuts import render,redirect
-from main.tasks.services import deploy_from_git, stop_container, deploy_from_git_template
+from main.tasks.services import deploy_from_git, stop_container, deploy_from_git_template, get_repo_name, clean_up
+from main.tasks import findfreeport
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from main.models import RunningInstance
@@ -17,6 +18,11 @@ response_header = loader.get_template("response_header.html")
 response_footer = loader.get_template("response_footer.html")
 log_template = loader.get_template("log.html")
 
+
+def deploy_template_dashboard(request):
+    return render(request, 'template_dashboard.html', context={
+        "instances": RunningInstance.objects.all() 
+    })
 
 @login_required
 def deploy_template_list(request):
@@ -41,7 +47,7 @@ def deploy_template_update(request, pk):
         form = DeployTemplateForm(request.POST, instance=template)
         if form.is_valid():
             form.save()
-            return redirect('list_templates')
+            return redirect('deploy_template_list')
     else:
         form = DeployTemplateForm(instance=template)
     return render(request, 'template_form.html', {'form': form})
@@ -50,14 +56,48 @@ def deploy_template_update(request, pk):
 def deploy_template_delete(request, pk):
     template = DeployTemplate.objects.get(pk=pk)
     template.delete()
-    return redirect('list_templates')
+    return redirect('deploy_template_list')
 
-@login_required  
-def deploy_from_template(request, access_token, social, org_name, repo_name, repo_url, branch_name, internal_port, docker_image, dockerfile_path, docker_volumes, docker_env_variables, default_branch, docker_network):
+@login_required
+def deploy_template_stop(request, pk):
+    instance = RunningInstance.objects.get(pk=pk)
+    prefix = "iris_template"
+    container_name = f"{prefix}_{instance.organisation}_{instance.repo_name}_{instance.branch}"
+    clean_up(
+        org_name = instance.organisation,
+        repo_name = instance.repo_name,
+        remove_container = container_name
+    )
+    instance.status = RunningInstance.STATUS_STOPPED
+    return redirect('deploy_template_dashboard')
+
+@login_required
+def deploy_from_template(request, pk):
+    template = DeployTemplate.objects.get(pk=pk)
+
+    social = template.social_type
+    # access_token = SocialToken.objects.get(account__user=request.user, account__provider=social).token
+    access_token = template.access_token
+    org_name = template.organisation_or_user
+    repo_url = template.git_repo_url
+    default_branch = template.default_branch
+    docker_image = template.docker_image
+    docker_env_variables = template.docker_env_vars
+    docker_volumes = template.docker_volumes
+    internal_port = template.internal_port
+    dockerfile_path = template.dockerfile_path
+    docker_network = template.docker_network
+    
+    repo_name = get_repo_name(repo_url)
+
     if request.method == 'POST':
+        external_port = findfreeport.find_free_port()
         try:
             instance = RunningInstance.objects.get(
-                social=social,organisation=org_name,repo_name=repo_name,branch= branch_name
+                social=social,
+                organisation=org_name,
+                repo_name=repo_name,
+                branch=default_branch
             )
             instance.owner = request.user.username
             instance.update_time = time.time()
@@ -65,39 +105,36 @@ def deploy_from_template(request, access_token, social, org_name, repo_name, rep
             instance.save()
         except ObjectDoesNotExist:
             instance = RunningInstance(
+                exposed_port = external_port,
                 social=social,
                 organisation=org_name,
                 repo_name=repo_name,
-                branch= branch_name,
+                branch=default_branch,
                 owner=request.user.username,
                 update_time=time.time(),
-                status = RunningInstance.STATUS_PENDING
+                status=RunningInstance.STATUS_PENDING
             )
             instance.save()
 
-        res, logs = deploy_from_git_template.delay(
-            token = access_token,
-            social = social,
-            org_name = org_name,
-            repo_name = repo_name,
-            repo_url = repo_url,
-            branch_name = branch_name,
-            internal_port = internal_port,
-            docker_image = docker_image,
-            dockerfile_path = dockerfile_path,
-            docker_volumes = docker_volumes,
-            docker_env_variables = docker_env_variables,
-            default_branch = default_branch,
-            docker_network = docker_network
+        
+        deploy_from_git_template.delay(
+            token=access_token,
+            social=social,
+            org_name=org_name,
+            repo_name=repo_name,
+            url=repo_url,
+            branch_name=default_branch,
+            internal_port=internal_port,
+            external_port=external_port,
+            docker_image=docker_image,
+            dockerfile_path=dockerfile_path,
+            docker_volumes=docker_volumes,
+            docker_env_variables=docker_env_variables,
+            default_branch=default_branch,
+            docker_network=docker_network
         )
 
-        if res:
-            instance.status = RunningInstance.STATUS_RUNNING
-            instance.save()
-        else:
-            instance.status = RunningInstance.STATUS_ERROR
-            instance.save()
-    return render(request, 'main/home.html')
+    return redirect('deploy_template_dashboard')
 
 @login_required(login_url='/accounts/login/')
 def home(response):
