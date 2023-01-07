@@ -561,8 +561,10 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
 
     if org_name == "NITK-IRIS":
         src = f'{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/' + "config/initializers"
-        res = run(["cp","/home/jokesta/Desktop/nitk_setting.rb",src],stdout=PIPE,stderr=PIPE)
-        res = run(["cp","/home/jokesta/Desktop/secret_token.rb",src],stdout=PIPE,stderr=PIPE)
+        path_to_nitk_setting = os.getenv(PATH_TO_NITK_SETTING)
+        path_to_secret_token = os.getenv(PATH_TO_SECRET_TOKEN)
+        res = run(["cp",path_to_nitk_setting,src],stdout=PIPE,stderr=PIPE)
+        res = run(["cp",path_to_secret_token,src],stdout=PIPE,stderr=PIPE)
         src = f'{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/'
         dest = "/iris-data/" 
         volumes = {
