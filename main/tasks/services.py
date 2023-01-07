@@ -41,9 +41,6 @@ NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 
 
 def pull_git(url, token, org_name, repo_name):
-
-    global log_file
-    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{DEFAULT_BRANCH}.txt"
     
     # get name of repo
     # repo_name = url.split('/')[-1].split('.')[0]
@@ -455,7 +452,7 @@ def deploy_from_git_template(self, token, url, social, org_name, repo_name, bran
     #     )
 
 @shared_task(bind=True)
-def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "main"):
+def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "master"):
     
 
     global log_file

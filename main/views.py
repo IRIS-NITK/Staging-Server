@@ -138,31 +138,28 @@ def deploy_from_template(request, pk):
 
 @login_required(login_url='/accounts/login/')
 def home(response):
-    # Example of how to get the access token for a particular provider
+
     # PyGithub: https://pygithub.readthedocs.io/en/latest/introduction.html
-    # gh_access_token_set = SocialToken.objects.filter(account__user=response.user, account__provider='github')
-    # if (len(gh_access_token_set) == 0):
-    #     print("No Github Access Token")
-    # else:
-    #     g = Github(gh_access_token_set.first().__str__())
-    #     print("1", g.get_user().login)
-    #     for repo in g.get_user().get_orgs():
-    #             print(repo.name)
+    gh_access_token_set = SocialToken.objects.filter(account__user=response.user, account__provider='github')
+    if (len(gh_access_token_set) == 0):
+        print("No Github Access Token")
+    else:
+        github_client = Github(gh_access_token_set.first().__str__())
+        print(github_client.get_user().login)
 
     gl_access_token_set = SocialToken.objects.filter(account__user=response.user, account__provider='gitlab')
     if (len(gl_access_token_set) == 0):
         print("No Gitlab Access Token")
     else:
         # Python Gitlab: https://python-gitlab.readthedocs.io/en/stable/
-        gl = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
+        gitlab_client = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
         try:
-            gl.auth()
+            gitlab_client.auth()
         except:
             return redirect("account_logout")
-        print("2", gl.user.emails.list())
-    
-    return render(response, "main/home.html")
+        print(gitlab_client.user.emails.list())
 
+    return render(response, "main/home.html")
 
 @login_required(login_url='/accounts/login/')
 def form_wrapper(request):
@@ -218,92 +215,75 @@ def form(request,social):
     
 @login_required(login_url='/accounts/login/')
 def getrepos(request):
+
     gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
-    g = Github(gh_access_token_set.first().__str__())
-    o = list(g.get_user().get_orgs())
+    github_client = Github(gh_access_token_set.first().__str__())
 
-    organisation = request.GET.get('org')
-    repos={}
-    val=1
-    obj=""
+    organization_name = request.GET.get('org')
+    repositories = {}
 
-    if organisation == g.get_user().login:
-        for i in g.get_user().get_repos():
-            repos[val]=i.name
-            val+=1
+    if organization_name == github_client.get_user().login:
+        for repo in github_client.get_user().get_repos():
+            repositories[repo.name] = repo.name
     else:
-        for i in o:
-            if i.name == organisation:
-                obj=i 
+        organizations = list(github_client.get_user().get_orgs())
+        for org in organizations:
+            if org.name == organization_name:
+                for repo in org.get_repos():
+                    repositories[repo.name] = repo.name
                 break
-        for i in obj.get_repos():
-            repos[val] = i.name
-            val+=1
 
-    return render(request,'response.html',{'dictionary':repos})
+    return render(request, 'response.html', {'dictionary': repositories})
 
 @login_required(login_url='/accounts/login/')
 def getbranches(request):
 
     gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
-    g = Github(gh_access_token_set.first().__str__())
-    o = list(g.get_user().get_orgs())
+    github_client = Github(gh_access_token_set.first().__str__())
+    organizations = list(github_client.get_user().get_orgs())
 
-    organisation = request.GET.get('org')
-    repo = request.GET.get('repo')
-    branches={}
-    val=1
+    organization_name = request.GET.get('org')
+    repo_name = request.GET.get('repo')
+    branches = {}
 
-    if organisation == g.get_user().login:
-        repo_obj = ""
-        for i in g.get_user().get_repos():
-            if i.name == repo:
-                repo_obj = i
+    if organization_name == github_client.get_user().login:
+        for repo in github_client.get_user().get_repos():
+            if repo.name == repo_name:
+                for branch in repo.get_branches():
+                    branches[branch.name] = branch.name
                 break
-        for i in repo_obj.get_branches():
-            branches[val]=i.name
-            val+=1
     else:
-        obj = g.get_user().get_orgs()
-        org_obj=""
-        repo_obj=""
-        for i in obj:
-            if i.name == organisation:
-                org_obj = i 
+        for org in organizations:
+            if org.name == organization_name:
+                for repo in org.get_repos():
+                    if repo.name == repo_name:
+                        for branch in repo.get_branches():
+                            branches[branch.name] = branch.name
+                        break
                 break
-        for i in org_obj.get_repos():
-            if i.name == repo:
-                repo_obj = i 
-                break
-        for i in repo_obj.get_branches():
-            branches[val]=i.name
-            val+=1
 
-    return render(request,'response.html',{'dictionary':branches})
+    return render(request,'response.html',{'dictionary': branches})
 
 @login_required(login_url='/accounts/login')
 def getIRISbranches(request):
-    repo = request.GET.get('repo')
+
+    repo_name = request.GET.get('repo')
     gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
-    gl = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
-    try:
-        gl.auth()
-    except:
-        return redirect("account_login")
-    repo_obj = ""
-    for i in gl.projects.list(get_all=True):
-        if i.name == repo:
-            repo_obj = i 
+    gitlab_client = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
+    gitlab_client.auth()
+
+    repo_object = None
+    for project in gitlab_client.projects.list(get_all=True):
+        if project.name == repo_name:
+            repo_object = project 
             break
 
-    branches = repo_obj.branches.list(get_all=True)
     branches_dictionary = {}
-    val = 1
-    for i in branches:
-        branches_dictionary[val] = i.name
-        val+=1
+    if repo_object:
+        for branch in repo_object.branches.list(get_all=True):
+            branches_dictionary[branch.name] = branch.name
 
-    return render(request,'response.html',{'dictionary':branches_dictionary})
+    return render(request,'response.html',{'dictionary': branches_dictionary})
 
 @login_required(login_url='/accounts/login/')
 def deploy_wrapper(request):
@@ -312,63 +292,52 @@ def deploy_wrapper(request):
 
 @login_required(login_url='/accounts/login/')
 def deploy(request,org_name,repo_name,branch,social):
-    token_obj = SocialToken.objects.filter(account__user= request.user, account__provider=social)
+
+    token_obj = SocialToken.objects.filter(account__user=request.user, account__provider=social)
     token = json.loads(serializers.serialize('json', token_obj))[0]['fields']['token']
-    org_obj=""
-    repo_obj=""
+    url = ""
     if social == "github":
         gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
-        g = Github(gh_access_token_set.first().__str__())
-        obj = g.get_user().get_orgs()
-        if org_name == g.get_user().login:
-            for i in g.get_user().get_repos():
-                if i.name == repo_name:
-                    repo_obj = i
-                    break
+        github_client = Github(gh_access_token_set.first().__str__())
+        if org_name == github_client.get_user().login:
+            repos = github_client.get_user().get_repos()
         else:
-            obj = g.get_user().get_orgs()
-            org_obj=""
-            repo_obj=""
-            for i in obj:
-                if i.name == org_name:
-                    org_obj = i 
-                    break
-            for i in org_obj.get_repos():
-                if i.name == repo_name:
-                    repo_obj = i 
-                    break
-        url = repo_obj.clone_url
+            repos = github_client.get_organization(org_name).get_repos()
+        for repo in repos:
+            if repo.name == repo_name:
+                url = repo.clone_url
+                break
     else:
-        url = "https://git.iris.nitk.ac.in/IRIS-NITK/"+repo_name+".git"
-    
-    try:
-        instance = RunningInstance.objects.get(social=social,organisation=org_name,repo_name=repo_name,branch= branch)
+        url = "https://git.iris.nitk.ac.in/IRIS-NITK/" + repo_name + ".git"
+
+    instance, created = RunningInstance.objects.get_or_create(
+        social=social,
+        organisation=org_name,
+        repo_name=repo_name,
+        branch=branch,
+        defaults={'owner': request.user.username, 'status': RunningInstance.STATUS_PENDING}
+    )
+    if not created:
         instance.owner = request.user.username
         instance.update_time = time.time()
         instance.save()
-    except ObjectDoesNotExist:
-        instance = RunningInstance(
-           branch=branch, owner=request.user.username, status=RunningInstance.STATUS_PENDING,repo_name =repo_name,organisation=org_name,social=social
-        )
-        instance.save()
-    deploy_from_git.delay(token,url,social,org_name,repo_name,branch)
-    instances = RunningInstance.objects.filter(social=social,organisation=org_name)
-    # return render(request,'display.html',{'instances':instances})
-    return redirect('form',social=social)
+    deploy_from_git.delay(token, url, social, org_name, repo_name, branch)
+
+    return redirect('form', social=social)
 
 
 @login_required(login_url='/accounts/login/')
 def logs(request,social,branch,reponame,orgname):
-    PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
-    DEFAULT_BRANCH = "main"
+    path_to_home_dir = os.getenv("PATH_TO_HOME_DIR")
+    default_branch = "master"
     try:
-        log_file_name = f'{PATH_TO_HOME_DIR}/{orgname}/{reponame}/{DEFAULT_BRANCH}/{branch}'+".txt"
-        f = open(log_file_name,"r")
-        data = f.read()
-        context ={'data': data,'social':social}
-        return render(request,'log.html',context)
-    except :
-        return render(request,'failure.html',)
+        log_file_name = f"{path_to_home_dir}/{orgname}/{reponame}/{default_branch}/{branch}.txt"
+        with open(log_file_name, "r") as f:
+            data = f.read()
+        context = {'data': data, 'social': social}
+        return render(request, 'log.html', context)
+    except:
+        return render(request, 'failure.html')
 
 @login_required(login_url='/accounts/login/')
 def stop(request,social,orgname,reponame,branch):
@@ -376,22 +345,19 @@ def stop(request,social,orgname,reponame,branch):
         yield response_header.render({"purpose": "stopping"})
         yield "<pre><code >"
         try:
-            instance = RunningInstance.objects.get(branch=branch,repo_name=reponame,organisation=orgname)
-            yield from stop_container(branch,reponame,orgname)
+            instance = RunningInstance.objects.get(branch=branch, repo_name=reponame, organisation=orgname)
+            yield from stop_container(branch, reponame, orgname)
             yield "</code></pre>"
             instance.delete()
             yield response_footer.render(
-                    {"status_message": "The server was stopped successfully",
-                    'social':social
-                    }
-                )
+                {"status_message": "The server was stopped successfully", 'social': social}
+            )
         except ObjectDoesNotExist:
             yield "</code></pre>"
             yield response_footer.render(
-                    {"status_message": "The server failed to stop properly",
-                    'social':social
-                    }
-                )
+                {"status_message": "The server failed to stop properly", 'social': social}
+            )
+
     response = StreamingHttpResponse(generate_stream())
     del response["Content-Length"]
     response["Cache-Control"] = "no-cache"
@@ -399,17 +365,24 @@ def stop(request,social,orgname,reponame,branch):
     return response
 
 @login_required(login_url='/accounts/login/')
-def getcontainerlogs(request,social,orgname,reponame,branch):
+def get_container_logs(request, social, orgname, reponame, branch):
     prefix = "iris"
-    container_name = f"{prefix}_{orgname}_{reponame}_{branch}" 
+    container_name = f"{prefix}_{orgname}_{reponame}_{branch}"
     command = ["docker", "logs", "-f", container_name]
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
-    logs = ""
-    while True:
-        output = process.stdout.readline()
-        if output == b'':
-            break
-        logs += output.decode('utf-8')
-    # template = Template("{{ logs }}")
-    context = {"data": logs,"social":social}
-    return HttpResponse(log_template.render(context))
+
+    def generate_stream():
+        yield response_header.render({"purpose": "Starting"})
+        yield "<pre><code >"
+        while True:
+            output = process.stdout.readline()
+            if output == b'':
+                break
+            logs = output.decode("utf-8")
+            yield logs
+
+    response = StreamingHttpResponse(generate_stream())
+    del response["Content-Length"]
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
+    return response
