@@ -375,7 +375,17 @@ def deploy_from_git_template(self, token, url, social, org_name, repo_name, bran
                 if res.returncode != 0:
                     return False, "Error while mounting code, incorrect mapping\n" + res.stderr.decode('utf-8')
     
-        
+    if docker_image != None:
+        logfile.write(f"Searching for Docker image : {docker_image}\n")
+        res = run(
+            ['docker', 'inspect', docker_image],
+            stdout=PIPE,
+            stderr=PIPE
+        )
+        if res.returncode != 0:
+            logfile.write("Docker image not found\n")
+            docker_image = None
+
     if docker_image == None:
         
         if dockerfile_path == None:
@@ -397,7 +407,7 @@ def deploy_from_git_template(self, token, url, social, org_name, repo_name, bran
         else:
             logfile.write(f"Docker image built successfully\ntagged : {docker_image}\n")
     
-    logfile.write(f"Starting container {docker_image}\n")
+    logfile.write(f"Starting container from image : {docker_image}\n")
     
 
     """
@@ -479,7 +489,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         return False, "Branch does not exist in the git repository"
     
     # checkout branch
-    res = checkout_git_branch(repo_name, branch_name=branch_name, org_name=org_name)
+    res, msg = checkout_git_branch(repo_name=repo_name, org_name=org_name, branch_name=branch_name)
     f = open(log_file,'a')
     # f.write(res[1])
     if not res[0]:
