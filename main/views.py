@@ -82,8 +82,8 @@ def deploy_from_template(request, pk):
     repo_url = template.git_repo_url
     default_branch = template.default_branch
     docker_image = template.docker_image
-    docker_env_variables = template.docker_env_vars
-    docker_volumes = template.docker_volumes
+    docker_env_variables = json.loads(template.docker_env_vars)
+    docker_volumes = json.loads(template.docker_volumes)
     internal_port = template.internal_port
     dockerfile_path = template.dockerfile_path
     docker_network = template.docker_network
@@ -135,7 +135,7 @@ def deploy_from_template(request, pk):
         )
 
     return redirect('deploy_template_dashboard')
-
+    
 @login_required(login_url='/accounts/login/')
 def home(response):
 
