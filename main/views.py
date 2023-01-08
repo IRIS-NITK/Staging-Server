@@ -101,6 +101,7 @@ def deploy_from_template(request, pk):
             )
             instance.owner = request.user.username
             instance.update_time = time.time()
+            instance.exposed_port = external_port
             instance.status = RunningInstance.STATUS_PENDING
             instance.save()
         except ObjectDoesNotExist:
@@ -135,7 +136,7 @@ def deploy_from_template(request, pk):
         )
 
     return redirect('deploy_template_dashboard')
-    
+
 @login_required(login_url='/accounts/login/')
 def home(response):
 

@@ -9,9 +9,16 @@
         <p class="card-text text-muted">Organisation or User: <span class="font-weight-bold text-truncate">{{ template.organisation_or_user }}</span></p>
         <p class="card-text text-muted">Git URL: <span class="font-weight-bold text-truncate">{{ template.git_repo_url }}</span></p>
         <p class="card-text text-muted">Default Branch: <span class="font-weight-bold text-truncate">{{ template.default_branch }}</span></p>
-        <p class="card-text text-muted">Docker Image: <span class="font-weight-bold text-truncate">{{ template.docker_image }}</span></p>
+        <!-- if template.docker_image is empty or none dont view -->
+        {% if template.docker_image %}
+          <p class="card-text text-muted">Docker Image: <span class="font-weight-bold text-truncate">{{ template.docker_image }}</span></p>
+        {% endif %}
         <p class="card-text text-muted">Docker Network: <span class="font-weight-bold text-truncate">{{ template.docker_network }}</span></p>
-        <p class="card-text text-muted">Docker Volumes: <span class="font-weight-bold text-truncate">{{ template.docker_volumes }}</span></p>
+        <!-- if length of volumes > 2-->
+        {% if template.docker_volumes|length > 2 %}
+          <p class="card-text text-muted">Docker Volumes: <span class="font-weight-bold text-truncate">{{ template.docker_volumes }}</span></p>
+        {% endif %}
+
         <p class="card-text text-muted">Internal Port: <span class="font-weight-bold text-truncate">{{ template.internal_port }}</span></p>
         <p class="card-text text-muted">Dockerfile Path: <span class="font-weight-bold text-truncate">{{ template.dockerfile_path }}</span></p>
         <a href="{% url 'deploy_template_update' pk=template.pk %}" class="btn btn-primary">Update</a>
