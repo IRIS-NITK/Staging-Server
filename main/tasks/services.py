@@ -30,27 +30,33 @@ import shutil
 from dotenv import load_dotenv
 from main.tasks.findfreeport import find_free_port
 import re
+import datetime 
 
 load_dotenv()
 # from ..setup import PATH_TO_HOME_DIR
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
+PATH_TO_HOME_DIR = "/home/vinayakj02/staging_area"
 DEFAULT_BRANCH = "master" # should be a config ideally
-log_file = ""
 NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 
 
-def pull_git(url, token, org_name, repo_name):
+def pull_git(url, token, org_name, repo_name, branch_name = DEFAULT_BRANCH):
     
     # get name of repo
     # repo_name = url.split('/')[-1].split('.')[0]
     # main or master ? -> DEFAULT_BRANCH
     # check if org exists
+    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
     if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}"):
         # org exists, check if repo exists
         if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):
             
-            f = open(log_file,"a")
+            try:
+                f = open(log_file,"a")
+            except FileNotFoundError:
+                f = open(log_file,"w")
+                f.write(f"{datetime.datetime.now()}\nStarting deployment\n")
             f.write("Repo already exists, pulling latest changes\n")
 
             result = subprocess.run(
@@ -104,8 +110,9 @@ def pull_git(url, token, org_name, repo_name):
 
 
 def get_git_branches(repo_name, org_name):
-    f = open(log_file,"a")
-    f.write("Getting branches\n")
+    # log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{default_branch}/{branch_name}.txt"
+    # f = open(log_file,"a")
+    # f.write("Getting branches\n")
     res = run(
         ['git', 'branch', '-a'],
         stdout=PIPE,
@@ -117,6 +124,7 @@ def get_git_branches(repo_name, org_name):
     return True, res.stdout.decode('utf-8')
 
 def checkout_git_branch(repo_name, org_name, branch_name):
+    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
     f = open(log_file,"a")
     f.write(f"Switching to branch : {branch_name}\n")
     res = run(
@@ -311,14 +319,14 @@ def clean_up(org_name, repo_name, remove_container = False, remove_volume = Fals
 
 @shared_task(bind=True)
 def deploy_from_git_template(self, token, url, social, org_name, repo_name, branch_name, internal_port, external_port, docker_image, dockerfile_path, docker_volumes = {}, docker_env_variables = {}, default_branch = "main", docker_network = None):
-    # global log_file
-    # log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{default_branch}/{branch_name}.txt"
-    # logfile = open(log_file,'w')
-    # logfile.write("Starting deployment\n")
-    # logfile.close()
+    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+    
     # pull git repo
     result,msg = pull_git(url,token,repo_name=repo_name, org_name=org_name)
-    logfile = open(log_file,'a')
+    try:
+        logfile = open(log_file,'a')
+    except FileNotFoundError:
+        logfile = open(log_file,'w')
     logfile.write(msg)
     if not result:
         logfile.write("Error in pulling git repo\ndeploy_from_git_template->pull_git\n")
@@ -340,7 +348,11 @@ def deploy_from_git_template(self, token, url, social, org_name, repo_name, bran
         return False, "Branch does not exist in git repo"
     
     # checkout branch
-    res, msg = checkout_git_branch(repo_name, branch_name, org_name)
+    res, msg = checkout_git_branch(
+        repo_name=repo_name,
+        org_name=org_name,
+        branch_name=branch_name
+    )
     logfile.write(msg)
     if not res:
         logfile.write("Error in checking out branch\ndeploy_from_git_template->checkout_git_branch\n")
@@ -454,7 +466,7 @@ def deploy_from_git_template(self, token, url, social, org_name, repo_name, bran
         return False, container_id
     
     logfile.write(f"Container started successfully \ncontainer name : {container_name}\ncontainer id : {container_id}\n")
-
+    return True, container_id
     # res = run(
     #         ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT,str(branch_name), str(external_port)],
     #         stdout=PIPE,
@@ -465,22 +477,22 @@ def deploy_from_git_template(self, token, url, social, org_name, repo_name, bran
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "master"):
     
 
-    global log_file
-    log_file = PATH_TO_HOME_DIR+"/"+org_name+"/"+repo_name+"/"+DEFAULT_BRANCH+"/"+branch_name+".txt"
-
+    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
     # pull git repo
     result,msg = pull_git(url,token,repo_name=repo_name, org_name=org_name)
     f = open(log_file,'a')
     f.write(msg)
     if not result:
+        f.write(msg)
+        f.close()
         return False, msg 
 
 
     # get branches
     res, branches  = get_git_branches(repo_name, org_name=org_name)
     if not res:
-        f = open(log_file,'a')
         f.write(branches)
+        f.close()
         return False, branches
         
     
@@ -490,9 +502,10 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     
     # checkout branch
     res, msg = checkout_git_branch(repo_name=repo_name, org_name=org_name, branch_name=branch_name)
-    f = open(log_file,'a')
-    # f.write(res[1])
+
     if not res[0]:
+        f.write(msg)
+        f.close()
         return False, res[1]
     
     # check if branch was already deployed previously
@@ -557,8 +570,8 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
         )
         if res.returncode != 0:
-            f = open(log_file,'a')
             f.write(res.stdout.decode('utf-8')+"\n")
+            f.close()
             return
     
     
@@ -583,7 +596,6 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         env_variables = {
             "RAILS_ENV": "development"
         }
-    f = open(log_file,'a')
 
     if check_container_exists.returncode !=0:
         #create container under newtork="abc"
@@ -610,6 +622,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         )
         if res1.returncode != 0:
             f.write("\nError : \n"+res1.stderr.decode('utf-8')+"\n")
+            f.close()
             return False, res1.stderr.decode('utf-8')
 
         f.write("Starting Container"+"\n")
@@ -634,6 +647,12 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             stdout=PIPE,
             stderr=PIPE,
         )
+    f.write(res.stdout.decode('utf-8')+"\n")
+    if res.returncode != 0: 
+        f.close()
+        return False, res.stderr.decode('utf-8')
+    f.close()
+    return True, "Success"
 
 def get_repo_name(url):
     github_match = re.match(r'(?:https?://)?github.com/(.+)/(.+)', url)
