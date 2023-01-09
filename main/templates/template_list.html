@@ -4,8 +4,15 @@
   {% for template in templates %}
     <div class="card mb-3">
       <div class="card-body">
-        <h3 class="card-title">{{ template.name }}</h5>
-        <p class="card-text text-muted">Description: <span class="font-weight-bold text-truncate">{{ template.social_type }}</span></p>
+        <h3 class="card-title">{{ template.name }} 
+          {% if template.social_type == 'github' %}
+          <img src="/static/github.png" alt="GitHub" width="20" height="20">
+          {% elif template.social_type == 'gitlab' %}
+              <img src="/static/gitlab.svg" alt="GitLab" width="20" height="20">
+          {% else %}
+              {{ instance.social }}
+          {% endif %}
+        </h5>
         <p class="card-text text-muted">Organisation or User: <span class="font-weight-bold text-truncate">{{ template.organisation_or_user }}</span></p>
         <p class="card-text text-muted">Git URL: <span class="font-weight-bold text-truncate">{{ template.git_repo_url }}</span></p>
         <p class="card-text text-muted">Default Branch: <span class="font-weight-bold text-truncate">{{ template.default_branch }}</span></p>
@@ -31,7 +38,6 @@
           {% csrf_token %}
           <button type="submit" class="btn btn-success">Deploy</button>
         </form>
-        <!-- deploy -->
         
       </div>
     </div>

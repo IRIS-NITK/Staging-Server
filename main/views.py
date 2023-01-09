@@ -72,6 +72,12 @@ def deploy_template_stop(request, pk):
     return redirect('deploy_template_dashboard')
 
 @login_required
+def deploy_instance_delete(request, pk):
+    instance = RunningInstance.objects.get(pk=pk)
+    instance.delete()
+    return redirect('deploy_template_dashboard')
+    
+@login_required
 def deploy_from_template(request, pk):
     template = DeployTemplate.objects.get(pk=pk)
 

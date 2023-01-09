@@ -119,7 +119,7 @@ def pull_git_changes(url, token = None, org_name = None, repo_name = None, branc
         if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}"):
             # Branch exists , pull latest changes
             logs = open(log_file,"a")
-            logs.write(f'\n{datetime.datetime.now()}\t : Pulling latest changes from branch {branch_name}\n')
+            logs.write(f'\n{datetime.datetime.now()} : Pulling latest changes from branch {branch_name}\n')
 
             res = subprocess.run(
                 ['git', 'pull'],
@@ -129,11 +129,11 @@ def pull_git_changes(url, token = None, org_name = None, repo_name = None, branc
             )
 
             if res.returncode != 0:
-                logs.write(f'\n{datetime.datetime.now()}\t : Error while pulling latest changes from branch {branch_name}\n{res.stderr.decode("utf-8")}\nExited')
+                logs.write(f'\n{datetime.datetime.now()} : Error while pulling latest changes from branch {branch_name}\n{res.stderr.decode("utf-8")}\nExited')
                 logs.close()
                 return False, res.stderr.decode('utf-8')
 
-            logs.write(f'\n{datetime.datetime.now()}\t : Successfully pulled latest changes from branch {branch_name}\n')
+            logs.write(f'\n{datetime.datetime.now()} : Successfully pulled latest changes from branch {branch_name}\n')
             logs.close()
             return True, res.stdout.decode('utf-8')
 
@@ -162,7 +162,7 @@ def pull_git_changes(url, token = None, org_name = None, repo_name = None, branc
 
             os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
             logs = open(log_file,"w")
-            logs.write(f'\n{datetime.datetime.now()}\t : Branch {branch_name} does not exist locally, pulling it\n')
+            logs.write(f'\n{datetime.datetime.now()} : Branch {branch_name} does not exist locally, pulling it\n')
             # copy latest changes to branch direcotry
             res = subprocess.run(
                 ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.", f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"],
@@ -172,22 +172,22 @@ def pull_git_changes(url, token = None, org_name = None, repo_name = None, branc
             )
 
             if res.returncode != 0:
-                logs.write(f'\n{datetime.datetime.now()}\t : Error while creating branch {branch_name}\n{res.stderr.decode("utf-8")}\nExited')
+                logs.write(f'\n{datetime.datetime.now()} : Error while creating branch {branch_name}\n{res.stderr.decode("utf-8")}\nExited')
                 logs.close()
                 return False, res.stderr.decode('utf-8')
             
-            logs.write(f'\n{datetime.datetime.now()}\t : Successfully created branch {branch_name} locally\n')
+            logs.write(f'\n{datetime.datetime.now()} : Successfully created branch {branch_name} locally\n')
             logs.close()
             return True, res.stdout.decode('utf-8')
     else:
         temp_logging_text = ""
         if not os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}"):
-            temp_logging_text = f'\n{datetime.datetime.now()}\t : Organization {org_name} does not exist locally, creating it\n'
+            temp_logging_text = f'\n{datetime.datetime.now()} : Organization {org_name} does not exist locally, creating it\n'
             os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}")
 
         # org exists , repo does not exist , could be a new repo , so clone it
         os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH")
-        temp_logging_text += f'\n{datetime.datetime.now()}\t : Repository {repo_name} does not exist locally, creating it\n'
+        temp_logging_text += f'\n{datetime.datetime.now()} : Repository {repo_name} does not exist locally, creating it\n'
 
         # repo_url = "https://oauth2:"+token+"@github.com/"+user_name+"/"+repo_name+".git"
         
@@ -202,7 +202,7 @@ def pull_git_changes(url, token = None, org_name = None, repo_name = None, branc
             stdout=PIPE,
             stderr=PIPE,
         )
-        temp_logging_text += f'\n{datetime.datetime.now()}\t : Repository {repo_name} does not exist locally, cloning it\n'
+        temp_logging_text += f'\n{datetime.datetime.now()} : Repository {repo_name} does not exist locally, cloning it\n'
         if res.returncode != 0:
             return False, res.stderr.decode('utf-8')
 
@@ -212,7 +212,7 @@ def pull_git_changes(url, token = None, org_name = None, repo_name = None, branc
         except:
             logs = open(log_file,"w")
         logs.write(temp_logging_text)
-        logs.write(f'\n{datetime.datetime.now()}\t : Branch {branch_name} does not exist locally, creating it\n')
+        logs.write(f'\n{datetime.datetime.now()} : Branch {branch_name} does not exist locally, creating it\n')
         
         # copy latest changes to branch direcotry
         res = subprocess.run(
@@ -222,10 +222,10 @@ def pull_git_changes(url, token = None, org_name = None, repo_name = None, branc
             cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
         )
         if res.returncode != 0:
-            logs.write(f'\n{datetime.datetime.now()}\t : Error while creating branch {branch_name}\n{res.stderr.decode("utf-8")}\nExited')
+            logs.write(f'\n{datetime.datetime.now()} : Error while creating branch {branch_name}\n{res.stderr.decode("utf-8")}\nExited')
             return False, res.stderr.decode('utf-8')
         
-        logs.write(f'\n{datetime.datetime.now()}\t : Successfully pulled latest changes from branch {branch_name}\n')
+        logs.write(f'\n{datetime.datetime.now()} : Successfully pulled latest changes from branch {branch_name}\n')
         # copy latest changes to branch direcotry
         res = subprocess.run(
             ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.", f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"],
@@ -234,9 +234,9 @@ def pull_git_changes(url, token = None, org_name = None, repo_name = None, branc
             cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
         )
         if res.returncode != 0:
-            logs.write(f'\n{datetime.datetime.now()}\t : Error while creating branch {branch_name}\n{res.stderr.decode("utf-8")}\nExited')
+            logs.write(f'\n{datetime.datetime.now()} : Error while creating branch {branch_name}\n{res.stderr.decode("utf-8")}\nExited')
             return False, res.stderr.decode('utf-8')
-        logs.write(f'\n{datetime.datetime.now()}\t : Successfully copied changes to branch {branch_name} locally\n')
+        logs.write(f'\n{datetime.datetime.now()} : Successfully copied changes to branch {branch_name} locally\n')
         return True, res.stdout.decode('utf-8') 
 
 def get_git_branches(repo_name, org_name):
@@ -268,19 +268,6 @@ def checkout_git_branch(repo_name, org_name, branch_name):
     return True, res.stdout.decode('utf-8')
 
 def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind_path, db_env_variables, network_name):
-    """
-    run([
-        "docker", "run",
-        "--name", db_name,
-        "-v", f"{db_dump_path}:/docker-entrypoint-initdb.d/",
-        "-v", f"{volume_name}:{volume_bind_path}",
-        "--env", *[f"{k}={v}" for k,v in db_env_variables.items()],
-        "--detach",
-        "--rm",
-        db_image
-    ])
-    
-    """
     command = ["docker", "run"] 
     if db_name:
         command.extend(["--name", db_name])
@@ -427,7 +414,6 @@ def clean_up(org_name, repo_name, remove_container = False, remove_volume = Fals
         except Exception as e:
             return False, f"Error in removing user directory : {remove_user_dir}\n" + str(e)
     
-    # yield "Clean up complete\n"
     return True, "Clean up complete"
 
 @shared_task(bind=True)
@@ -455,24 +441,24 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
     logs = open(log_file,'a')
     
     if docker_image != None:
-        logs.write(f"{datetime.datetime.now()}\t : Searching for Docker image : {docker_image}\n")
+        logs.write(f"{datetime.datetime.now()} : Searching for Docker image : {docker_image}\t ")
         res = run(
             ['docker', 'inspect', docker_image],
             stdout=PIPE,
             stderr=PIPE
         )
         if res.returncode != 0:
-            logs.write(f"\t\tDocker image {docker_image} not found\n")
+            logs.write(f"-> not found\n")
             docker_image = None
         else:
-            logs.write(f"\t\tDocker image {docker_image} found\n")
+            logs.write(f"-> found\n")
 
     if docker_image == None:
         if dockerfile_path == None:
-            logs.write("\t\tDockerfile not provided\n")
+            logs.write("\t\t\tDockerfile not provided\n")
             logs.close()
             return False, "Dockerfile not provided"
-        logs.write(f"{datetime.datetime.now()}\t : Docker image not provided, building image from {dockerfile_path}\n")
+        logs.write(f"{datetime.datetime.now()} : Docker image not provided, building image from {dockerfile_path}\n")
         docker_image = f"{org_name}/{repo_name}:{branch_name}"
         res = run(
             ['docker', 'build', '-t', docker_image, "."],
@@ -481,33 +467,33 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
             cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
         )
         if res.returncode != 0:
-            logs.write(f"{datetime.datetime.now()}\t : Error while building docker image\n\t\tdeploy_from_git_template->run->docker build\n")
+            logs.write(f"{datetime.datetime.now()} : Error while building docker image\n\t\t\tdeploy_from_git_template->run->docker build\n")
             logs.close()
             return False, "Error while building docker image\n" + res.stderr.decode('utf-8')
         else:
-            logs.write(f"{datetime.datetime.now()}\t : Docker image built successfully\n\t\ttagged : {docker_image}\n")
+            logs.write(f"{datetime.datetime.now()} : Docker image built successfully\n\t\t\ttagged : {docker_image}\n")
     
-    logs.write(f"{datetime.datetime.now()}\t : Starting container from image : {docker_image}\n")
+    logs.write(f"{datetime.datetime.now()} : Starting container from image : {docker_image}\n")
     prefix = "iris_template"
     container_name = f"{prefix}_{org_name}_{repo_name}_{branch_name}"
     check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
 
     
     if check_container_exists.returncode == 0:
-        logs.write(f"{datetime.datetime.now()}\t : Container already exists : {container_name}\n")
-        logs.write(f"{datetime.datetime.now()}\t : Removing existing container : {container_name}\n")
+        logs.write(f"{datetime.datetime.now()} : Container already exists : {container_name}\n")
+        logs.write(f"{datetime.datetime.now()} : Removing existing container : {container_name}\n")
         res = run(
             ["docker","rm","-f",container_name],
             stdout=PIPE,
             stderr=PIPE
         )
         if res.returncode != 0:
-            logs.write(f"{datetime.datetime.now()}\t : Error while removing existing container\ndeploy_from_git_template->run->docker rm\n")
+            logs.write(f"{datetime.datetime.now()} : Error while removing existing container\ndeploy_from_git_template->run->docker rm\n")
             logs.close()
             return False, "Error while removing existing container\n" + res.stderr.decode('utf-8')
-        logs.write(f"Existing container removed : {container_name}\n")
+        logs.write(f"\t\t\tExisting container removed : {container_name}\n")
     
-    logs.write(f"{datetime.datetime.now()}\t : Starting container : {container_name}\n")
+    logs.write(f"{datetime.datetime.now()} : Starting container : {container_name}\n")
     res, container_id = start_container(
         container_name=container_name,
         org_name=org_name,
@@ -522,11 +508,11 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
     )
 
     if not res:
-        logs.write(f"{datetime.datetime.now()}\t : Error while starting container : {container_name}\n")
+        logs.write(f"{datetime.datetime.now()} : Error while starting container : {container_name}\n")
         logs.close()
         return False, container_id
     
-    logs.write(f"{datetime.datetime.now()}\t : Container started successfully \ncontainer name : {container_name}\ncontainer id : {container_id}\n")
+    logs.write(f"\n{datetime.datetime.now()} : 🥳 Container started successfully \n\ncontainer name : {container_name}\ncontainer id : {container_id}\n")
     return True, container_id
     # res = run(
     #         ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT,str(branch_name), str(external_port)],
@@ -675,18 +661,18 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         )
         f.write(container_id+"\n")
     else:
-        f.write("Removing Exisiting Container"+container_name+"\n")
+        f.write("\t\t\tRemoving Exisiting Container"+container_name+"\n")
         res1 = run(
             ["docker","rm","-f",container_name],
             stdout=PIPE,
             stderr=PIPE
         )
         if res1.returncode != 0:
-            f.write("\nError : \n"+res1.stderr.decode('utf-8')+"\n")
+            f.write("\n\t\t\tError : \n\t\t\t"+res1.stderr.decode('utf-8')+"\n")
             f.close()
             return False, res1.stderr.decode('utf-8')
 
-        f.write("Starting Container"+"\n")
+        f.write("\t\t\tStarting Container"+"\n")
 
         res, container_id = start_container(
         container_name=container_name,
