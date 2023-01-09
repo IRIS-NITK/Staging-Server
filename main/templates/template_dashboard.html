@@ -49,7 +49,7 @@
                 <td>{{ instance.update_time }}</td>
                 <td>{{ instance.status }}</td>
                 <td>
-                    <form method="post" action="{% url 'deploy_template_stop' instance.pk %}">
+                    <form method="post" action="{% url 'deploy_template_clean_up' instance.pk %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-danger">Stop</button>
                     </form>

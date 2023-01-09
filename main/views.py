@@ -137,6 +137,27 @@ def deploy_from_template(request, pk):
 
     return redirect('deploy_template_dashboard')
 
+@login_required
+def deploy_template_clean_up(request, pk):
+    # def clean_up(org_name, repo_name, remove_container = False, remove_volume = False, remove_network = False, remove_image = False, remove_branch_dir = False, remove_all_dir = False, remove_user_dir = False):
+    instance = RunningInstance.objects.get(pk=pk)
+    if request.method == 'POST':
+        repo_name = instance.repo_name
+        org_name = instance.organisation
+        container_name = f"iris_template_{org_name}_{repo_name}_{instance.branch}"
+        print(f"Cleaning up {container_name}")
+        res, logs = clean_up(
+            org_name = org_name,
+            repo_name = repo_name,
+            remove_container = container_name
+        )
+        if res:
+            instance.status = RunningInstance.STATUS_STOPPED
+            instance.save()
+
+    return redirect('deploy_template_dashboard')
+        
+
 @login_required(login_url='/accounts/login/')
 def home(response):
 

@@ -38,4 +38,5 @@ urlpatterns = [
     path('deploy_template_stop/<int:pk>/', views.deploy_template_stop, name='deploy_template_stop'),
     path('deploy_from_template/<int:pk>/', views.deploy_from_template, name='deploy_from_template'),
     path('deploy_template_dashboard', views.deploy_template_dashboard, name='deploy_template_dashboard'),
+    path('deploy_template_clean_up/<int:pk>/', views.deploy_template_clean_up, name='deploy_template_clean_up'),
 ]

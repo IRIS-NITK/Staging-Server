@@ -387,65 +387,48 @@ def clean_up(org_name, repo_name, remove_container = False, remove_volume = Fals
     Remove all the containers, volumes, networks and images related to the branch
     """
     if remove_container:
-        yield f"Removing container {remove_container}\n"
         res = run(["docker","rm","-f",remove_container],stdout=PIPE,stderr=PIPE)
-        if res.returncode == 0:
-            yield f"Removed container : {remove_container}\n" + res.stdout.decode('utf-8') 
-        else:
-            yield f"Error in removing container : {remove_container}" + res.stderr.decode('utf-8')
+        if res.returncode != 0:
+            return False, res.stderr.decode('utf-8')
     
     if remove_volume:
-        yield f"Removing volume : {remove_volume}\n"
         res = run(["docker","volume","rm",remove_volume],stdout=PIPE,stderr=PIPE)
-        if res.returncode == 0:
-            yield f"Removed volume : {remove_volume}\n" + res.stdout.decode('utf-8')
-        else:
-            yield f"Error in removing volume : {remove_volume}" + res.stderr.decode('utf-8')
+        if res.returncode != 0:
+            return False, res.stderr.decode('utf-8')
 
     if remove_network:
-        yield f"Removing network : {remove_network}\n"
         res = run(["docker","network","rm",remove_network],stdout=PIPE,stderr=PIPE)
-        if res.returncode == 0:
-            yield f"Removed network : {remove_network}\n" + res.stdout.decode('utf-8')
-        else:
-            yield f"Error in removing network : {remove_network}" + res.stderr.decode('utf-8')
+        if res.returncode != 0:
+            return False, res.stderr.decode('utf-8')
     
     if remove_image:
-        yield f"Removing image : {remove_image}\n"
         res = run(["docker","image","rm",remove_image],stdout=PIPE,stderr=PIPE)
-        if res.returncode == 0:
-            yield f"Removed image : {remove_image}\n" + res.stdout.decode('utf-8')
-        else:
-            yield f"Error in removing image : {remove_image}" + res.stderr.decode('utf-8')
+        if res.returncode != 0:
+            return False, res.stderr.decode('utf-8')
 
     if remove_branch_dir:
-        yield f"Removing branch directory : {remove_branch_dir}\n"
         try:
             absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{remove_branch_dir}/{repo_name}"
             shutil.rmtree(absolute_path)
-            yield f"Removed branch directory : {remove_branch_dir}\n"
         except Exception as e:
-            yield f"Error in removing branch directory : {remove_branch_dir}\n" + str(e)
+            return False, f"Error in removing branch directory : {remove_branch_dir}\n" + str(e)
         
     if remove_all_dir:
-        yield f"Removing all directories : {remove_all_dir}\n"
         try:
             absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"
             shutil.rmtree(absolute_path)
-            yield f"Removed all directories : {remove_all_dir}\n"
         except Exception as e:
-            yield f"Error in removing all directories : {remove_all_dir}\n" + str(e)
+            return False, f"Error in removing all directories : {remove_all_dir}\n" + str(e)
     
     if remove_user_dir:
-        yield f"Removing user directory : {remove_user_dir}\n"
         try:
             absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}"
             shutil.rmtree(absolute_path)
-            yield f"Removed user directory : {remove_user_dir}\n"
         except Exception as e:
-            yield f"Error in removing user directory : {remove_user_dir}\n" + str(e)
+            return False, f"Error in removing user directory : {remove_user_dir}\n" + str(e)
     
-    yield "Clean up complete\n"
+    # yield "Clean up complete\n"
+    return True, "Clean up complete"
 
 @shared_task(bind=True)
 def deploy_from_git_template(self, url, token = None, social = None, org_name = None, repo_name = None, branch_name = DEFAULT_BRANCH, internal_port = 80, external_port = 3000, docker_image = None, dockerfile_path = None, docker_volumes = {}, docker_env_variables = {}, default_branch = "main", docker_network = None):
