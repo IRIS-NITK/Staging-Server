@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<!-- table showing 
+    <!-- table showing 
 
     branch = models.TextField()
     owner = models.TextField()
@@ -24,7 +24,6 @@
                 <th scope="col">Repository</th>
                 <th scope="col">Branch</th>
                 <th scope="col">Owner</th>
-                <th scope="col">Create Time</th>
                 <th scope="col">Update Time</th>
                 <th scope="col">Status</th>
                 <th scope="col"></th>
@@ -45,21 +44,37 @@
                 <td><a href="http://localhost:{{ instance.exposed_port }}">{{ instance.organisation }}/{{ instance.repo_name }}</a></td>
                 <td>{{ instance.branch }}</td>
                 <td>{{ instance.owner }}</td>
-                <td>{{ instance.create_time }}</td>
                 <td>{{ instance.update_time }}</td>
-                <td>{{ instance.status }}</td>
                 <td>
+                    {% if instance.status == "PENDING" %}
+                        <span class="badge badge-secondary">Pending</span>
+                    {% elif instance.status == "SUCCESS" %}
+                        <span class="badge badge-success">Success</span>
+                    {% elif instance.status == "ERROR" %}
+                        <span class="badge badge-danger">Error</span>
+                    {% elif instance.status == "DEPLOYING" %}
+                        <span class="badge badge-warning">Deploying</span>
+                    {% elif instance.status == "STOPPED" %}
+                        <span class="badge badge-danger">Stopped</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group">
+                    <form method="post" action="{% url 'logs' orgname=instance.organisation reponame=instance.repo_name branch=instance.branch social=instance.social%}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-info btn-sm mx-1">Logs</button>
+                    </form>
                     <form method="post" action="{% url 'deploy_template_clean_up' instance.pk %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">Stop</button>
-                    </form>
+                        <button type="submit" class="btn btn-outline-danger btn-sm mx-1">Stop</button>
+                    </form>  
+                    </div>                  
                 </td>
             </tr>
           {% endfor %}
         </tbody>
     
     </table>  
-  
 
       
 {% endblock %}

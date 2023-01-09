@@ -351,12 +351,11 @@ def deploy(request,org_name,repo_name,branch,social):
 @login_required(login_url='/accounts/login/')
 def logs(request,social,branch,reponame,orgname):
     path_to_home_dir = os.getenv("PATH_TO_HOME_DIR")
-    default_branch = "master"
     try:
-        log_file_name = f"{path_to_home_dir}/{orgname}/{reponame}/{default_branch}/{branch}.txt"
+        log_file_name = f"{path_to_home_dir}/{orgname}/{reponame}/{branch}/{branch}.txt"
         with open(log_file_name, "r") as f:
             data = f.read()
-        context = {'data': data, 'social': social}
+        context = {'data': data, 'social': social, 'branch': branch, 'reponame': reponame, 'orgname': orgname}
         return render(request, 'log.html', context)
     except:
         return render(request, 'failure.html')
