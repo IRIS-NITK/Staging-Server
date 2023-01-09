@@ -23,3 +23,6 @@ env/
 
 # Pycharm files #
 .idea/
+
+# tests file 
+local_tests.py 
