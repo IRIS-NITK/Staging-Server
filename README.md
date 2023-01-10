@@ -1,4 +1,15 @@
 # Staging-Sever
 
  - [Setup Instructions](/docs/SETUP.md)
- - [Folder Structure](/docs/FOLDER_STRUCTURE.md)
+    - [1. Create and activate virtual environment](/docs/SETUP.md#1-create-and-activate-virtual-environment)
+    - [2. Install dependencies](/docs/SETUP.md#2-install-dependencies)
+    - [3. Run migrations](/docs/SETUP.md#3-run-migrations)
+    - [4. Create superuser](/docs/SETUP.md#4-create-superuser)
+    - [5. Run the app and log in as superuser](/docs/SETUP.md#5-run-the-app-and-log-in-as-superuser)
+    - [6. Update site name](/docs/SETUP.md#6-update-site-name)
+    - [7. Add social applications](/docs/SETUP.md#7-add-social-applications)
+    - [7.1  Add GitLab SSO](/docs/SETUP.md#71-add-gitlab-sso)
+    - [7.2 Add Github SSO](/docs/SETUP.md#72-add-github-sso)
+    - [8. Celery Setup](/docs/SETUP.md#8-celery-setup)
+- [Folder Structure](/docs/FOLDER_STRUCTURE.md)
+- [Using Templates](/docs/TEMPLATES.md)
