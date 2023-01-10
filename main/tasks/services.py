@@ -39,74 +39,6 @@ DEFAULT_BRANCH = "master" # should be a config ideally
 NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 
-
-def pull_git(url, token, org_name, repo_name, branch_name = DEFAULT_BRANCH):
-    
-    # get name of repo
-    # repo_name = url.split('/')[-1].split('.')[0]
-    # main or master ? -> DEFAULT_BRANCH
-    # check if org existss
-    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
-    if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}"):
-        # org exists, check if repo exists
-        if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):
-            
-            try:
-                f = open(log_file,"a")
-            except FileNotFoundError:
-                f = open(log_file,"w")
-                f.write(f"{datetime.datetime.now()}\nStarting deployment\n")
-            f.write("Repo already exists, pulling latest changes\n")
-
-            result = subprocess.run(
-                            ['git', 'pull'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}"
-            )
-
-            if result.returncode != 0:
-                return False, result.stderr.decode('utf-8')
-            return True, result.stdout.decode('utf-8')
-        else:
-            # repo does not exist , could be a new repo , so clone it
-            os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}")
-            # f = open(log_file,"a")
-            # f.write("Repo does not exist, cloning it for the first time\n")
-            user_name = url.split('/')[3]
-            repo_url = "https://oauth2:"+token+"@github.com/"+user_name+"/"+repo_name+".git"
-            parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}"
-            local_dir = os.path.join(parent_dir, repo_name)
-            res = run(
-                ['git', 'clone', repo_url,local_dir],
-                stdout=PIPE,
-                stderr=PIPE,
-            )
-            f = open(log_file,'w')
-            f.write("Starting deployment\n")
-            f.write("Repo did not exist, cloning it for the first time\n")
-            if res.returncode != 0:
-                f.write("Error while cloning repo\n")
-                return False, res.stderr.decode('utf-8')
-            f.write("Repo cloned successfully\n")
-        return True, res.stdout.decode('utf-8')
-    else:
-        os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}")
-        f = open(log_file,"a")
-        f.write("Org does not exist, cloning it for the first time\n")
-        user_name = url.split('/')[3]
-        repo_url = "https://oauth2:"+token+"@github.com/"+user_name+"/"+repo_name+".git"
-        parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}"
-        local_dir = os.path.join(parent_dir, repo_name)
-        res = run(
-                ['git', 'clone', repo_url,local_dir],
-                stdout=PIPE,
-                stderr=PIPE,
-            )
-        if res.returncode != 0:
-            return False, res.stderr.decode('utf-8')
-        return True, res.stdout.decode('utf-8')
-
 def pull_git_changes(url, token = None, org_name = None, repo_name = None, branch_name = DEFAULT_BRANCH):
     user_name, repo_name = get_repo_info(url)
     org_name = user_name
@@ -192,7 +124,7 @@ def pull_git_changes(url, token = None, org_name = None, repo_name = None, branc
         # repo_url = "https://oauth2:"+token+"@github.com/"+user_name+"/"+repo_name+".git"
         
         if token:
-            url = f'https://{user_name}:{token}@github.com/{user_name}/{repo_name}.git'
+            url = f'https://{user_name}:{token}@github.com/{user_name}/{repo_name}'
 
         parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH"
         local_dir = os.path.join(parent_dir, repo_name)
@@ -239,33 +171,6 @@ def pull_git_changes(url, token = None, org_name = None, repo_name = None, branc
         logs.write(f'\n{datetime.datetime.now()} : Successfully copied changes to branch {branch_name} locally\n')
         return True, res.stdout.decode('utf-8') 
 
-def get_git_branches(repo_name, org_name):
-    # log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{default_branch}/{branch_name}.txt"
-    # f = open(log_file,"a")
-    # f.write("Getting branches\n")
-    res = run(
-        ['git', 'branch', '-a'],
-        stdout=PIPE,
-        stderr=PIPE,
-        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}"
-    )
-    if res.returncode != 0:
-        return False, res.stderr.decode('utf-8')
-    return True, res.stdout.decode('utf-8')
-
-def checkout_git_branch(repo_name, org_name, branch_name):
-    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
-    f = open(log_file,"a")
-    f.write(f"Switching to branch : {branch_name}\n")
-    res = run(
-        ['git', 'checkout', branch_name],
-        stdout=PIPE,
-        stderr=PIPE,
-        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}"
-    )
-    if res.returncode != 0:
-        return False, res.stderr.decode('utf-8')
-    return True, res.stdout.decode('utf-8')
 
 def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind_path, db_env_variables, network_name):
     command = ["docker", "run"] 
@@ -419,7 +324,7 @@ def clean_up(org_name, repo_name, remove_container = False, remove_volume = Fals
 @shared_task(bind=True)
 def deploy_from_git_template(self, url, token = None, social = None, org_name = None, repo_name = None, branch_name = DEFAULT_BRANCH, internal_port = 80, external_port = 3000, docker_image = None, dockerfile_path = None, docker_volumes = {}, docker_env_variables = {}, default_branch = "main", docker_network = None):
     log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
-    
+    external_port = find_free_port()
     # pull git repo
     res, msg = pull_git_changes(
         url=url,
@@ -523,61 +428,16 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
 @shared_task(bind=True)
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "master"):
     
-
     log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+
     # pull git repo
-    result,msg = pull_git(url,token,repo_name=repo_name, org_name=org_name, branch_name=branch_name )
-    f = open(log_file,'a')
-    f.write(msg)
-    if not result:
-        f.write(msg)
-        f.close()
-        return False, msg 
-
-
-    # get branches
-    res, branches  = get_git_branches(repo_name, org_name=org_name)
-    if not res:
-        f.write(branches)
-        f.close()
-        return False, branches
-        
-    
-    # check if branch exists
-    if branch_name not in branches:
-        return False, "Branch does not exist in the git repository"
-    
-    # checkout branch
-    res, msg = checkout_git_branch(repo_name=repo_name, org_name=org_name, branch_name=branch_name)
-
-    if not res[0]:
-        f.write(msg)
-        f.close()
-        return False, res[1]
-    
-    # check if branch was already deployed previously
-    if branch_name not in os.listdir(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):
-        # branch was not deployed previously
-        # create a new directory for the branch
-        os.mkdir(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
-        # copy the code from the default branch to the new branch
-        if src_code_dir == None:
-            res = run(
-                ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}/", f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/"],
-                stdout=PIPE,
-                stderr=PIPE
-            )
-        else:
-            if len(src_code_dir) != len(dest_code_dir):
-                return False, "Error in mounting the files, incorrect mapping"
-            for src_folder, dest_folder in zip(src_code_dir, dest_code_dir):
-                res = run(
-                    ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{repo_name}/{src_folder}", f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{dest_folder}"],
-                    stdout=PIPE,
-                    stderr=PIPE
-                )
-                if res.returncode != 0:
-                    return False, "Error while mounting code, incorrect mapping\n" + res.stderr.decode('utf-8')
+    res, msg = pull_git_changes(
+        url=url,
+        token=token,
+        org_name=org_name,
+        repo_name=repo_name,
+        branch_name=branch_name,
+    )
     
         
     image_name = ""
@@ -601,6 +461,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     for key, value in env_var_args.items():
         db_env_variables.extend(["--env", f"{key}={value}"])
 
+    f = open(log_file,'a')
     db_name = "db"
     f.write("Starting Database Container"+"\n")
     res, msg = start_db_container(db_image, "db", None, None, None, db_env_variables, "IRIS")
@@ -629,7 +490,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     external_port = find_free_port()
     env_variables = {}
 
-    if org_name == "NITK-IRIS":
+    if org_name == "IRIS-NITK":
         src = f'{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/' + "config/initializers"
         path_to_nitk_setting = os.getenv("PATH_TO_NITK_SETTING")
         path_to_secret_token = os.getenv("PATH_TO_SECRET_TOKEN")
@@ -703,13 +564,17 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
 
 def get_repo_info(url):
     "Return org/username , repo name from a GitHub or GitLab URL."
-    github_match = re.match(r'(?:https?://)?github.com/(.+)/(.+)', url)
+    github_match = re.match(r'(?:https?://)?github.com/([^/]+)/([^/]+)(?:\.git)?', url)
     if github_match:
-        return (github_match.group(1), github_match.group(2))
+        repo = url.rsplit("/",1)[-1].replace(".git","")
+        return (github_match.group(1), repo)
 
-    gitlab_match = re.match(r'(?:https?://)?gitlab.com/(.+)/(.+)', url)
-    if gitlab_match:
-        return (gitlab_match.group(1), gitlab_match.group(2))
+    # gitlab_match = re.match(r'(?:https?://)?gitlab.com/([^/]+)/([^/]+)(?:\.git)?', url)
+    # if gitlab_match:
+    #     repo = url.rsplit("/",1)[-1].replace(".git","")
+    #     print(repo)
+    #     return (gitlab_match.group(1), repo)
+    return ("IRIS-NITK","IRIS")
 
     # Unrecognized URL format
     return (None, None)
