@@ -349,8 +349,10 @@ def deploy(request,org_name,repo_name,branch,social):
         instance.owner = request.user.username
         instance.update_time = time.time()
         instance.save()
+    # deploy_from_git.delay(token, url, social, org_name, repo_name, branch)
+    print(org_name)
+    # deploy_from_git_template.delay(url,token,social,org_name,repo_name,branch)
     deploy_from_git.delay(token, url, social, org_name, repo_name, branch)
-
     return redirect('form', social=social)
 
 
