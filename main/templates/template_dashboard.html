@@ -67,8 +67,13 @@
                     <form method="post" action="{% url 'deploy_template_clean_up' instance.pk %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-danger btn-sm mx-1">Stop</button>
-                    </form>
-                    <a href="{% url 'deploy_instance_delete' instance.pk %}">🗑️</a>  
+                    </form>                    
+                    <a href="{% url 'deploy_instance_delete' instance.pk %}">
+                        <i class="fa fa-trash" style="font-size: 24px; margin-right: 10px; margin-left: 10px;"></i>
+                    </a>
+                    <a href="{% url 'check_uptime_status' instance.pk %}">
+                        <i class="fa fa-refresh" style="font-size:24px;"></i>
+                    </a>  
                     </div>                  
                 </td>
             </tr>

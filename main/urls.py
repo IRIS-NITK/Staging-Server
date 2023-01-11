@@ -41,4 +41,6 @@ urlpatterns = [
     path('deploy_template_clean_up/<int:pk>/', views.deploy_template_clean_up, name='deploy_template_clean_up'),
     path('deploy_instance_delete/<int:pk>/', views.deploy_instance_delete, name='deploy_instance_delete'),
     path('deploy_template_duplicate/<int:pk>/', views.deploy_template_duplicate, name='deploy_template_duplicate'),
+
+    path('check_uptime_status/<int:pk>/',views.check_uptime_status, name="check_uptime_status"),
 ]
