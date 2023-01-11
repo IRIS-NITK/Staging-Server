@@ -80,7 +80,7 @@ def deploy_instance_delete(request, pk):
 
 @login_required
 def deploy_instance_redeploy(request, pk):
-    # TODO : doesn't work yet , 
+    # TODO : doesn't work yet 
     instance = RunningInstance.objects.get(pk=pk)
     try:
         template = DeployTemplate.objects.get(
@@ -374,7 +374,9 @@ def deploy(request,org_name,repo_name,branch,social):
                 url = repo.clone_url
                 break
     else:
-        url = "https://git.iris.nitk.ac.in/IRIS-NITK/" + repo_name + ".git"
+        url = "ssh://git@git.iris.nitk.ac.in:5022/IRIS-NITK/IRIS.git"
+        token = None 
+        # url = "https://git.iris.nitk.ac.in/IRIS-NITK/" + repo_name + ".git"
 
     instance, created = RunningInstance.objects.get_or_create(
         social=social,
@@ -387,10 +389,15 @@ def deploy(request,org_name,repo_name,branch,social):
         instance.owner = request.user.username
         instance.update_time = time.time()
         instance.save()
-    # deploy_from_git.delay(token, url, social, org_name, repo_name, branch)
-    print(org_name)
-    # deploy_from_git_template.delay(url,token,social,org_name,repo_name,branch)
-    deploy_from_git.delay(token, url, social, org_name, repo_name, branch)
+
+    deploy_from_git.delay(
+        token = token, 
+        url = url,
+        social = social,
+        org_name = org_name,
+        repo_name = repo_name,
+        branch_name = branch
+    )
     return redirect('form', social=social)
 
 

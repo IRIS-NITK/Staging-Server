@@ -441,8 +441,9 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         
     image_name = ""
     docker_image = ""
-    if url == 'https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git':
-        docker_image = "dev27"
+    if url == 'https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git' or url=="ssh://git@git.iris.nitk.ac.in:5022/IRIS-NITK/IRIS.git":
+        docker_image = "git-registry.iris.nitk.ac.in/iris-teams/systems-team/staging-server/dev-iris:latest"
+    
     else:
         image_name = org_name+"/"+repo_name+":"+branch_name
         docker_image = image_name.lower()
@@ -459,8 +460,11 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
 
     for key, value in env_var_args.items():
         db_env_variables.extend(["--env", f"{key}={value}"])
+    try:
+        f = open(log_file,'a')
+    except FileNotFoundError:
+        f = open(log_file,'w')
 
-    f = open(log_file,'a')
     db_name = "db"
     f.write("Starting Database Container"+"\n")
     res, msg = start_db_container(db_image, "db", None, None, None, db_env_variables, "IRIS")
@@ -491,10 +495,15 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
 
     if org_name == "IRIS-NITK":
         src = f'{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/' + "config/initializers"
-        path_to_nitk_setting = os.getenv("PATH_TO_NITK_SETTING")
-        path_to_secret_token = os.getenv("PATH_TO_SECRET_TOKEN")
-        res = run(["cp",path_to_nitk_setting,src],stdout=PIPE,stderr=PIPE)
-        res = run(["cp",path_to_secret_token,src],stdout=PIPE,stderr=PIPE)
+        res = run([
+            "cp",f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/config/initializers/nitk_setting.rb.example",
+            f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/config/initializers/nitk_setting.rb"
+        ])
+
+        res = run([
+            "cp",f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/config/initializers/nitk_setting.rb.example",
+            f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/config/initializers/secret_token.rb"
+        ])
         src = f'{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/'
         dest = "/iris-data/" 
         volumes = {
@@ -549,16 +558,16 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
 
     #nginx config 
 
-    res = run(
-            ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT,str(branch_name), str(external_port)],
-            stdout=PIPE,
-            stderr=PIPE,
-        )
-    f.write(res.stdout.decode('utf-8')+"\n")
-    if res.returncode != 0: 
-        f.close()
-        return False, res.stderr.decode('utf-8')
-    f.close()
+    # res = run(
+    #         ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT,str(branch_name), str(external_port)],
+    #         stdout=PIPE,
+    #         stderr=PIPE,
+    #     )
+    # f.write(res.stdout.decode('utf-8')+"\n")
+    # if res.returncode != 0: 
+    #     f.close()
+    #     return False, res.stderr.decode('utf-8')
+    # f.close()
     return True, "Success"
 
 def get_repo_info(url):
