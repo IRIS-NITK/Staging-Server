@@ -168,7 +168,7 @@ SOCIALACCOUNT_PROVIDERS = {
     # https://docs.gitlab.com/ee/integration/oauth_provider.html
     'gitlab': {
         'GITLAB_URL': 'https://git.iris.nitk.ac.in',
-        'SCOPE': ['api'],
+        'SCOPE': ['read_api', 'read_user', 'read_repository', 'read_registry'],
     },
 }
 
