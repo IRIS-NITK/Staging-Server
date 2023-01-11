@@ -3,7 +3,8 @@
 {% block content %}
   {% for template in templates %}
     <div class="card mb-3">
-      <div class="card-body">
+
+      <div class="card-header">
         <h3 class="card-title">{{ template.name }} 
           {% if template.social_type == 'github' %}
           <img src="/static/github.png" alt="GitHub" width="20" height="20">
@@ -12,6 +13,11 @@
           {% else %}
               {{ instance.social }}
           {% endif %}
+      </div>
+
+      <div class="card-body">
+        
+          
         </h5>
         <p class="card-text text-muted">Organisation or User: <span class="font-weight-bold text-truncate">{{ template.organisation_or_user }}</span></p>
         <p class="card-text text-muted">Git URL: <span class="font-weight-bold text-truncate">{{ template.git_repo_url }}</span></p>
@@ -36,7 +42,12 @@
 
         <form action="{% url 'deploy_from_template' pk=template.pk %}" method="post" class="d-inline">
           {% csrf_token %}
-          <button type="submit" class="btn btn-success">Deploy</button>
+          <button type="submit" class="btn btn-outline-success">Deploy</button>
+        </form>
+
+        <form action="{% url 'deploy_template_duplicate' pk=template.pk %}" method="post" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-dark">Duplicate</button>
         </form>
         
       </div>

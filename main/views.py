@@ -162,6 +162,50 @@ def deploy_template_clean_up(request, pk):
             instance.save()
 
     return redirect('deploy_template_dashboard')
+
+"""
+social_type = models.TextField(
+        choices=[
+            ("github", "Github"),
+            ("gitlab", "Gitlab"),
+            ("other", "Other")
+        ]
+    )
+
+    name = models.TextField("Name", max_length=100)
+    organisation_or_user = models.TextField("Organisation or User", max_length=100)
+    git_repo_url = models.URLField("Git URL", max_length=200)
+    access_token = models.TextField("Access Token", max_length=50, blank=True, null=True)
+    default_branch = models.TextField("Default Branch", default="main", max_length=50) 
+    
+    docker_image = models.TextField("Docker Image", max_length=100, blank=True)
+    docker_network = models.TextField("Docker Network", default="bridge", max_length=100)
+    docker_volumes = models.TextField("Docker Volumes", default="{}", max_length=500)
+    docker_env_vars = models.TextField("Docker Environment Variables", default="{}", max_length=500)
+    internal_port = models.IntegerField("Internal Port", default="80")
+
+    dockerfile_path = models.TextField("Dockerfile Path", blank=True, max_length=100)
+"""   
+@login_required
+def deploy_template_duplicate(request, pk):
+    template = DeployTemplate.objects.get(pk=pk)
+    if request.method == 'POST':
+        duplicate_template = DeployTemplate.objects.create(
+            name = template.name + " (copy)",
+            social_type = template.social_type,
+            organisation_or_user = template.organisation_or_user,
+            git_repo_url = template.git_repo_url,
+            access_token = template.access_token,
+            default_branch = template.default_branch,
+            docker_image = template.docker_image,
+            docker_network = template.docker_network,
+            docker_volumes = template.docker_volumes,
+            docker_env_vars = template.docker_env_vars,
+            internal_port = template.internal_port,
+            dockerfile_path = template.dockerfile_path
+        )
+        duplicate_template.save()
+    return redirect('deploy_template_list')
         
 
 @login_required(login_url='/accounts/login/')
