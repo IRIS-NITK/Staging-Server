@@ -300,7 +300,7 @@ def clean_up(org_name, repo_name, remove_container = False, remove_volume = Fals
 
     if remove_branch_dir:
         try:
-            absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{remove_branch_dir}/{repo_name}"
+            absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{remove_branch_dir}"
             shutil.rmtree(absolute_path)
         except Exception as e:
             return False, f"Error in removing branch directory : {remove_branch_dir}\n" + str(e)
@@ -378,7 +378,7 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
             logs.write(f"{datetime.datetime.now()} : Docker image built successfully\n\t\t\ttagged : {docker_image}\n")
     
     logs.write(f"{datetime.datetime.now()} : Starting container from image : {docker_image}\n")
-    prefix = "iris_template"
+    prefix = "iris"
     container_name = f"{prefix}_{org_name}_{repo_name}_{branch_name}"
     check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
 
@@ -425,7 +425,7 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
     #     )
 
 @shared_task(bind=True)
-def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "master"):
+def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  external_port = None, src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "master"):
     
     log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
 
@@ -436,9 +436,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         org_name=org_name,
         repo_name=repo_name,
         branch_name=branch_name,
-    )
-    
-        
+    )        
     image_name = ""
     docker_image = ""
     if url == 'https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git' or url=="ssh://git@git.iris.nitk.ac.in:5022/IRIS-NITK/IRIS.git":
@@ -490,7 +488,6 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     prefix = "iris"
     container_name = f"{prefix}_{org_name}_{repo_name}_{branch_name}"
     check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
-    external_port = find_free_port()
     env_variables = {}
 
     if org_name == "IRIS-NITK":

@@ -62,8 +62,7 @@ def deploy_template_delete(request, pk):
 @login_required
 def deploy_template_stop(request, pk):
     instance = RunningInstance.objects.get(pk=pk)
-    prefix = "iris_template"
-    container_name = f"{prefix}_{instance.organisation}_{instance.repo_name}_{instance.branch}"
+    container_name = f"iris_{instance.organisation}_{instance.repo_name}_{instance.branch}"
     clean_up(
         org_name = instance.organisation,
         repo_name = instance.repo_name,
@@ -166,12 +165,13 @@ def deploy_template_clean_up(request, pk):
     if request.method == 'POST':
         repo_name = instance.repo_name
         org_name = instance.organisation
-        container_name = f"iris_template_{org_name}_{repo_name}_{instance.branch}"
+        container_name = f"iris_{org_name}_{repo_name}_{instance.branch}"
         print(f"Cleaning up {container_name}")
         res, logs = clean_up(
             org_name = org_name,
             repo_name = repo_name,
-            remove_container = container_name
+            remove_container = container_name,
+            remove_branch_dir=instance.branch,
         )
         if res:
             instance.status = RunningInstance.STATUS_STOPPED
@@ -378,7 +378,9 @@ def deploy(request,org_name,repo_name,branch,social):
         token = None 
         # url = "https://git.iris.nitk.ac.in/IRIS-NITK/" + repo_name + ".git"
 
+    external_port = findfreeport.find_free_port()
     instance, created = RunningInstance.objects.get_or_create(
+        exposed_port= external_port,
         social=social,
         organisation=org_name,
         repo_name=repo_name,
@@ -387,10 +389,12 @@ def deploy(request,org_name,repo_name,branch,social):
     )
     if not created:
         instance.owner = request.user.username
+        instance.exposed_port = external_port
         instance.update_time = time.time()
         instance.save()
 
     deploy_from_git.delay(
+        external_port = external_port,
         token = token, 
         url = url,
         social = social,
