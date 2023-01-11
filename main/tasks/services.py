@@ -324,7 +324,6 @@ def clean_up(org_name, repo_name, remove_container = False, remove_volume = Fals
 @shared_task(bind=True)
 def deploy_from_git_template(self, url, token = None, social = None, org_name = None, repo_name = None, branch_name = DEFAULT_BRANCH, internal_port = 80, external_port = 3000, docker_image = None, dockerfile_path = None, docker_volumes = {}, docker_env_variables = {}, default_branch = "main", docker_network = None):
     log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
-    external_port = find_free_port()
     # pull git repo
     res, msg = pull_git_changes(
         url=url,
