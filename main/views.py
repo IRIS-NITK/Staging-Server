@@ -13,6 +13,7 @@ from main.models import RunningInstance
 from django.template import Context, loader
 from .forms import DeployTemplateForm
 from .models import DeployTemplate
+import requests
 
 response_header = loader.get_template("response_header.html")
 response_footer = loader.get_template("response_footer.html")
@@ -76,7 +77,22 @@ def deploy_instance_delete(request, pk):
     instance = RunningInstance.objects.get(pk=pk)
     instance.delete()
     return redirect('deploy_template_dashboard')
-    
+
+@login_required
+def deploy_instance_redeploy(request, pk):
+    # TODO : doesn't work yet , 
+    instance = RunningInstance.objects.get(pk=pk)
+    try:
+        template = DeployTemplate.objects.get(
+        social_type = instance.social,
+        organisation_or_user = instance.organisation,
+        default_branch = instance.branch,
+        )
+    except ObjectDoesNotExist:
+        return HttpResponse("Template not found, was this deployed from a template ?")
+    return redirect('deploy_from_template', pk=template.pk)
+
+
 @login_required
 def deploy_from_template(request, pk):
     template = DeployTemplate.objects.get(pk=pk)
@@ -163,29 +179,7 @@ def deploy_template_clean_up(request, pk):
 
     return redirect('deploy_template_dashboard')
 
-"""
-social_type = models.TextField(
-        choices=[
-            ("github", "Github"),
-            ("gitlab", "Gitlab"),
-            ("other", "Other")
-        ]
-    )
-
-    name = models.TextField("Name", max_length=100)
-    organisation_or_user = models.TextField("Organisation or User", max_length=100)
-    git_repo_url = models.URLField("Git URL", max_length=200)
-    access_token = models.TextField("Access Token", max_length=50, blank=True, null=True)
-    default_branch = models.TextField("Default Branch", default="main", max_length=50) 
-    
-    docker_image = models.TextField("Docker Image", max_length=100, blank=True)
-    docker_network = models.TextField("Docker Network", default="bridge", max_length=100)
-    docker_volumes = models.TextField("Docker Volumes", default="{}", max_length=500)
-    docker_env_vars = models.TextField("Docker Environment Variables", default="{}", max_length=500)
-    internal_port = models.IntegerField("Internal Port", default="80")
-
-    dockerfile_path = models.TextField("Dockerfile Path", blank=True, max_length=100)
-"""   
+ 
 @login_required
 def deploy_template_duplicate(request, pk):
     template = DeployTemplate.objects.get(pk=pk)
@@ -459,3 +453,20 @@ def get_container_logs(request, social, orgname, reponame, branch):
     response["Cache-Control"] = "no-cache"
     response["X-Accel-Buffering"] = "no"
     return response
+
+
+@login_required
+def check_uptime_status(request, pk):
+    instance = RunningInstance.objects.get(pk = pk)
+    url = f"http://localhost:{instance.exposed_port}"
+    try:
+        res = (requests.get(url, timeout=5).status_code == 200)
+    except:
+        res = False 
+    if instance.status !=(RunningInstance.STATUS_SUCCESS) and res:
+        instance.status = RunningInstance.STATUS_SUCCESS
+    if instance.status == RunningInstance.STATUS_SUCCESS and not res:
+        instance.status = RunningInstance.STATUS_STOPPED
+    instance.save()
+    return redirect('deploy_template_dashboard')
+    
