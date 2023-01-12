@@ -247,8 +247,6 @@ def form_wrapper(request):
 
 @login_required(login_url='/accounts/login/')
 def form(request,social):
-
-    account__provider = social
     social = social.capitalize()
     if social == "Github":
         gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
@@ -271,13 +269,14 @@ def form(request,social):
         except:
             return redirect("account_login")
         projects = gl.projects.list(get_all=True)
-        repos = {}
-        val = 1
-        for i in projects:
-            repos[val] = i.name
-            val+=1
-        instances = RunningInstance.objects.all()
-        return render(request,'gitlabform.html',{'instances':instances,'repos':repos})
+        repos = { i + 1 : project.name for i,project in enumerate(projects) }
+        # repos = {}
+        # val = 1
+        # for i in projects:
+        #     repos[val] = i.name
+        #     val+=1
+        instances = RunningInstance.objects.filter(organisation="IRIS-NITK")
+        return render(request,'gitlab_form.html',{'instances':instances,'repos':repos})
     
 @login_required(login_url='/accounts/login/')
 def getrepos(request):
@@ -361,7 +360,6 @@ def deploy(request,org_name,repo_name,branch,social):
 
     token_obj = SocialToken.objects.filter(account__user=request.user, account__provider=social)
     token = json.loads(serializers.serialize('json', token_obj))[0]['fields']['token']
-    external_port = findfreeport.find_free_port()
     url = ""
     if social == "github":
         gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
@@ -379,17 +377,20 @@ def deploy(request,org_name,repo_name,branch,social):
         token = None 
         # url = "https://git.iris.nitk.ac.in/IRIS-NITK/" + repo_name + ".git"
 
-    try:
-        instance = RunningInstance.objects.get(social=social,organisation=org_name,repo_name=repo_name,branch= branch)
+    external_port = findfreeport.find_free_port()
+    instance, created = RunningInstance.objects.get_or_create(
+        exposed_port= external_port,
+        social=social,
+        organisation=org_name,
+        repo_name=repo_name,
+        branch=branch,
+        defaults={'owner': request.user.username, 'status': RunningInstance.STATUS_PENDING}
+    )
+    if not created:
         instance.owner = request.user.username
+        instance.exposed_port = external_port
         instance.update_time = time.time()
         instance.save()
-    except ObjectDoesNotExist:
-        instance = RunningInstance(
-           branch=branch, owner=request.user.username, status=RunningInstance.STATUS_PENDING,repo_name =repo_name,organisation=org_name,social=social
-        )
-        instance.save()
-
 
     deploy_from_git.delay(
         external_port = external_port,
