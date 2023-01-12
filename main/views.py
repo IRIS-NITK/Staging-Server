@@ -361,6 +361,7 @@ def deploy(request,org_name,repo_name,branch,social):
 
     token_obj = SocialToken.objects.filter(account__user=request.user, account__provider=social)
     token = json.loads(serializers.serialize('json', token_obj))[0]['fields']['token']
+    external_port = findfreeport.find_free_port()
     url = ""
     if social == "github":
         gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
@@ -378,20 +379,17 @@ def deploy(request,org_name,repo_name,branch,social):
         token = None 
         # url = "https://git.iris.nitk.ac.in/IRIS-NITK/" + repo_name + ".git"
 
-    external_port = findfreeport.find_free_port()
-    instance, created = RunningInstance.objects.get_or_create(
-        exposed_port= external_port,
-        social=social,
-        organisation=org_name,
-        repo_name=repo_name,
-        branch=branch,
-        defaults={'owner': request.user.username, 'status': RunningInstance.STATUS_PENDING}
-    )
-    if not created:
+    try:
+        instance = RunningInstance.objects.get(social=social,organisation=org_name,repo_name=repo_name,branch= branch)
         instance.owner = request.user.username
-        instance.exposed_port = external_port
         instance.update_time = time.time()
         instance.save()
+    except ObjectDoesNotExist:
+        instance = RunningInstance(
+           branch=branch, owner=request.user.username, status=RunningInstance.STATUS_PENDING,repo_name =repo_name,organisation=org_name,social=social
+        )
+        instance.save()
+
 
     deploy_from_git.delay(
         external_port = external_port,
