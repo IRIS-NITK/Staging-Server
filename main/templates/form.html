@@ -21,7 +21,7 @@
                 {% for instance in instances %}
                     <div class="list-group-item status">
                         <div style="display: flex; align-items: center; ">
-                            <a 
+                            <a href="https://staging-test-{{instance.organisation}}-{{instance.repo_name}}-{{instance.branch}}"
                             class="mx-2" target="_blank" 
                             style="display: flex; align-items: center;">
                             {{instance.branch}}

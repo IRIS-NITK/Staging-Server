@@ -26,3 +26,7 @@ env/
 
 # tests file 
 local_tests.py 
+
+#nginx scripts
+
+scripts/
