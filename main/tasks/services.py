@@ -442,8 +442,8 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     image_name = ""
     docker_image = ""
     if url == 'https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git' or url=="ssh://git@git.iris.nitk.ac.in:5022/IRIS-NITK/IRIS.git":
-        docker_image = "git-registry.iris.nitk.ac.in/iris-teams/systems-team/staging-server/dev-iris:latest"
-    
+        #docker_image = "git-registry.iris.nitk.ac.in/iris-teams/systems-team/staging-server/dev-iris:latest"
+    	docker_image = os.getenv("BASE_IMAGE")
     else:
         image_name = org_name+"/"+repo_name+":"+branch_name
         docker_image = image_name.lower()
