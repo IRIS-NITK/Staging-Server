@@ -75,7 +75,7 @@ def deploy_template_stop(request, pk):
 def deploy_instance_delete(request, pk):
     instance = RunningInstance.objects.get(pk=pk)
     instance.delete()
-    return redirect('deploy_template_dashboard')
+    return redirect('form',social=instance.social)
 
 @login_required
 def deploy_instance_redeploy(request, pk):
@@ -177,7 +177,7 @@ def deploy_template_clean_up(request, pk):
             instance.status = RunningInstance.STATUS_STOPPED
             instance.save()
 
-    return redirect('deploy_template_dashboard')
+    return redirect('form',social=instance.social)
 
  
 @login_required
@@ -382,10 +382,11 @@ def deploy(request,org_name,repo_name,branch,social):
         instance = RunningInstance.objects.get(social=social,organisation=org_name,repo_name=repo_name,branch= branch)
         instance.owner = request.user.username
         instance.update_time = time.time()
+        instance.external_port = external_port
         instance.save()
     except ObjectDoesNotExist:
         instance = RunningInstance(
-           branch=branch, owner=request.user.username, status=RunningInstance.STATUS_PENDING,repo_name =repo_name,organisation=org_name,social=social
+           branch=branch, owner=request.user.username, status=RunningInstance.STATUS_PENDING,repo_name =repo_name,organisation=org_name,social=social,exposed_port=external_port
         )
         instance.save()
 
@@ -444,17 +445,20 @@ def get_container_logs(request, social, orgname, reponame, branch):
     prefix = "iris"
     container_name = f"{prefix}_{orgname}_{reponame}_{branch}"
     command = ["docker", "logs", "-f", container_name]
-    process = subprocess.Popen(command, stdout=subprocess.PIPE)
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def generate_stream():
         yield response_header.render({"purpose": "Starting"})
         yield "<pre><code >"
-        while True:
+        while process.poll() is None:
             output = process.stdout.readline()
-            if output == b'':
-                break
             logs = output.decode("utf-8")
             yield logs
+        output, errors = process.communicate()
+        if errors:
+            logs = errors.decode("utf-8")
+            yield logs
+
 
     response = StreamingHttpResponse(generate_stream())
     del response["Content-Length"]
@@ -476,5 +480,5 @@ def check_uptime_status(request, pk):
     if instance.status == RunningInstance.STATUS_SUCCESS and not res:
         instance.status = RunningInstance.STATUS_STOPPED
     instance.save()
-    return redirect('deploy_template_dashboard')
+    return redirect('form', social=instance.social)
     

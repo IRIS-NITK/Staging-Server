@@ -268,7 +268,7 @@ def stop_container(branch_name, repo_name, org_name):
     file_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{DEFAULT_BRANCH}/{branch_name}"+".txt"
     res = run(["rm",file_path])
     yield "Removing Nginx Script\n"
-    res = run(["sudo","bash",NGINX_REMOVE_CONFIG_SCRIPT,branch_name],stdout=PIPE,stderr=PIPE)
+    res = run(["sudo","bash",NGINX_REMOVE_CONFIG_SCRIPT,org_name,repo_name,branch_name],stdout=PIPE,stderr=PIPE)
     if res.returncode == 0:
         yield res.stdout.decode('utf-8')
     else:
@@ -278,6 +278,8 @@ def clean_up(org_name, repo_name, remove_container = False, remove_volume = Fals
     """
     Remove all the containers, volumes, networks and images related to the branch
     """
+    res = run(["sudo","bash",NGINX_REMOVE_CONFIG_SCRIPT,org_name,repo_name,remove_branch_dir],stdout=PIPE,stderr=PIPE)
+    
     if remove_container:
         res = run(["docker","rm","-f",remove_container],stdout=PIPE,stderr=PIPE)
         if res.returncode != 0:
@@ -318,7 +320,7 @@ def clean_up(org_name, repo_name, remove_container = False, remove_volume = Fals
             shutil.rmtree(absolute_path)
         except Exception as e:
             return False, f"Error in removing user directory : {remove_user_dir}\n" + str(e)
-    
+ 
     return True, "Clean up complete"
 
 @shared_task(bind=True)
@@ -555,17 +557,19 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
 
     #nginx config 
 
-    # res = run(
-    #         ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT,str(branch_name), str(external_port)],
-    #         stdout=PIPE,
-    #         stderr=PIPE,
-    #     )
-    # f.write(res.stdout.decode('utf-8')+"\n")
-    # if res.returncode != 0: 
-    #     f.close()
-    #     return False, res.stderr.decode('utf-8')
-    # f.close()
-    return True, "Success"
+    with open("logfile.txt", "w") as f:
+        try:
+            result = subprocess.run(
+                ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(org_name), str(repo_name), str(branch_name), str(external_port)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True
+            )
+            f.write(result.stdout.decode('utf-8') + "\n")
+            return True, "Success"
+        except subprocess.CalledProcessError as error:
+            f.write(error.stderr.decode('utf-8') + "\n")
+            return False, error.stderr.decode('utf-8')
 
 def get_repo_info(url):
     "Return org/username , repo name from a GitHub or GitLab URL."
