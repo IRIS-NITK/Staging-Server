@@ -65,7 +65,7 @@
           {% for instance in instances %}
             <tr>
                 <td>
-                    <a href="https://staging-test-{{instance.organisation}}-{{instance.repo_name}}-{{ instance.branch | lower}}.iris.nitk.ac.in">{{ instance.branch }}</a>
+                    <a href="https://staging-{{ instance.branch | lower}}.iris.nitk.ac.in">{{ instance.branch }}</a>
                 </td>
                 <td>{{ instance.owner }}</td>
                 <td>{{ instance.update_time }}</td>
