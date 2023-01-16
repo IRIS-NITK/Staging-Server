@@ -38,6 +38,7 @@ PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
 DEFAULT_BRANCH = "master" # should be a config ideally
 NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
+NGINX_ADD_CONFIG_SCRIPT_IRIS = os.getenv("NGINX_ADD_CONFIG_SCRIPT_IRIS")
 
 def pull_git_changes(url, token = None, org_name = None, repo_name = None, branch_name = DEFAULT_BRANCH):
     user_name, repo_name = get_repo_info(url)
@@ -556,11 +557,10 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         f.write(container_id+"\n")
 
     #nginx config 
-
     with open("logfile.txt", "w") as f:
         try:
             result = subprocess.run(
-                ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(org_name), str(repo_name), str(branch_name), str(external_port)],
+                ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT_IRIS, str(branch_name), str(external_port)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 check=True
