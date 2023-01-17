@@ -470,15 +470,22 @@ def get_container_logs(request, social, orgname, reponame, branch):
 @login_required
 def check_uptime_status(request, pk):
     instance = RunningInstance.objects.get(pk = pk)
-    url = f"http://localhost:{instance.exposed_port}"
-    try:
-        res = (requests.get(url, timeout=5).status_code == 200)
-    except:
-        res = False 
-    if instance.status !=(RunningInstance.STATUS_SUCCESS) and res:
-        instance.status = RunningInstance.STATUS_SUCCESS
-    if instance.status == RunningInstance.STATUS_SUCCESS and not res:
-        instance.status = RunningInstance.STATUS_STOPPED
-    instance.save()
+ 
+    res = run(['docker','ps','-f','name=',f'iris_{instance.organisation}_{instance.repo_name}_{instance.branch}'],stdout=PIPE,stderr=PIPE)
+    if res.stdout.decode('utf-8') == '':
+        instance.status = RunningInstance.STATUS_ERROR
+        instance.save()
+    else:
+        url = f"http://localhost:{instance.exposed_port}"
+        try:
+            res = (requests.get(url, timeout=5).status_code == 200)
+        except:
+            res = False 
+        if instance.status !=(RunningInstance.STATUS_SUCCESS) and res:
+            instance.status = RunningInstance.STATUS_SUCCESS
+        if instance.status == RunningInstance.STATUS_SUCCESS and not res:
+            instance.status = RunningInstance.STATUS_PENDING
+        instance.save()
     return redirect('form', social=instance.social)
+
     
