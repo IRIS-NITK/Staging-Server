@@ -557,19 +557,17 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         f.write(container_id+"\n")
 
     #nginx config 
-    with open("logfile.txt", "w") as f:
-        try:
-            result = subprocess.run(
-                ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT_IRIS, str(branch_name), str(external_port)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=True
-            )
-            f.write(result.stdout.decode('utf-8') + "\n")
-            return True, "Success"
-        except subprocess.CalledProcessError as error:
-            f.write(error.stderr.decode('utf-8') + "\n")
-            return False, error.stderr.decode('utf-8')
+    
+    result = run(
+        ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT_IRIS, str(branch_name), str(external_port)],
+        stdout=PIPE,
+        stderr=PIPE
+    )
+    if result.returncode != 0:
+        f.write(result.stderr.decode('utf-8') + "\n")
+        return False, result.stderr.decode('utf-8')
+    f.write(result.stdout.decode('utf-8') + "\n")
+    return True, result.stdout.decode('utf-8')
 
 def get_repo_info(url):
     "Return org/username , repo name from a GitHub or GitLab URL."
