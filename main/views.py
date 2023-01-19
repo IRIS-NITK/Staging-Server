@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from allauth.socialaccount.models import SocialToken
 from github import Github
+from subprocess import PIPE, run
 import gitlab,json,time,os,subprocess
 from django.http import HttpResponse,StreamingHttpResponse
 from django.shortcuts import render,redirect
@@ -475,17 +476,17 @@ def check_uptime_status(request, pk):
     if res.stdout.decode('utf-8') == '':
         instance.status = RunningInstance.STATUS_ERROR
         instance.save()
-    else:
-        url = f"http://localhost:{instance.exposed_port}"
-        try:
-            res = (requests.get(url, timeout=5).status_code == 200)
-        except:
-            res = False 
-        if instance.status !=(RunningInstance.STATUS_SUCCESS) and res:
-            instance.status = RunningInstance.STATUS_SUCCESS
-        if instance.status == RunningInstance.STATUS_SUCCESS and not res:
-            instance.status = RunningInstance.STATUS_PENDING
-        instance.save()
+
+    url = f"http://localhost:{instance.exposed_port}"
+    try:
+        res = (requests.get(url, timeout=5).status_code == 200)
+    except:
+       	res = False 
+    if instance.status !=(RunningInstance.STATUS_SUCCESS) and res:
+          instance.status = RunningInstance.STATUS_SUCCESS
+    if instance.status == RunningInstance.STATUS_SUCCESS and not res:
+          instance.status = RunningInstance.STATUS_PENDING
+    instance.save()
     return redirect('form', social=instance.social)
 
     
