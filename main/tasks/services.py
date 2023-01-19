@@ -336,7 +336,7 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
         branch_name=branch_name,
     )
 
-    temp_org_name, temp_repo_name = get_repo_info(url=url)
+    temp_org_name, temp_repo_name = get_org_and_repo_name_v2(url=url)
     if not org_name:
         org_name = temp_org_name
     if not repo_name:
@@ -418,14 +418,21 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
         logs.write(f"{datetime.datetime.now()} : Error while starting container : {container_name}\n")
         logs.close()
         return False, container_id
-    
+
+    # <org> <repo> <branch> <port>
+    res = run(
+            ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(org_name) , str(repo_name), str(branch_name), str(external_port), ],
+            stdout=PIPE,
+            stderr=PIPE,
+        )
+    if res.returncode != 0:
+        logs.write(f"{datetime.datetime.now()} : Error while adding nginx config\n")
+        logs.close()
+        return False, "Error while adding nginx config\n" + res.stderr.decode('utf-8')
+    logs.write(f"{datetime.datetime.now()} : Nginx config added successfully\n")
     logs.write(f"\n{datetime.datetime.now()} : 🥳 Container started successfully \n\ncontainer name : {container_name}\ncontainer id : {container_id}\n")
     return True, container_id
-    # res = run(
-    #         ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT,str(branch_name), str(external_port)],
-    #         stdout=PIPE,
-    #         stderr=PIPE,
-    #     )
+    
 
 @shared_task(bind=True)
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  external_port = None, src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "master"):
@@ -586,3 +593,17 @@ def get_repo_info(url):
     # Unrecognized URL format
     return (None, None)
 
+
+def get_org_and_repo_name_v2(url):
+    github_match = re.match(r'(?:https?://)?github.com/([^/]+)/([^/]+)(?:\.git)?', url)
+    if github_match:
+        repo = url.rsplit("/",1)[-1].replace(".git","")
+        return (github_match.group(1), repo)
+    
+    match = re.search(r'https://git\.iris\.nitk\.ac\.in/(.*)/(.*)/(.*)', url)
+    org_name = match.group(1).replace("/", "-")
+    repo_name = match.group(3).replace("/", "-")
+    if org_name and repo_name:
+        return (org_name, repo_name)
+
+    return (None, None)

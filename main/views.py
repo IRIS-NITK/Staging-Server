@@ -6,7 +6,7 @@ from subprocess import PIPE, run
 import gitlab,json,time,os,subprocess
 from django.http import HttpResponse,StreamingHttpResponse
 from django.shortcuts import render,redirect
-from main.tasks.services import deploy_from_git, stop_container, deploy_from_git_template, get_repo_info, clean_up
+from main.tasks.services import deploy_from_git, stop_container, deploy_from_git_template, get_repo_info, clean_up, get_org_and_repo_name_v2
 from main.tasks import findfreeport
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
@@ -110,8 +110,9 @@ def deploy_from_template(request, pk):
     dockerfile_path = template.dockerfile_path
     docker_network = template.docker_network
     
-    user_name, repo_name = get_repo_info(repo_url)
-
+    # user_name, repo_name = get_repo_info(repo_url)
+    user_name, repo_name = get_org_and_repo_name_v2(repo_url)
+    
     if request.method == 'POST':
         external_port = findfreeport.find_free_port()
         try:
