@@ -14,8 +14,8 @@ REPO=$2
 BRANCH=$3
 PORT=$4
 
-sudo sed -e "s/<ORG_NAME>/$ORG/g" -e "s/<REPO_NAME>/$REPO/g" -e "s/<BRANCH_NAME>/$BRANCH/g" -e "s/<PORT>/$PORT/g" sites-available/dev-template.conf > sites-available/dev-${ORG}-${REPO}-${BRANCH}.conf
-sudo ln -f -s ../sites-available/dev-${ORG}-${REPO}-${BRANCH}.conf sites-enabled/dev-${ORG}-${REPO}-${BRANCH}.conf
+sudo sed -e "s/<ORG_NAME>/$ORG/g" -e "s/<REPO_NAME>/$REPO/g" -e "s/<BRANCH_NAME>/$BRANCH/g" -e "s/<PORT>/$PORT/g" sites-available/dev-gen-template.conf > sites-available/dev-gen-${ORG}-${REPO}-${BRANCH}.conf
+sudo ln -f -s ../sites-available/dev-gen-${ORG}-${REPO}-${BRANCH}.conf sites-enabled/dev-gen-${ORG}-${REPO}-${BRANCH}.conf
 sudo service nginx reload
 
 
