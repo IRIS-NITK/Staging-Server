@@ -1,62 +1,9 @@
-<head>
-    <title>IRIS Dev Server</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
-    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
-  
-    {% load static %}
-    <link rel="stylesheet" type="text/css" href="">
-    <link rel="shortcut icon" href="{%  static 'favicon.ico' %}">
-  </head>
-  <body>
-    <div class="container-fluid">
-        <div class="card" style="margin: 30px;">
-            <div class="card-header">IRIS, NITK Staging Server</div>
-              <div class="card-body">
-                <ul class="list-group list-group-flush">
-                {% for instance in instances %}
-                    <div class="list-group-item status">
-                        <div style="display: flex; align-items: center; ">
-                            <a href="https://staging-test-{{instance.organisation}}-{{instance.repo_name}}-{{instance.branch}}"
-                            class="mx-2" target="_blank" 
-                            style="display: flex; align-items: center;">
-                            {{instance.branch}}
-                        </a>
-                            <span class="ml-4" style="display: flex; align-items: center;"><i>{{instance.owner}}</i></span>
-                            <span class="ml-4" style="display: flex; align-items: center;">[{{instance.update_time}}]</span> 
-                            <span class="badge badge-warning mx-2" style="height: 18px;">{{instance.status}}</span>
-                        </div>
-                        <div class="control-buttons">
-                            <button type="submit" class="btn btn-outline-primary btn-sm mx-1"
-                                onclick="location.href='{% url 'deploy' org_name=instance.organisation repo_name=instance.repo_name branch=instance.branch social=instance.social%}'">Redeploy</button>
-                            <button type="button" class="btn btn-outline-info btn-sm mx-1"
-                                onclick="location.href='{% url 'logs' orgname=instance.organisation reponame=instance.repo_name branch=instance.branch social=instance.social%}'">Logs</button>
-                            <button type="button" class="btn btn-outline-info btn-sm mx-1"
-                                onclick="location.href='{% url 'containerlogs' social=instance.social orgname=instance.organisation reponame=instance.repo_name branch=instance.branch %}'">Container Logs</button>    
-                            <button type="button" class="btn btn-outline-danger btn-sm mx-1"
-                                onclick="location.href='{% url 'stop' social=instance.social orgname=instance.organisation reponame=instance.repo_name branch=instance.branch%}'">Stop</button>
-                        </div>
-                    </div>
-                {% endfor %}
-                </ul>
-            </div>
-        </div> 
-    </div>
-  </body>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <script src="https://code.jquery.com/jquery-3.1.1.min.js">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
-    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
-  
-  </head>
+{% extends 'main/base.html' %}
+
+{% block title %}{% endblock %}
+
+{% block content %}
+
   <body>
         <div class="card" style="margin: 30px;">
             <div class="card-header"></div>
@@ -89,6 +36,23 @@
                     <select class="custom-select" id="branches" name="branches" required>
                     </select>
                 </div>
+
+                <div class="input-group mx-2 mb-2">
+                    <div class="input-group-prepend">
+                        <label class="input-group-text" for="path">Path to Dockerfile</label>
+                    </div>
+                    <input type="text" class="form-control" id="dockerfile_path" name="dockerfile_path" placeholder="Path to Dockerfile" >
+                    </select>
+                </div>
+
+                <div class="input-group mx-2 mb-2">
+                    <div class="input-group-prepend">
+                        <label class="input-group-text" for="path">Service Internal_Port</label>
+                    </div>
+                    <input type="text" class="form-control" id="intenal_port" name="internal_port" placeholder="Internal_Port" required>
+                    </select>
+                </div>
+
                 <input type="hidden" id="social_provider" name="social_provider" value="github" />
                 <button type="submit" class="btn btn-success mx-2 mb-2">Deploy</button>
             </form>
@@ -109,8 +73,7 @@
                 }
               });
         });
-    </script>
-    <script>
+
         $("#repos").change(function(){
 
             var org = document.getElementById('orgselect').value;
@@ -131,4 +94,69 @@
         });
     </script>
 
+
+    <table class="table" style="text-align: center;">
+        <thead>
+            <tr>
+                <th scope="col">Branch</th>
+                <th scope="col">Owner</th>
+                <th scope="col">Update Time</th>
+                <th scope="col">Status</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+          {% for instance in instances %}
+            <tr>
+                <td>
+                    <a href="https://staging-{{ instance.branch | lower}}.iris.nitk.ac.in">{{ instance.branch }}</a>
+                </td>
+                <td>{{ instance.owner }}</td>
+                <td>{{ instance.update_time }}</td>
+                <td>
+                    {% if instance.status == "PENDING" %}
+                        <span class="badge badge-secondary">Pending</span>
+                    {% elif instance.status == "SUCCESS" %}
+                        <span class="badge badge-success">Success</span>
+                    {% elif instance.status == "ERROR" %}
+                        <span class="badge badge-danger">Error</span>
+                    {% elif instance.status == "DEPLOYING" %}
+                        <span class="badge badge-warning">Deploying</span>
+                    {% elif instance.status == "STOPPED" %}
+                        <span class="badge badge-danger">Stopped</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group">
+                    <form method="post" action="{% url 'logs' orgname=instance.organisation reponame=instance.repo_name branch=instance.branch social=instance.social %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-primary btn-sm mx-1">Logs</button>
+                    </form>
+                    <button type="button" class="btn btn-outline-primary btn-sm mx-1" onclick="location.href='{% url 'containerlogs' social=instance.social orgname=instance.organisation reponame=instance.repo_name branch=instance.branch %}'">
+                                Container Logs
+                    </button>    
+                            
+                    <form method="post" action="{% url 'deploy' org_name=instance.organisation repo_name=instance.repo_name branch=instance.branch social=instance.social dockerfile_path=instance.dockerfile_path internal_port=instance.internal_port%}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-warning btn-sm mx-1">Redeploy</button>
+                    </form>
+                    <form method="post" action="{% url 'deploy_template_clean_up' instance.pk  %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm mx-1">Stop</button>
+                    </form>                    
+                    <a href="{% url 'deploy_instance_delete' instance.pk %}">
+                        <i class="fa fa-trash" style="font-size: 24px; margin-right: 10px; margin-left: 10px;"></i>
+                    </a>
+                    <a href="{% url 'check_uptime_status' instance.pk %}">
+                        <i class="fa fa-refresh" style="font-size:24px;"></i>
+                    </a>  
+                    </div>                  
+                </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+    
+    </table>  
+
   </body>
+  {% endblock %}

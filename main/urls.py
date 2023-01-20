@@ -29,6 +29,7 @@ urlpatterns = [
     path("containerlogs/<orgname>/<reponame>/<branch>/<social>",views.get_container_logs,name="containerlogs"),
     path("logs/<orgname>/<reponame>/<branch>/<social>",views.logs,name="logs"),
     path('deploy/<org_name>/<repo_name>/<branch>/<social>',views.deploy,name="deploy"),
+    path('deploy/<org_name>/<repo_name>/<branch>/<social>/<dockerfile_path>/<internal_port>',views.deploy,name="deploy"),
     path('stop/<social>/<orgname>/<reponame>/<branch>',views.stop,name='stop'),
 
     path('deploy_template_list', views.deploy_template_list, name="deploy_template_list"),

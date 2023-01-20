@@ -22,6 +22,7 @@ class RunningInstance(models.Model):
     repo_name = models.TextField()
     social = models.TextField()
     exposed_port = models.IntegerField(default=3000)
+    dockerfile_path = models.TextField(blank=True)
     internal_port = models.IntegerField(default=80)
 
 class DeployTemplate(models.Model):
