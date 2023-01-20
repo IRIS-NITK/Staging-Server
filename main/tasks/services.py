@@ -370,7 +370,7 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
             ['docker', 'build', '--tag', docker_image, "."],
             stdout=PIPE,
             stderr=PIPE,
-            cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/{dockerfile_path}"
+            cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/"
         )
         if res.returncode != 0:
             logs.write(f"{datetime.datetime.now()} : Error while building docker image\n\t\t\tdeploy_from_git_template->run->docker build\n")
@@ -420,7 +420,7 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
 
     # <org> <repo> <branch> <port>
     res = run(
-            ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(org_name) , str(repo_name), str(branch_name), str(external_port), ],
+            ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(org_name.lower()) , str(repo_name.lower()), str(branch_name.lower()), str(external_port), ],
             stdout=PIPE,
             stderr=PIPE,
         )

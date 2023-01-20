@@ -14,7 +14,7 @@ from main.models import RunningInstance
 from django.template import Context, loader
 from .forms import DeployTemplateForm
 from .models import DeployTemplate
-import requests
+import requests,base64
 
 response_header = loader.get_template("response_header.html")
 response_footer = loader.get_template("response_footer.html")
@@ -262,8 +262,6 @@ def form(request,social):
             orgs_name[val] = i.name
             val+=1
         instances = RunningInstance.objects.filter(social='github')
-        # for instance in instances: 
-        #     print(instance.dockerfile_path)
         return render(request,'form.html',{'instances':instances,'orgs_name':orgs_name})
     else:
         gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
@@ -356,7 +354,7 @@ def getIRISbranches(request):
 
 @login_required(login_url='/accounts/login/')
 def deploy_wrapper(request):
-    return redirect('deploy',org_name = request.POST.get('orgselect'),repo_name = request.POST.get('repos'),branch = request.POST.get('branches'),social  = request.POST.get('social_provider'),dockerfile_path = request.POST.get('dockerfile_path'),internal_port = request.POST.get('internal_port'))
+    return redirect('deploy',org_name = request.POST.get('orgselect'),repo_name = request.POST.get('repos'),branch = request.POST.get('branches'),social  = request.POST.get('social_provider'),dockerfile_path = 'Dockerfile',internal_port = request.POST.get('internal_port'))
 
 
 @login_required(login_url='/accounts/login/')
