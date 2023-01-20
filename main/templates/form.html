@@ -37,13 +37,6 @@
                     </select>
                 </div>
 
-                <div class="input-group mx-2 mb-2">
-                    <div class="input-group-prepend">
-                        <label class="input-group-text" for="path">Path to Dockerfile</label>
-                    </div>
-                    <input type="text" class="form-control" id="dockerfile_path" name="dockerfile_path" placeholder="Path to Dockerfile" >
-                    </select>
-                </div>
 
                 <div class="input-group mx-2 mb-2">
                     <div class="input-group-prepend">
@@ -109,7 +102,7 @@
           {% for instance in instances %}
             <tr>
                 <td>
-                    <a href="https://staging-{{ instance.branch | lower}}.iris.nitk.ac.in">{{ instance.branch }}</a>
+                    <a href="https://staging-{{instance.org_name| lower}}-{{instance.repo_name| lower}}-{{ instance.branch | lower}}.iris.nitk.ac.in">{{ instance.branch }}</a>
                 </td>
                 <td>{{ instance.owner }}</td>
                 <td>{{ instance.update_time }}</td>
