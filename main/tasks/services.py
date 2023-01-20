@@ -205,7 +205,6 @@ def start_container(container_name, org_name, repo_name, branch_name, docker_ima
     # volume_args = []
     # for host_path, container_path in volumes.items():
     #     volume_args.append(f"{host_path}:{container_path}")
-
     command = ["docker", "run"]
     command.extend(["-d", "-p", f"{external_port}:{internal_port}"])
     for src, dest in volumes.items():
@@ -366,12 +365,12 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
             logs.close()
             return False, "Dockerfile not provided"
         logs.write(f"{datetime.datetime.now()} : Docker image not provided, building image from {dockerfile_path}\n")
-        docker_image = f"{org_name}/{repo_name}:{branch_name}"
+        docker_image = f"{org_name.lower()}/{repo_name.lower()}:{branch_name.lower()}"
         res = run(
-            ['docker', 'build', '-t', docker_image, "."],
+            ['docker', 'build', '--tag', docker_image, "."],
             stdout=PIPE,
             stderr=PIPE,
-            cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
+            cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/{dockerfile_path}"
         )
         if res.returncode != 0:
             logs.write(f"{datetime.datetime.now()} : Error while building docker image\n\t\t\tdeploy_from_git_template->run->docker build\n")

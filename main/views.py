@@ -262,6 +262,8 @@ def form(request,social):
             orgs_name[val] = i.name
             val+=1
         instances = RunningInstance.objects.filter(social='github')
+        # for instance in instances: 
+        #     print(instance.dockerfile_path)
         return render(request,'form.html',{'instances':instances,'orgs_name':orgs_name})
     else:
         gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
@@ -354,12 +356,12 @@ def getIRISbranches(request):
 
 @login_required(login_url='/accounts/login/')
 def deploy_wrapper(request):
-    return redirect('deploy',org_name = request.POST.get('orgselect'),repo_name = request.POST.get('repos'),branch = request.POST.get('branches'),social  = request.POST.get('social_provider'))
+    return redirect('deploy',org_name = request.POST.get('orgselect'),repo_name = request.POST.get('repos'),branch = request.POST.get('branches'),social  = request.POST.get('social_provider'),dockerfile_path = request.POST.get('dockerfile_path'),internal_port = request.POST.get('internal_port'))
 
 
 @login_required(login_url='/accounts/login/')
-def deploy(request,org_name,repo_name,branch,social):
-
+def deploy(request,org_name,repo_name,branch,social,dockerfile_path,internal_port):
+    print(dockerfile_path)
     token_obj = SocialToken.objects.filter(account__user=request.user, account__provider=social)
     token = json.loads(serializers.serialize('json', token_obj))[0]['fields']['token']
     external_port = findfreeport.find_free_port()
@@ -381,27 +383,28 @@ def deploy(request,org_name,repo_name,branch,social):
         # url = "https://git.iris.nitk.ac.in/IRIS-NITK/" + repo_name + ".git"
 
     try:
-        instance = RunningInstance.objects.get(social=social,organisation=org_name,repo_name=repo_name,branch= branch)
+        instance = RunningInstance.objects.get(social=social,organisation=org_name,repo_name=repo_name,branch= branch,dockerfile_path=dockerfile_path,internal_port=internal_port)
         instance.owner = request.user.username
         instance.update_time = time.time()
         instance.external_port = external_port
         instance.save()
     except ObjectDoesNotExist:
         instance = RunningInstance(
-           branch=branch, owner=request.user.username, status=RunningInstance.STATUS_PENDING,repo_name =repo_name,organisation=org_name,social=social,exposed_port=external_port
+           branch=branch, owner=request.user.username, status=RunningInstance.STATUS_PENDING,repo_name =repo_name,organisation=org_name,social=social,exposed_port=external_port,dockerfile_path=dockerfile_path,internal_port=internal_port
         )
         instance.save()
-
-
-    deploy_from_git.delay(
-        external_port = external_port,
-        token = token, 
-        url = url,
-        social = social,
-        org_name = org_name,
-        repo_name = repo_name,
-        branch_name = branch
-    )
+    if(social=='github'):
+         deploy_from_git_template.delay(url=url, token = token, social = social, org_name = org_name, repo_name = repo_name, branch_name = branch, external_port = external_port,internal_port = internal_port, dockerfile_path = dockerfile_path)
+    else:
+        deploy_from_git.delay(
+            external_port = external_port,
+            token = token, 
+            url = url,
+            social = social,
+            org_name = org_name,
+            repo_name = repo_name,
+            branch_name = branch
+        )
     return redirect('form', social=social)
 
 
