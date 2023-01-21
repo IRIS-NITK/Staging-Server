@@ -29,6 +29,7 @@
                 <select class="custom-select" id="branches" name="branches" required>
                 </select>
             </div>
+            <input type="hidden" id="internal_port" name="internal_port" value="3000" />
             <button type="submit" class="btn btn-outline-success mx-2 mb-2">Deploy</button>
         </form>
     </div>
@@ -92,7 +93,7 @@
                                 Container Logs
                     </button>    
                             
-                    <form method="post" action="{% url 'deploy' org_name=instance.organisation repo_name=instance.repo_name branch=instance.branch social=instance.social%}">
+                    <form method="post" action="{% url 'deploy' org_name=instance.organisation repo_name=instance.repo_name branch=instance.branch social=instance.social dockerfile_path=instance.dockerfile_path internal_port=instance.internal_port%}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-warning btn-sm mx-1">Redeploy</button>
                     </form>
