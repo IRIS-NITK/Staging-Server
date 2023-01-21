@@ -358,7 +358,7 @@ def deploy_wrapper(request):
 
 
 @login_required(login_url='/accounts/login/')
-def deploy(request,org_name,repo_name,branch,social,dockerfile_path,internal_port):
+def deploy(request,org_name,repo_name,branch,social,dockerfile_path,internal_port=3000):
     print(dockerfile_path)
     token_obj = SocialToken.objects.filter(account__user=request.user, account__provider=social)
     token = json.loads(serializers.serialize('json', token_obj))[0]['fields']['token']
