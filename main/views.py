@@ -74,9 +74,13 @@ def deploy_template_stop(request, pk):
 
 @login_required
 def deploy_instance_delete(request, pk):
-    instance = RunningInstance.objects.get(pk=pk)
-    instance.delete()
-    return redirect('form',social=instance.social)
+    try:
+        instance = RunningInstance.objects.get(pk=pk)
+        instance.delete()
+        return redirect('form',social=instance.social)
+    except:
+        return redirect('home')
+    
 
 @login_required
 def deploy_instance_redeploy(request, pk):

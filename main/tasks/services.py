@@ -505,7 +505,10 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
             "cp",f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/config/initializers/nitk_setting.rb.example",
             f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/config/initializers/nitk_setting.rb"
         ])
-
+        res = run([
+            "cp",f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/session_store.rb",
+            f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/config/initializers/session_store.rb"
+        ])
         res = run([
             "cp",f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/config/initializers/nitk_setting.rb.example",
             f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/config/initializers/secret_token.rb"
