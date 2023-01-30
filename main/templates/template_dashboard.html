@@ -26,7 +26,15 @@
                         {{ instance.social }}
                     {% endif %}
                 </td>
-                <td><a href="http://localhost:{{ instance.exposed_port }}">{{ instance.organisation }}/{{ instance.repo_name }}</a></td>
+                <td>
+			{% if instance.social == "github" %}
+			<a href="http://staging-{{ instance.organisation }}-{{ instance.repo_name }}-{{ instance.branch }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
+			{% elif instance.social == "gitlab" %}
+			<a href="http://staging-{{ branch }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
+			{% else %}
+			Not supported yet :(
+			{% endif %}		
+		</td>
                 <td>{{ instance.branch }}</td>
                 <td>{{ instance.owner }}</td>
                 <td>{{ instance.update_time }}</td>
