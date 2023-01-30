@@ -5,7 +5,7 @@
     <table class="table" style="text-align: center;">
         <thead>
             <tr>
-                <th scope="col">Social</th>
+                <th scope="col">VCS</th>
                 <th scope="col">Repository</th>
                 <th scope="col">Branch</th>
                 <th scope="col">Owner</th>
@@ -57,6 +57,10 @@
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-info btn-sm mx-1">Logs</button>
                     </form>
+ 	            <button type="button" class="btn btn-outline-primary btn-sm mx-1" onclick="location.href='{% url 'containerlogs' social=instance.social orgname=instance.organisation reponame=instance.repo_name branch=instance.branch %}'">
+                                Container Logs
+                    </button> 
+
                     <form method="post" action="{% url 'deploy_template_clean_up' instance.pk %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-danger btn-sm mx-1">Stop</button>
