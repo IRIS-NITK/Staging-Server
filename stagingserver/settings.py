@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-jq**bq4fw)y*z%eshlkg9f0fc(*k2-5i0b41#i^1#2@@1d&wol'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_ALLOWED_HOSTS').split(',')
@@ -136,7 +136,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR ,"static")
 ]
-STATIC_ROOT = os.path.join(BASE_DIR, 'assests')
+STATIC_ROOT = os.path.join(BASE_DIR, 'assets')
 # STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 # Default primary key field type

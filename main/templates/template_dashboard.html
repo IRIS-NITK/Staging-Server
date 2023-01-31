@@ -28,9 +28,9 @@
                 </td>
                 <td>
 			{% if instance.social == "github" %}
-			<a href="http://staging-{{ instance.organisation }}-{{ instance.repo_name }}-{{ instance.branch }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
+			<a href="http://staging-{{ instance.organisation | lower }}-{{ instance.repo_name | lower }}-{{ instance.branch | lower }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
 			{% elif instance.social == "gitlab" %}
-			<a href="http://staging-{{ branch }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
+			<a href="http://staging-{{ branch | lower }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
 			{% else %}
 			Not supported yet :(
 			{% endif %}		
