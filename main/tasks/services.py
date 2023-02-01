@@ -40,11 +40,11 @@ NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 NGINX_ADD_CONFIG_SCRIPT_IRIS = os.getenv("NGINX_ADD_CONFIG_SCRIPT_IRIS")
 
-def pull_git_changes(url, token = None, org_name = None, repo_name = None, branch_name = DEFAULT_BRANCH):
-    user_name, repo_name = get_repo_info(url)
-    org_name = user_name
+def pull_git_changes(url, token = None, org_name = None, repo_name = None, branch_name = DEFAULT_BRANCH, social = None):
+    if org_name == None:
+        return False, "No organisation name provided"
+    user_name = org_name
     log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
-    DEFAULT_log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/DEFAULT_BRANCH.txt"
     ## TODO : pull and checkout also needs access tokens 
     # Check if repository exists
     if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):       
@@ -123,8 +123,7 @@ def pull_git_changes(url, token = None, org_name = None, repo_name = None, branc
         temp_logging_text += f'\n{datetime.datetime.now()} : Repository {repo_name} does not exist locally, creating it\n'
 
         # repo_url = "https://oauth2:"+token+"@github.com/"+user_name+"/"+repo_name+".git"
-        
-        if token:
+        if token and social.lower() == "github":
             url = f'https://{user_name}:{token}@github.com/{user_name}/{repo_name}'
 
         parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH"
@@ -430,6 +429,7 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
         return False, "Error while adding nginx config\n" + res.stderr.decode('utf-8')
     logs.write(f"{datetime.datetime.now()} : Nginx config added successfully\n")
     logs.write(f"\n{datetime.datetime.now()} : 🥳 Container started successfully \n\ncontainer name : {container_name}\ncontainer id : {container_id}\n")
+    logs.write(f"Visit it on : staging-{org_name.lower()}-{repo_name.lower()}-{branch_name.lower()}.iris.nitk.ac.in\n\n")
     return True, container_id
     
 
@@ -450,7 +450,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     docker_image = ""
     if url == 'https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git' or url=="ssh://git@git.iris.nitk.ac.in:5022/IRIS-NITK/IRIS.git":
         #docker_image = "git-registry.iris.nitk.ac.in/iris-teams/systems-team/staging-server/dev-iris:latest"
-    	docker_image = os.getenv("BASE_IMAGE")
+        docker_image = os.getenv("BASE_IMAGE")
     else:
         image_name = org_name+"/"+repo_name+":"+branch_name
         docker_image = image_name.lower()
@@ -595,16 +595,25 @@ def get_repo_info(url):
     return (None, None)
 
 
-def get_org_and_repo_name_v2(url):
-    github_match = re.match(r'(?:https?://)?github.com/([^/]+)/([^/]+)(?:\.git)?', url)
-    if github_match:
-        repo = url.rsplit("/",1)[-1].replace(".git","")
-        return (github_match.group(1), repo)
+def get_org_and_repo_name_v2(url, social = "github"):
+    if social == "github":
+        github_match = re.match(r'(?:https?://)?github.com/([^/]+)/([^/]+)(?:\.git)?', url)
+        if github_match:
+            repo = url.rsplit("/",1)[-1].replace(".git","")
+            return (github_match.group(1), repo)
+
+    elif social == "gitlab":
+        gitlab_match = re.match(r'(?:https?://)?gitlab.com/([^/]+)/([^/]+)(?:\.git)?', url)
+        if gitlab_match:
+            repo = url.rsplit("/",1)[-1].replace(".git","")
+            return (gitlab_match.group(1), repo)
     
-    match = re.search(r'https://git\.iris\.nitk\.ac\.in/(.*)/(.*)/(.*)', url)
-    org_name = match.group(1).replace("/", "-")
-    repo_name = match.group(3).replace("/", "-")
-    if org_name and repo_name:
-        return (org_name, repo_name)
+    elif social == "iris_git":
+
+        iris_git_match = re.search(r'(?:https?://)?//git\.iris\.nitk\.ac\.in/(.*)/(.*)/(.*)', url)
+        org_name = iris_git_match.group(1).replace("/", "-")
+        repo_name = iris_git_match.group(3).replace("/", "-")
+        if org_name and repo_name:
+            return (org_name, repo_name)
 
     return (None, None)

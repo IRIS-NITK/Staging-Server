@@ -115,8 +115,10 @@ def deploy_from_template(request, pk):
     docker_network = template.docker_network
     
     # user_name, repo_name = get_repo_info(repo_url)
-    user_name, repo_name = get_org_and_repo_name_v2(repo_url)
-    
+    dummy_user_name, repo_name = get_org_and_repo_name_v2(repo_url)
+    if org_name == None or len(org_name) == 0:
+        org_name = dummy_user_name
+
     if request.method == 'POST':
         external_port = findfreeport.find_free_port()
         try:
@@ -482,17 +484,32 @@ def check_uptime_status(request, pk):
     if res.stdout.decode('utf-8') == '':
         instance.status = RunningInstance.STATUS_ERROR
         instance.save()
+        return redirect('form', social=instance.social)
 
+    url = f"http://0.0.0.0:{instance.exposed_port}"
+    try:
+        res = (requests.get(url, timeout=5).status_code == 200)
+    except:
+        res = False 
+    
+    if instance.status == RunningInstance.STATUS_PENDING and res:
+        instance.status = RunningInstance.STATUS_SUCCESS
+    elif instance.status == RunningInstance.STATUS_SUCCESS and not res:
+        instance.status = RunningInstance.STATUS_STOPPED
+    instance.save()
+    return redirect('form', social=instance.social)
+
+def uptime_check_template(request, pk):
+    instance = RunningInstance.objects.get(pk = pk)
     url = f"http://localhost:{instance.exposed_port}"
     try:
         res = (requests.get(url, timeout=5).status_code == 200)
     except:
-       	res = False 
-    if instance.status !=(RunningInstance.STATUS_SUCCESS) and res:
-          instance.status = RunningInstance.STATUS_SUCCESS
-    if instance.status == RunningInstance.STATUS_SUCCESS and not res:
-          instance.status = RunningInstance.STATUS_PENDING
+        res = False
+    if res:
+        instance.status = RunningInstance.STATUS_SUCCESS
+    else:
+        instance.status = RunningInstance.STATUS_STOPPED
     instance.save()
-    return redirect('form', social=instance.social)
-
+    return redirect('deploy_template_dashboard')
     
