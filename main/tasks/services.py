@@ -465,6 +465,9 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         repo_name=repo_name,
         branch_name=branch_name,
     )        
+    if not res:
+    	return False, msg
+
     image_name = ""
     docker_image = ""
     if url == 'https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git' or url=="ssh://git@git.iris.nitk.ac.in:5022/IRIS-NITK/IRIS.git":
