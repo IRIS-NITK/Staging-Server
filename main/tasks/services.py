@@ -43,7 +43,7 @@ NGINX_ADD_CONFIG_SCRIPT_IRIS = os.getenv("NGINX_ADD_CONFIG_SCRIPT_IRIS")
 def write_to_log(file, text):
     file.write(f'{datetime.datetime.now()} : {text}\n')
 
-def pull_git_changes(url, token = None, org_name = None, repo_name = None, branch_name = DEFAULT_BRANCH):
+def pull_git_changes(url, social,token = None, org_name = None, repo_name = None,branch_name = DEFAULT_BRANCH):
     """
     Pulls the latest changes from the git repo, if the repo is not present, then it clones the repo
     """
@@ -450,7 +450,11 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
     logs.write(f"\n{datetime.datetime.now()} : 🥳 Container started successfully \n\ncontainer name : {container_name}\ncontainer id : {container_id}\n")
     logs.write(f"Visit it on : staging-{org_name.lower()}-{repo_name.lower()}-{branch_name.lower()}.iris.nitk.ac.in\n\n")
     return True, container_id
-    
+
+
+def remove_spaces(string):
+    return string.replace(" ", "")
+
 
 @shared_task(bind=True)
 def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  external_port = None, src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "master"):
@@ -460,22 +464,24 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     # pull git repo
     res, msg = pull_git_changes(
         url=url,
+        social=social,
         token=token,
         org_name=org_name,
         repo_name=repo_name,
         branch_name=branch_name,
     )        
-    if not res:
-    	return False, msg
 
+    m_org_name = remove_spaces(org_name).lower()
+    m_repo_name = remove_spaces(repo_name).lower()
+    m_branch_name = remove_spaces(branch_name).lower()
+    logs = open(log_file,'a')
     image_name = ""
     docker_image = ""
     if url == 'https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git' or url=="ssh://git@git.iris.nitk.ac.in:5022/IRIS-NITK/IRIS.git":
         #docker_image = "git-registry.iris.nitk.ac.in/iris-teams/systems-team/staging-server/dev-iris:latest"
         docker_image = os.getenv("BASE_IMAGE")
     else:
-        image_name = org_name+"/"+repo_name+":"+branch_name
-        docker_image = image_name.lower()
+        docker_image = f"{m_org_name.lower()}_{m_repo_name.lower()}_{m_branch_name.lower()}"
     # start container 
     db_image = "mysql:5.7"
     env_var_args = {
@@ -503,25 +509,26 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     check_image_exists = run(["docker","image","inspect",docker_image],stdout=PIPE,stderr=PIPE)
 
     if check_image_exists.returncode != 0:
+        write_to_log(logs, f"Docker image not provided, building image")
         res = run(
-            ['docker', 'build', '-t', docker_image, "."],
+            ['docker', 'build', '--tag', docker_image, "."],
             stdout=PIPE,
             stderr=PIPE,
-            cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
+            cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/"
         )
         if res.returncode != 0:
-            f.write(res.stdout.decode('utf-8')+"\n")
-            f.close()
-            return
-    
+            write_to_log(logs, f"Error while building docker image")
+            write_to_log(logs, res.stderr.decode('utf-8'))
+            logs.close()
+            return False, "Error while building docker image\n" + res.stderr.decode('utf-8')
+        else:
+            write_to_log(logs, f"Docker image {docker_image} built successfully")
+            logs.write(f"{datetime.datetime.now()} : Docker image built successfully\n\t\t\ttagged : {docker_image}\n")
     
     # # org_name, repo_name, branch_name, docker_image, external_port, internal_port = 80, src_code_dir = None, dest_code_dir = None
-    prefix = "iris"
-    container_name = f"{prefix}_{org_name}_{repo_name}_{branch_name}"
-    check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
     env_variables = {}
 
-    if org_name == "IRIS-NITK":
+    if repo_name == "IRIS":
         src = f'{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/' + "config/initializers"
         res = run([
             "cp",f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/config/initializers/nitk_setting.rb.example",
@@ -543,38 +550,29 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         env_variables = {
             "RAILS_ENV": "development"
         }
+    
+    write_to_log(logs, f"Starting container from image : {docker_image}")
+    prefix = "iris"
+    container_name = f"{prefix}_{m_org_name}_{m_repo_name}_{m_branch_name}"
+    check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
 
-    if check_container_exists.returncode !=0:
-        #create container under newtork="abc"
-        #create database container under network ='abc'
-        f.write("Starting Container")
-        res, container_id = start_container(
-            container_name=container_name,
-            org_name=org_name,
-            repo_name=repo_name,
-            branch_name=branch_name,
-            docker_image=docker_image,
-            external_port=external_port,
-            internal_port=internal_port,
-            volumes=volumes,
-            env_variables=env_variables
-        )
-        f.write(container_id+"\n")
-    else:
-        f.write("\t\t\tRemoving Exisiting Container"+container_name+"\n")
-        res1 = run(
+    if check_container_exists.returncode == 0:
+        write_to_log(logs, f"Container already exists : {container_name}")
+        write_to_log(logs, f"Removing existing container : {container_name}")
+        res = run(
             ["docker","rm","-f",container_name],
             stdout=PIPE,
             stderr=PIPE
         )
-        if res1.returncode != 0:
-            f.write("\n\t\t\tError : \n\t\t\t"+res1.stderr.decode('utf-8')+"\n")
-            f.close()
-            return False, res1.stderr.decode('utf-8')
+        if res.returncode != 0:
+            write_to_log(logs, f"Error while removing existing container : {container_name}")
+            logs.close()
+            return False, "Error while removing existing container\n" + res.stderr.decode('utf-8')
+        write_to_log(logs, f"Existing container removed : {container_name}")
 
-        f.write("\t\t\tStarting Container"+"\n")
+    write_to_log(logs, f"Starting container : {container_name}")    
 
-        res, container_id = start_container(
+    res, container_id = start_container(
         container_name=container_name,
         org_name=org_name,
         repo_name=repo_name,
@@ -584,20 +582,28 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         internal_port=internal_port,
         volumes=volumes,
         env_variables=env_variables
-        )
-        f.write(container_id+"\n")
+    )
+
+    if not res:
+        write_to_log(logs, f"Error while starting container : {container_name}")
+        write_to_log(logs, container_id)
+        logs.close()
+        return False, container_id
 
     #nginx config 
-    result = run(
-        ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT_IRIS, str(branch_name), str(external_port)],
+    res = run(
+        ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(org_name.lower()) , str(repo_name.lower()), str(branch_name.lower()), str(external_port), ],
         stdout=PIPE,
-        stderr=PIPE
+        stderr=PIPE,
     )
-    if result.returncode != 0:
-        f.write(result.stderr.decode('utf-8') + "\n")
-        return False, result.stderr.decode('utf-8')
-    f.write(result.stdout.decode('utf-8') + "\n")
-    return True, result.stdout.decode('utf-8')
+    if res.returncode != 0:
+        logs.write(f"{datetime.datetime.now()} : Error while adding nginx config\n")
+        logs.close()
+        return False, "Error while adding nginx config\n" + res.stderr.decode('utf-8')
+    logs.write(f"{datetime.datetime.now()} : Nginx config added successfully\n")
+    logs.write(f"\n{datetime.datetime.now()} : 🥳 Container started successfully \n\ncontainer name : {container_name}\ncontainer id : {container_id}\n")
+    logs.write(f"Visit it on : staging-{org_name.lower()}-{repo_name.lower()}-{branch_name.lower()}.iris.nitk.ac.in\n\n")
+    return True, container_id
 
 def get_repo_info(url):
     "Return org/username , repo name from a GitHub or GitLab URL."
