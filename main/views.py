@@ -365,7 +365,6 @@ def deploy_wrapper(request):
 
 @login_required(login_url='/accounts/login/')
 def deploy(request,org_name,repo_name,branch,social,dockerfile_path,internal_port=3000):
-    print(dockerfile_path)
     token_obj = SocialToken.objects.filter(account__user=request.user, account__provider=social)
     token = json.loads(serializers.serialize('json', token_obj))[0]['fields']['token']
     external_port = findfreeport.find_free_port()
@@ -382,9 +381,18 @@ def deploy(request,org_name,repo_name,branch,social,dockerfile_path,internal_por
                 url = repo.clone_url
                 break
     else:
-        url = "ssh://git@git.iris.nitk.ac.in:5022/IRIS-NITK/IRIS.git"
-        token = None 
-        # url = "https://git.iris.nitk.ac.in/IRIS-NITK/" + repo_name + ".git"
+        gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
+        gitlab_client = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
+        try:
+            gitlab_client.auth()
+        except:
+            return redirect("account_logout")
+        for project in gitlab_client.projects.list(get_all=True):
+            if project.name == repo_name:
+                url = project.http_url_to_repo
+                break
+    
+    print(url,social)
 
     try:
         instance = RunningInstance.objects.get(social=social,organisation=org_name,repo_name=repo_name,branch= branch,dockerfile_path=dockerfile_path,internal_port=internal_port)
