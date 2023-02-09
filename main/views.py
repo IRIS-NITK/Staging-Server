@@ -76,11 +76,26 @@ def deploy_template_stop(request, pk):
 def deploy_instance_delete(request, pk):
     try:
         instance = RunningInstance.objects.get(pk=pk)
-        instance.delete()
-        return redirect('form',social=instance.social)
+        if request.method == 'POST':
+            repo_name = instance.repo_name
+            org_name = instance.organisation
+            container_name = f"iris_{org_name}_{repo_name}_{instance.branch}"
+            print(f"Cleaning up {container_name}")
+            res, logs = clean_up(
+                org_name = org_name,
+                repo_name = repo_name,
+                remove_container = container_name,
+                remove_branch_dir=instance.branch,
+            )
+            if res:
+                instance.delete()
+            return redirect('form',social=instance.social)
+        else:
+            return redirect('home')
     except:
         return redirect('home')
-    
+    return redirect('form',social=instance.social)
+
 
 @login_required
 def deploy_instance_redeploy(request, pk):
