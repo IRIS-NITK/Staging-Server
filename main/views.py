@@ -6,7 +6,7 @@ from subprocess import PIPE, run
 import gitlab,json,time,os,subprocess
 from django.http import HttpResponse,StreamingHttpResponse
 from django.shortcuts import render,redirect
-from main.tasks.services import deploy_from_git, stop_container, deploy_from_git_template, get_repo_info, clean_up, get_org_and_repo_name_v2
+from main.tasks.services import deploy_from_git, stop_container, deploy_from_git_template, clean_up, get_org_and_repo_name_v2
 from main.tasks import findfreeport
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
@@ -371,7 +371,10 @@ def deploy(request,org_name,repo_name,branch,social,dockerfile_path,internal_por
     url = ""
     if social == "github":
         gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
-        github_client = Github(gh_access_token_set.first().__str__())
+        try:
+            github_client = Github(gh_access_token_set.first().__str__())
+        except:
+            return redirect("account_logout")
         if org_name == github_client.get_user().login:
             repos = github_client.get_user().get_repos()
         else:
@@ -392,7 +395,16 @@ def deploy(request,org_name,repo_name,branch,social,dockerfile_path,internal_por
                 url = project.http_url_to_repo
                 break
     
-    print(url,social)
+    if social=='github' and url != "":
+        temp_org_name,temp_repo_name = get_org_and_repo_name_v2(url,'github')
+        if org_name != github_client.get_user().login:
+            org_name = temp_org_name
+            repo_name = temp_repo_name
+        else:
+            repo_name = temp_repo_name
+    else: 
+        if url != "":
+            org_name,repo_name = get_org_and_repo_name_v2(url,'iris_git')
 
     try:
         instance = RunningInstance.objects.get(social=social,organisation=org_name,repo_name=repo_name,branch= branch,dockerfile_path=dockerfile_path,internal_port=internal_port)
@@ -405,11 +417,14 @@ def deploy(request,org_name,repo_name,branch,social,dockerfile_path,internal_por
            branch=branch, owner=request.user.username, status=RunningInstance.STATUS_PENDING,repo_name =repo_name,organisation=org_name,social=social,exposed_port=external_port,dockerfile_path=dockerfile_path,internal_port=internal_port
         )
         instance.save()
+
+    print(social)
     if(social=='github'):
-         deploy_from_git_template.delay(url=url, token = token, social = social, org_name = org_name, repo_name = repo_name, branch_name = branch, external_port = external_port,internal_port = internal_port, dockerfile_path = dockerfile_path)
+        deploy_from_git_template.delay(url=url, token = token, social = social, user_name=request.user.username,org_name = org_name, repo_name = repo_name, branch_name = branch, external_port = external_port,internal_port = internal_port, dockerfile_path = dockerfile_path)
     else:
         deploy_from_git.delay(
             external_port = external_port,
+            user_name = request.user.username,
             token = token, 
             url = url,
             social = social,
@@ -460,7 +475,7 @@ def stop(request,social,orgname,reponame,branch):
 @login_required(login_url='/accounts/login/')
 def get_container_logs(request, social, orgname, reponame, branch):
     prefix = "iris"
-    container_name = f"{prefix}_{orgname}_{reponame}_{branch}"
+    container_name = f"{prefix}_{orgname.lower()}_{reponame.lower()}_{branch.lower()}"
     command = ["docker", "logs", "-f", container_name]
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
