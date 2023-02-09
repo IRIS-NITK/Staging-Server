@@ -43,11 +43,10 @@ NGINX_ADD_CONFIG_SCRIPT_IRIS = os.getenv("NGINX_ADD_CONFIG_SCRIPT_IRIS")
 def write_to_log(file, text):
     file.write(f'{datetime.datetime.now()} : {text}\n')
 
-def pull_git_changes(url, social,token = None, org_name = None, repo_name = None,branch_name = DEFAULT_BRANCH):
+def pull_git_changes(url, user_name,social,token = None, org_name = None, repo_name = None,branch_name = DEFAULT_BRANCH):
     """
     Pulls the latest changes from the git repo, if the repo is not present, then it clones the repo
     """
-    
     if not (org_name and repo_name):
         return False, "Org name and repo name are required\n"
 
@@ -136,7 +135,10 @@ def pull_git_changes(url, social,token = None, org_name = None, repo_name = None
 
         # repo_url = "https://oauth2:"+token+"@github.com/"+user_name+"/"+repo_name+".git"
         if token and social.lower() == "github":
-            url = f'https://{user_name}:{token}@github.com/{user_name}/{repo_name}'
+            v1,v2 = get_org_and_repo_name_v2(url,'github')
+            url = f'https://{user_name}:{token}@github.com/{v1}/{v2}'
+        else:
+            url = f'ssh://git@git.iris.nitk.ac.in:5022/{org_name}/{repo_name}.git'
 
         parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH"
         local_dir = os.path.join(parent_dir, repo_name)
@@ -339,10 +341,10 @@ def clean_up(org_name, repo_name, remove_container = False, remove_volume = Fals
     return True, "Clean up complete"
 
 @shared_task(bind=True)
-def deploy_from_git_template(self, url, token = None, social = None, org_name = None, repo_name = None, branch_name = DEFAULT_BRANCH, internal_port = 80, external_port = 3000, docker_image = None, dockerfile_path = None, docker_volumes = {}, docker_env_variables = {}, default_branch = "main", docker_network = None):
+def deploy_from_git_template(self, url, user_name,token = None, social = None, org_name = None, repo_name = None, branch_name = DEFAULT_BRANCH, internal_port = 80, external_port = 3000, docker_image = None, dockerfile_path = None, docker_volumes = {}, docker_env_variables = {}, default_branch = "main", docker_network = None):
     
     log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
-    
+
     temp_org_name, temp_repo_name = get_org_and_repo_name_v2(url=url)
     if not org_name:
         org_name = temp_org_name
@@ -352,6 +354,8 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
     # pull git repo
     res, msg = pull_git_changes(
         url=url,
+        user_name=user_name,
+        social=social,
         token=token,
         org_name=org_name,
         repo_name=repo_name,
@@ -381,7 +385,8 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
             logs.close()
             return False, "Dockerfile not provided"
         docker_image = f"{org_name.lower()}/{repo_name.lower()}:{branch_name.lower()}"
-        write_to_log(logs, f"Docker image not provided, building image {docker_image} from {dockerfile_path}")
+        write_to_log(logs, f"Docker image not provided, building image")
+        print(docker_image)
         res = run(
             ['docker', 'build', '--tag', docker_image, "."],
             stdout=PIPE,
@@ -452,28 +457,23 @@ def deploy_from_git_template(self, url, token = None, social = None, org_name = 
     return True, container_id
 
 
-def remove_spaces(string):
-    return string.replace(" ", "")
-
-
 @shared_task(bind=True)
-def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, internal_port = 3000,  external_port = None, src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "master"):
+def deploy_from_git(self, token, url, social, user_name,org_name, repo_name, branch_name, internal_port = 3000,  external_port = None, src_code_dir = None , dest_code_dir = None, docker_image=None, volumes = {}, DEFAULT_BRANCH = "master"):
     
+    # pull git repo
+    org_name,repo_name = get_org_and_repo_name_v2(url,'iris_git')
+
     log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
 
-    # pull git repo
     res, msg = pull_git_changes(
         url=url,
+        user_name=user_name,
         social=social,
         token=token,
         org_name=org_name,
         repo_name=repo_name,
         branch_name=branch_name,
     )        
-
-    m_org_name = remove_spaces(org_name).lower()
-    m_repo_name = remove_spaces(repo_name).lower()
-    m_branch_name = remove_spaces(branch_name).lower()
     logs = open(log_file,'a')
     image_name = ""
     docker_image = ""
@@ -481,7 +481,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
         #docker_image = "git-registry.iris.nitk.ac.in/iris-teams/systems-team/staging-server/dev-iris:latest"
         docker_image = os.getenv("BASE_IMAGE")
     else:
-        docker_image = f"{m_org_name.lower()}_{m_repo_name.lower()}_{m_branch_name.lower()}"
+        docker_image = f"{org_name.lower()}_{repo_name.lower()}_{branch_name.lower()}"
     # start container 
     db_image = "mysql:5.7"
     env_var_args = {
@@ -553,7 +553,7 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     
     write_to_log(logs, f"Starting container from image : {docker_image}")
     prefix = "iris"
-    container_name = f"{prefix}_{m_org_name}_{m_repo_name}_{m_branch_name}"
+    container_name = f"{prefix}_{org_name.lower()}_{repo_name.lower()}_{branch_name.lower()}"
     check_container_exists = run(["docker","container","inspect",container_name],stdout=PIPE,stderr=PIPE)
 
     if check_container_exists.returncode == 0:
@@ -605,23 +605,6 @@ def deploy_from_git(self, token, url, social, org_name, repo_name, branch_name, 
     logs.write(f"Visit it on : staging-{org_name.lower()}-{repo_name.lower()}-{branch_name.lower()}.iris.nitk.ac.in\n\n")
     return True, container_id
 
-def get_repo_info(url):
-    "Return org/username , repo name from a GitHub or GitLab URL."
-    github_match = re.match(r'(?:https?://)?github.com/([^/]+)/([^/]+)(?:\.git)?', url)
-    if github_match:
-        repo = url.rsplit("/",1)[-1].replace(".git","")
-        return (github_match.group(1), repo)
-
-    # gitlab_match = re.match(r'(?:https?://)?gitlab.com/([^/]+)/([^/]+)(?:\.git)?', url)
-    # if gitlab_match:
-    #     repo = url.rsplit("/",1)[-1].replace(".git","")
-    #     print(repo)
-    #     return (gitlab_match.group(1), repo)
-    return ("IRIS-NITK","IRIS")
-
-    # Unrecognized URL format
-    return (None, None)
-
 
 def get_org_and_repo_name_v2(url, social = "github"):
     if social == "github":
@@ -637,11 +620,10 @@ def get_org_and_repo_name_v2(url, social = "github"):
             return (gitlab_match.group(1), repo)
     
     elif social == "iris_git":
-
-        iris_git_match = re.search(r'(?:https?://)?//git\.iris\.nitk\.ac\.in/(.*)/(.*)/(.*)', url)
-        org_name = iris_git_match.group(1).replace("/", "-")
-        repo_name = iris_git_match.group(3).replace("/", "-")
-        if org_name and repo_name:
+        iris_git_match = re.search(r'https://git\.iris\.nitk\.ac\.in/(.*)/(.*)\.git', url)
+        if iris_git_match:
+            org_name = iris_git_match.group(1)
+            repo_name = iris_git_match.group(2)
             return (org_name, repo_name)
+        return None, None
 
-    return (None, None)
