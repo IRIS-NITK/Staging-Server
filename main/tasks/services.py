@@ -384,7 +384,7 @@ def deploy_from_git_template(self, url, user_name,token = None, social = None, o
             write_to_log(logs, "Dockerfile not provided")
             logs.close()
             return False, "Dockerfile not provided"
-        docker_image = f"{org_name.lower()}/{repo_name.lower()}:{branch_name.lower()}"
+        docker_image = f"{org_name.lower()}_{repo_name.lower()}_{branch_name.lower()}"
         write_to_log(logs, f"Docker image not provided, building image")
         print(docker_image)
         res = run(

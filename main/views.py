@@ -237,54 +237,47 @@ def home(response):
 
 @login_required(login_url='/accounts/login/')
 def form_wrapper(request):
-
     social = request.POST.get('social')
-    if(social == "Github"):
-        gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
-        if (len(gh_access_token_set) == 0):
-            return redirect("socialaccount_connections")
-        else:
-            return redirect("form",social)
-    else:
-        gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
-        if (len(gl_access_token_set) == 0):
-            return redirect("socialaccount_connections")
-        else:
-            return redirect("form",social)
+    provider = 'github' if social == 'Github' else 'gitlab'
+    access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider=provider)
+    if not access_token_set:
+        return redirect("socialaccount_connections")
+    return redirect("form", social)
 
 
 @login_required(login_url='/accounts/login/')
-def form(request,social):
+def form(request, social):
     social = social.capitalize()
+    access_token_set = SocialToken.objects.filter(
+        account__user=request.user,
+        account__provider=('github' if social == 'Github' else 'gitlab')
+    )
+
+    access_token = access_token_set.first().__str__()
     if social == "Github":
-        gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
-        g = Github(gh_access_token_set.first().__str__())
+        g = Github(access_token)
         name = g.get_user().login
         o = list(g.get_user().get_orgs())
-        val = 2
-        orgs_name = {}
-        orgs_name[1] = g.get_user().login
-        for i in o:
-            orgs_name[val] = i.name
-            val+=1
+        orgs_name = { i + 1 : org.name for i, org in enumerate(o) }
+        orgs_name[1] = name
         instances = RunningInstance.objects.filter(social='github')
-        return render(request,'form.html',{'instances':instances,'orgs_name':orgs_name})
+        return render(request, 'form.html', {
+            'instances': instances,
+            'orgs_name': orgs_name
+        })
     else:
-        gl_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='gitlab')
-        gl = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=gl_access_token_set.first().__str__())
+        gl = gitlab.Gitlab(url='https://git.iris.nitk.ac.in', oauth_token=access_token)
         try:
             gl.auth()
         except:
             return redirect("account_login")
         projects = gl.projects.list(get_all=True)
-        repos = { i + 1 : project.name for i,project in enumerate(projects) }
-        # repos = {}
-        # val = 1
-        # for i in projects:
-        #     repos[val] = i.name
-        #     val+=1
+        repos = { i + 1 : project.name for i, project in enumerate(projects) }
         instances = RunningInstance.objects.filter(organisation="IRIS-NITK")
-        return render(request,'gitlab_form.html',{'instances':instances,'repos':repos})
+        return render(request, 'gitlab_form.html', {
+            'instances': instances,
+            'repos': repos
+        })
     
 @login_required(login_url='/accounts/login/')
 def getrepos(request):
@@ -310,7 +303,6 @@ def getrepos(request):
 
 @login_required(login_url='/accounts/login/')
 def getbranches(request):
-
     gh_access_token_set = SocialToken.objects.filter(account__user=request.user, account__provider='github')
     github_client = Github(gh_access_token_set.first().__str__())
     organizations = list(github_client.get_user().get_orgs())
@@ -320,20 +312,15 @@ def getbranches(request):
     branches = {}
 
     if organization_name == github_client.get_user().login:
-        for repo in github_client.get_user().get_repos():
-            if repo.name == repo_name:
-                for branch in repo.get_branches():
-                    branches[branch.name] = branch.name
-                break
+        repository = next((repo for repo in github_client.get_user().get_repos() if repo.name == repo_name), None)
+        if repository:
+            branches = {branch.name: branch.name for branch in repository.get_branches()}
     else:
-        for org in organizations:
-            if org.name == organization_name:
-                for repo in org.get_repos():
-                    if repo.name == repo_name:
-                        for branch in repo.get_branches():
-                            branches[branch.name] = branch.name
-                        break
-                break
+        org = next((org for org in organizations if org.name == organization_name), None)
+        if org:
+            repository = next((repo for repo in org.get_repos() if repo.name == repo_name), None)
+            if repository:
+                branches = {branch.name: branch.name for branch in repository.get_branches()}
 
     return render(request,'response.html',{'dictionary': branches})
 
@@ -418,7 +405,6 @@ def deploy(request,org_name,repo_name,branch,social,dockerfile_path,internal_por
         )
         instance.save()
 
-    print(social)
     if(social=='github'):
         deploy_from_git_template.delay(url=url, token = token, social = social, user_name=request.user.username,org_name = org_name, repo_name = repo_name, branch_name = branch, external_port = external_port,internal_port = internal_port, dockerfile_path = dockerfile_path)
     else:
