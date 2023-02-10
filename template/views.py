@@ -10,7 +10,7 @@ from template import services
 from dotenv import load_dotenv
 import os, time
 
-from main.tasks.services import clean_up, deploy_from_git_template
+from main.tasks.services import clean_up
 from main.tasks.findfreeport import find_free_port
 
 
