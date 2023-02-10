@@ -146,8 +146,11 @@ def deploy_from_template(request, pk):
             )
             instance.save()
 
-        
+        #def deploy_from_git_template(self, url, user_name,token = None, social = None, org_name = None, repo_name = None, branch_name = DEFAULT_BRANCH, internal_port = 80, external_port = 3000, docker_image = None, dockerfile_path = None, docker_volumes = {}, docker_env_variables = {}, default_branch = "main", docker_network = None):
+   
+
         deploy_from_git_template.delay(
+            user_name = org_name,
             token=access_token,
             social=social,
             org_name=org_name,
