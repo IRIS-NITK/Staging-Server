@@ -592,7 +592,7 @@ def deploy_from_git(self, token, url, social, user_name,org_name, repo_name, bra
 
     #nginx config 
     res = run(
-        ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(org_name.lower()) , str(repo_name.lower()), str(branch_name.lower()), str(external_port), ],
+        ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT_IRIS, str(branch_name), str(external_port)],
         stdout=PIPE,
         stderr=PIPE,
     )
