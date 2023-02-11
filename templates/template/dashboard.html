@@ -8,7 +8,7 @@
                 <th scope="col">VCS</th>
                 <th scope="col">Repository</th>
                 <th scope="col">Branch</th>
-                <th scope="col">Owner</th>
+                <th scope="col">Deployed By</th>
                 <th scope="col">Update Time</th>
                 <th scope="col">Status</th>
                 <th scope="col"></th>
@@ -23,18 +23,16 @@
                     {% elif instance.social == 'gitlab' %}
                         <img src="/static/gitlab.svg" alt="GitLab" width="20" height="20">
                     {% elif instance.social == 'git.iris' %}
-                        <img src="/static/iris_git.svg", alt = "git.iris", width="20", height="20">
+                        <img src="/static/iris_git.jpg", alt = "git.iris", width="40", height="15">
                     {% else %}
                         {{ instance.social }}
                     {% endif %}
                 </td>
                 <td>
-			{% if instance.social == "github" or instance.social == "gitlab" %}
-			<a href="http://staging-{{ instance.organisation | lower }}-{{ instance.repo_name | lower }}-{{ instance.branch | lower }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
-			{% elif instance.social == "git.iris" %}
-			<a href="http://staging-{{ branch | lower }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
+			{% if instance.social == "git.iris" %}
+			<a href="http://staging-{{ instance.branch | lower }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
 			{% else %}
-			Not supported yet :(
+            <a href="http://staging-{{ instance.organisation | lower }}-{{ instance.repo_name | lower }}-{{ instance.branch | lower }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
 			{% endif %}		
 		</td>
                 <td>{{ instance.branch }}</td>
@@ -59,16 +57,14 @@
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-info btn-sm mx-1">Logs</button>
                     </form>
-                    <form method="post" action="{% url 'deploy_template_clean_up' instance.pk %}">
+                    <form method="post" action="{% url 'template_stop' instance.pk %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-danger btn-sm mx-1">Stop</button>
-                    </form>                    
-                    <a href="{% url 'deploy_instance_delete' instance.pk %}">
-                        <i class="fa fa-trash" style="font-size: 24px; margin-right: 10px; margin-left: 10px;"></i>
-                    </a>
-                    <a href="{% url 'uptime_check_template' instance.pk %}">
-                        <i class="fa fa-refresh" style="font-size:24px;"></i>
-                    </a>  
+                    </form>  
+                    <form method="post" action="{% url 'template_healthcheck' instance.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-secondary btn-sm mx-1"><i class="fa fa-refresh" style="font-size:18px;"></i></button>
+                    </form>              
                     </div>                  
                 </td>
             </tr>

@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.staticfiles',
 
-
+    'template',
     'main.apps.MainConfig',
     'crispy_forms',
     # 'crispy_bootstrap5',
