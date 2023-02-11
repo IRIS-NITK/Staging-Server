@@ -1,4 +1,4 @@
-import os, datetime
+import os, datetime, requests
 
 from subprocess import PIPE, run
 
@@ -139,3 +139,16 @@ def deploy(self, url, repo_name, user_name, vcs, branch, external_port, internal
         pretty_print(logger, f"Visit it on : staging-{user_name.lower()}-{repo_name.lower()}-{branch.lower()}.iris.nitk.ac.in")
         
         return True, logs # log will be container id 
+
+def health_check(url, auth_header):
+    """
+    Checking uptime status of site, uses auth header 
+    """
+    try:
+        response = requests.get(url, headers={"Authorization": auth_header})
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+    except Exception as e:
+        return False

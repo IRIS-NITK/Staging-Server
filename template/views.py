@@ -17,6 +17,8 @@ from main.tasks.findfreeport import find_free_port
 
 load_dotenv()
 PREFIX = os.getenv("PREFIX", "dev")
+DOMAIN_PREFIX = os.getenv("DOMAIN_PREFIX", "staging")
+DOMAIN = os.getenv("DOMAIN","iris.nitk.ac.in")
 
 def dashboard(request):
     """
@@ -94,6 +96,9 @@ def delete(request, pk):
     return redirect("template_list") 
 
 def duplicate(request, pk):
+    """
+    Duplicate existing template
+    """
     if request.method == 'POST':
         template = Template.objects.get(pk = pk)
         duplicate_template = Template.objects.create(
@@ -181,3 +186,21 @@ def deploy(request, pk):
         )
 
     return redirect("template_dashboard")
+
+AUTH_HEADER = os.getenv("AUTH_HEADER")
+def health_check(request, pk):
+    instance = RunningInstance.objects.get(pk = pk)
+    if instance.social == "git.iris":
+        url = f"https://{DOMAIN_PREFIX}-{instance.branch.lower()}.{DOMAIN}"
+    else:
+        url = f"https://{DOMAIN_PREFIX}-{instance.organisation.lower()}-{instance.repo_name.lower()}-{instance.branch.lower()}.{DOMAIN}"
+
+    status = services.health_check(url=url, auth_header=f"basic {AUTH_HEADER}")
+    if status:
+        instance.status = RunningInstance.STATUS_SUCCESS
+    else:
+        instance.status = RunningInstance.STATUS_PENDING
+
+    instance.save()
+    return redirect("template_dashboard")
+    
