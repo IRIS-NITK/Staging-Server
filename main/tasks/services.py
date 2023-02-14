@@ -40,6 +40,9 @@ NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 NGINX_ADD_CONFIG_SCRIPT_IRIS = os.getenv("NGINX_ADD_CONFIG_SCRIPT_IRIS")
 
+def pretty_print(file, text):    
+    file.write(f"{datetime.datetime.now()} : {text}\n")
+
 def write_to_log(file, text):
     file.write(f'{datetime.datetime.now()} : {text}\n')
 
@@ -191,7 +194,12 @@ def pull_git_changes(url, user_name,social,token = None, org_name = None, repo_n
         
         return True, res.stdout.decode('utf-8') 
 
-
+def start_database_container(image, name, volumes, network, environment_variables):
+    # same as below but with multiple volumes and env variable support 
+    db_env_variables = []
+    for key, value in environment_variables.items():
+        db_env_variables.extend(["--env", f"{key}={value}"])
+    pass 
 
 def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind_path, db_env_variables, network_name):
     command = ["docker", "run"] 
