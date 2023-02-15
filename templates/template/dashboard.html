@@ -1,4 +1,4 @@
-{% extends 'main/base.html' %}
+{% extends 'base.html' %}
 
 {% block content %}
 
@@ -53,10 +53,7 @@
                 </td>
                 <td>
                     <div class="btn-group">
-                    <form method="post" action="{% url 'logs' orgname=instance.organisation reponame=instance.repo_name branch=instance.branch social=instance.social%}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-info btn-sm mx-1">Logs</button>
-                    </form>
+                        <!-- TODO : add logs page -->
                     <form method="post" action="{% url 'template_stop' instance.pk %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-danger btn-sm mx-1">Stop</button>
