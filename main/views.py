@@ -381,7 +381,8 @@ def deploy(request,org_name,repo_name,branch,social,dockerfile_path,internal_por
         except:
             return redirect("account_logout")
         for project in gitlab_client.projects.list(get_all=True):
-            if project.name == repo_name:
+            another_name = project.name.lower().replace(" ", "-")
+            if project.name == repo_name or repo_name.lower() == another_name:
                 url = project.http_url_to_repo
                 break
     
