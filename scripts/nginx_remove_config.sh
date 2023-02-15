@@ -14,6 +14,6 @@ REPO=$2
 BRANCH=$3
 
 # Delete Config files if exits
-sudo rm -f sites-enabled/dev-${ORG}-${REPO}-${BRANCH}.conf
-sudo rm -f sites-available/dev-${ORG}-${REPO}-${BRANCH}.conf
+sudo rm -f sites-enabled/dev-gen-${ORG}-${REPO}-${BRANCH}.conf
+sudo rm -f sites-available/dev-gen-${ORG}-${REPO}-${BRANCH}.conf
 

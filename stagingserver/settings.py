@@ -41,10 +41,10 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.staticfiles',
 
-    'template',
+    'template', # app for template type of deployment
+    'iris', # app for IRIS repository deployment 
     'main.apps.MainConfig',
     'crispy_forms',
-    # 'crispy_bootstrap5',
     "allauth_ui",
     'allauth',
     'allauth.account',
