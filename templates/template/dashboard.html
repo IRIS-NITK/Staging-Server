@@ -15,7 +15,7 @@
             </tr>
         </thead>
         <tbody>
-          {% for instance in instances %}
+          {% for instance in iris_instances %}
             <tr>
                 <td>
                     {% if instance.social == 'github' %}
@@ -54,6 +54,14 @@
                 <td>
                     <div class="btn-group">
                         <!-- TODO : add logs page -->
+                    <form method="post" action="{% url 'instance_logs' instance.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-primary btn-sm mx-1">Logs</button>
+                    </form>  
+                    <form method="post" action="{% url 'container_logs' instance.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-primary btn-sm mx-1">Container Logs</button>
+                    </form>  
                     <form method="post" action="{% url 'template_stop' instance.pk %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-danger btn-sm mx-1">Stop</button>

@@ -26,4 +26,4 @@ class Template(models.Model):
     docker_env_vars = models.TextField("Docker Environment Variables", default = "{}", max_length = 500)
     internal_port = models.IntegerField("Internal Port", default = "80")
 
-    dockerfile_path = models.TextField("Dockerfile Path", default = "", null = True, blank = True, max_length = 100)
+    dockerfile_path = models.TextField("Dockerfile Path", default = "Dockerfile", null = True, blank = True, max_length = 100)

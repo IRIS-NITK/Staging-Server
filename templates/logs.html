@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">{{ instance.repo_name }}</h5>
+        <h6 class="card-subtitle mb-2 text-muted">{{ instance.branch }}</h6>
+        <p class="card-text"><strong>Deployed by:</strong> {{ instance.owner }}</p>
+        <p class="card-text"><strong>VCS:</strong> {{ instance.social }}</p>
+        <p class="card-text"><strong>Internal Port:</strong> {{ instance.internal_port }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">Logs</h5>
+    </div>
+    <div class="card-body">
+        <pre>{{ data }}</pre>
+    </div>
+</div>
+
+
+
+{% endblock %}

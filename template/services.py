@@ -12,12 +12,13 @@ PREFIX = os.getenv("PREFIX", "dev")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
 NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
+DEFAULT_NETWORK = os.getenv("DEFAULT_NETWORK", "IRIS")
 
 def pretty_print(file, text):    
     file.write(f"{datetime.datetime.now()} : {text}\n")
 
 @shared_task(bind = True)
-def deploy(self, url, repo_name, user_name, vcs, branch, external_port, internal_port = 80, access_token = None, docker_image = None, docker_network = None, dockerfile_path = None, docker_volumes = {}, docker_env_variables = {}):
+def deploy(self, url, repo_name, user_name, vcs, branch, external_port, internal_port = 80, access_token = None, docker_image = None, docker_network = DEFAULT_NETWORK, dockerfile_path = None, docker_volumes = {}, docker_env_variables = {}):
     """
     Pulls changes, builds/pulls docker image, starts container, configure NGINX
     """
@@ -57,10 +58,10 @@ def deploy(self, url, repo_name, user_name, vcs, branch, external_port, internal
         # building docker image and tagging it
         docker_image = f"{user_name.lower()}_{repo_name.lower()}:{branch.lower()}"
         result = run(
-            ['docker', 'build', '--tag', docker_image, "."],
+            ['docker', 'build', '--tag', docker_image, "-f", f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch}/{repo_name}/{dockerfile_path}", "."],
             stdout = PIPE, 
             stderr = PIPE,
-            cwd = f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch}/{repo_name}/{dockerfile_path}"
+            cwd = f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch}/{repo_name}/"
         ) 
 
         if result.returncode !=0:
@@ -102,10 +103,10 @@ def deploy(self, url, repo_name, user_name, vcs, branch, external_port, internal
             repo_name = repo_name,
             branch_name = branch,
             container_name = container_name,
-            external_port = external_port,
+            external_port = external_port, 
             internal_port = internal_port,
             volumes = docker_volumes,
-            env_variables = docker_env_variables,
+            enviroment_variables = docker_env_variables,
             docker_network = docker_network
         )
 
