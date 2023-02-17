@@ -53,7 +53,7 @@ def pull_git_changes(url, user_name, vcs, repo_name, branch_name, token = None):
     """
     Pulls the latest changes from the git repo, if the repo is not present, then it clones the repo
     """
-    assert vcs.lower() in ["github", "iris.git", "gitlab"], "VCS not supported"
+    assert vcs.lower() in ["github", "git.iris", "gitlab"], "VCS not supported"
 
     log_file_path = f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch_name}/{branch_name}.txt"
 
@@ -87,7 +87,7 @@ def pull_git_changes(url, user_name, vcs, repo_name, branch_name, token = None):
         logger = open(log_file_path, "w")
         # copy the contents of DEFAULT_BRANCH to the branch directory
         result = run(
-            ["cp", "-r", f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/DEFAULT_BRANCH/.", f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch_name}/{repo_name}"],
+            ["cp", "-r", f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.", f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch_name}/{repo_name}"],
             stdout = PIPE,
             stderr = PIPE,
         )
@@ -114,6 +114,7 @@ def pull_git_changes(url, user_name, vcs, repo_name, branch_name, token = None):
     else:
         # open log file
         logger = open(log_file_path, "a")
+        logger.write("\n")
         pretty_print(logger, f"Pulled latest changes from {branch_name}")
         
         # git pull

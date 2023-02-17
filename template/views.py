@@ -1,15 +1,16 @@
-import os, time
+import os, time, json
 
 from django.shortcuts import render, redirect
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
 
 from main.models import RunningInstance
-from main.services import clean_up, find_free_port, health_check
+from main.services import clean_up, find_free_port
+from main.services import health_check as main_health_check
 
 from template.models import Template
 from template.forms import TemplateForm 
-from template.services import deploy
+from template.services import deploy as deploy_template
 
 from dotenv import load_dotenv
 
@@ -105,17 +106,17 @@ def duplicate(request, pk):
         template = Template.objects.get(pk = pk)
         duplicate_template = Template.objects.create(
             name = template.name + "_copy",
-            social_type = template.vcs,
-            organisation_or_user = template.user_name,
-            git_repo_url = template.git_url,
+            user_name = template.user_name,
+            repo_name = template.repo_name,
+            git_url = template.git_url,
             access_token = template.access_token,
-            default_branch = template.default_branch,
+            branch = template.branch, 
+            default_branch = template.branch,
             docker_image = template.docker_image,
             docker_network = template.docker_network,
-            docker_volumes = template.docker_volumes,
             docker_env_vars = template.docker_env_vars,
             internal_port = template.internal_port,
-            dockerfile_path = template.dockerfile_path
+            dockerfile_path = template.dockerfile_path,
         )
         duplicate_template.save()
     return redirect("template_list")
@@ -129,14 +130,17 @@ def stop(request, pk):
     container_name = f"{PREFIX}_{instance.organisation.lower()}_{instance.repo_name.lower()}_{instance.branch.lower()}"
 
     # stop container
-    clean_up(
+    result, logs = clean_up(
         org_name = instance.organisation,
         repo_name = instance.repo_name,
         remove_container = container_name
     )
 
-    # delete the object from database
-    instance.delete()
+    if result:
+        # delete the object from database
+        instance.delete()
+    else:
+        print(f"Stop in templates failed\nLogs : {logs}")
     return redirect("template_dashboard")
 
 @login_required
@@ -175,7 +179,7 @@ def deploy(request, pk):
 
         # TODO : sanitize inputs before passing to celery task
 
-        deploy.delay(
+        deploy_template.delay(
             url = template.git_url,
             repo_name = template.repo_name,
             user_name = template.user_name,
@@ -187,8 +191,8 @@ def deploy(request, pk):
             docker_image = template.docker_image,
             docker_network = template.docker_network,
             dockerfile_path = template.dockerfile_path,
-            docker_volumes = template.docker_volumes,
-            docker_env_variables = template.docker_env_vars
+            docker_volumes = json.loads(template.docker_volumes),
+            docker_env_variables = json.loads(template.docker_env_vars)
         )
 
     return redirect("template_dashboard")
@@ -201,7 +205,7 @@ def health_check(request, pk):
     else:
         url = f"https://{DOMAIN_PREFIX}-{instance.organisation.lower()}-{instance.repo_name.lower()}-{instance.branch.lower()}.{DOMAIN}"
 
-    status = health_check(url=url, auth_header=f"basic {AUTH_HEADER}")
+    status = main_health_check(url=url, auth_header=f"basic {AUTH_HEADER}")
     if status:
         instance.status = RunningInstance.STATUS_SUCCESS
     else:

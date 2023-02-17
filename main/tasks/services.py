@@ -40,6 +40,9 @@ NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 NGINX_ADD_CONFIG_SCRIPT_IRIS = os.getenv("NGINX_ADD_CONFIG_SCRIPT_IRIS")
 
+def pretty_print(file, text):    
+    file.write(f"{datetime.datetime.now()} : {text}\n")
+
 def write_to_log(file, text):
     file.write(f'{datetime.datetime.now()} : {text}\n')
 
@@ -191,7 +194,12 @@ def pull_git_changes(url, user_name,social,token = None, org_name = None, repo_n
         
         return True, res.stdout.decode('utf-8') 
 
-
+def start_database_container(image, name, volumes, network, environment_variables):
+    # same as below but with multiple volumes and env variable support 
+    db_env_variables = []
+    for key, value in environment_variables.items():
+        db_env_variables.extend(["--env", f"{key}={value}"])
+    pass 
 
 def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind_path, db_env_variables, network_name):
     command = ["docker", "run"] 
@@ -202,18 +210,18 @@ def start_db_container(db_image, db_name, db_dump_path, volume_name, volume_bind
     if volume_name and volume_bind_path:
         command.extend(["-v", f"{volume_name}:{volume_bind_path}"])
     if db_env_variables:
-        command.extend([*db_env_variables])
+        for key, value in db_env_variables.items():
+            command.extend(["--env", f"{key}={value}"])
     if network_name:
         command.extend(["--network", network_name])
     command.extend(["--detach", "--rm", db_image])
-
+    
     res = run(
         command,
         stdout=PIPE,
         stderr=PIPE,
     )    
     if res.returncode != 0:
-        print(res.stderr.decode('utf-8'))
         return False, res.stderr.decode('utf-8')
     return True, res.stdout.decode('utf-8')
 
@@ -246,7 +254,6 @@ def start_container(container_name, org_name, repo_name, branch_name, docker_ima
     running_instance = RunningInstance.objects.get(branch=branch_name,repo_name=repo_name,organisation=org_name)
     if res.returncode != 0:
         running_instance.status = RunningInstance.STATUS_ERROR
-        print(res.stderr.decode('utf-8'))
         return False, res.stderr.decode('utf-8')
     else:
         running_instance.status = RunningInstance.STATUS_SUCCESS
@@ -386,7 +393,6 @@ def deploy_from_git_template(self, url, user_name,token = None, social = None, o
             return False, "Dockerfile not provided"
         docker_image = f"{org_name.lower()}_{repo_name.lower()}_{branch_name.lower()}"
         write_to_log(logs, f"Docker image not provided, building image")
-        print(docker_image)
         res = run(
             ['docker', 'build', '--tag', docker_image, "."],
             stdout=PIPE,
@@ -477,13 +483,11 @@ def deploy_from_git(self, token, url, social, user_name,org_name, repo_name, bra
     logs = open(log_file,'a')
     image_name = ""
     docker_image = ""
-    db_name = "db"
     if url == 'https://git.iris.nitk.ac.in/IRIS-NITK/IRIS.git' or url=="ssh://git@git.iris.nitk.ac.in:5022/IRIS-NITK/IRIS.git":
         #docker_image = "git-registry.iris.nitk.ac.in/iris-teams/systems-team/staging-server/dev-iris:latest"
         docker_image = os.getenv("BASE_IMAGE")
     else:
         docker_image = f"{org_name.lower()}_{repo_name.lower()}_{branch_name.lower()}"
-        db_name = f"{org_name.lower()}_{repo_name.lower()}_db"
     # start container 
     db_image = "mysql:5.7"
     env_var_args = {
@@ -501,32 +505,31 @@ def deploy_from_git(self, token, url, social, user_name,org_name, repo_name, bra
         f = open(log_file,'a')
     except FileNotFoundError:
         f = open(log_file,'w')
-    check_db_container_exists = run(["docker","container","inspect",db_name],stdout=PIPE,stderr=PIPE)
-    if check_db_container_exists.returncode != 0:
-        f.write("Starting Database Container"+"\n")
-        res, msg = start_db_container(db_image, db_name, None, None, None, db_env_variables, "IRIS")
-        f.write(msg+"\n")
-    else: 
-        f.write("Database Container "+ db_name + " already exists."+"\n")
+
+    db_name = "db"
+    f.write("Starting Database Container"+"\n")
+    res, msg = start_db_container(db_image, "db", None, None, None, db_env_variables, "IRIS")
+    f.write(msg+"\n")
 
 
-    #check_image_exists = run(["docker","image","inspect",docker_image],stdout=PIPE,stderr=PIPE)
+    check_image_exists = run(["docker","image","inspect",docker_image],stdout=PIPE,stderr=PIPE)
 
-    write_to_log(logs, f"Building docker image:")
-    res = run(
-        ['docker', 'build', '--tag', docker_image, "."],
-        stdout=PIPE,
-        stderr=PIPE,
-        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/"
-    )
-    if res.returncode != 0:
-        write_to_log(logs, f"Error while building docker image")
-        write_to_log(logs, res.stderr.decode('utf-8'))
-        logs.close()
-        return False, "Error while building docker image\n" + res.stderr.decode('utf-8')
-    else:
-        write_to_log(logs, f"Docker image {docker_image} built successfully")
-        logs.write(f"{datetime.datetime.now()} : Docker image built successfully\n\t\t\ttagged : {docker_image}\n")
+    if check_image_exists.returncode != 0:
+        write_to_log(logs, f"Docker image not provided, building image")
+        res = run(
+            ['docker', 'build', '--tag', docker_image, "."],
+            stdout=PIPE,
+            stderr=PIPE,
+            cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}/"
+        )
+        if res.returncode != 0:
+            write_to_log(logs, f"Error while building docker image")
+            write_to_log(logs, res.stderr.decode('utf-8'))
+            logs.close()
+            return False, "Error while building docker image\n" + res.stderr.decode('utf-8')
+        else:
+            write_to_log(logs, f"Docker image {docker_image} built successfully")
+            logs.write(f"{datetime.datetime.now()} : Docker image built successfully\n\t\t\ttagged : {docker_image}\n")
     
     # # org_name, repo_name, branch_name, docker_image, external_port, internal_port = 80, src_code_dir = None, dest_code_dir = None
     env_variables = {}

@@ -19,8 +19,9 @@
         
           
         </h5>
-        <p class="card-text text-muted">Organisation / User: <span class="font-weight-bold text-truncate">{{ template.organisation_or_user }}</span></p>
-        <p class="card-text text-muted">Git URL: <span class="font-weight-bold text-truncate">{{ template.git_repo_url }}</span></p>
+        <p class="card-text text-muted">Organisation / User: <span class="font-weight-bold text-truncate">{{ template.user_name }}</span></p>
+        <p class="card-text text-muted">Repository Name: <span class="font-weight-bold text-truncate">{{ template.repo_name }}</span></p>
+        <p class="card-text text-muted">Git URL: <span class="font-weight-bold text-truncate">{{ template.git_url }}</span></p>
         <p class="card-text text-muted">Branch: <span class="font-weight-bold text-truncate">{{ template.default_branch }}</span></p>
         <!-- if template.docker_image is empty or none dont view -->
         {% if template.docker_image %}
@@ -34,20 +35,20 @@
 
         <p class="card-text text-muted">Port to be exposed: <span class="font-weight-bold text-truncate">{{ template.internal_port }}</span></p>
         <p class="card-text text-muted">Dockerfile Path: <span class="font-weight-bold text-truncate">{{ template.dockerfile_path }}</span></p>
-        <a href="{% url 'deploy_template_update' pk=template.pk %}" class="btn btn-primary">
+        <a href="{% url 'template_update' pk=template.pk %}" class="btn btn-primary">
           <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
           Update</a>
-        <form action="{% url 'deploy_template_delete' pk=template.pk %}" method="post" class="d-inline">
+        <form action="{% url 'template_delete' pk=template.pk %}" method="post" class="d-inline">
           {% csrf_token %}
           <button type="submit" class="btn btn-danger">Delete</button>
         </form>
 
-        <form action="{% url 'deploy_from_template' pk=template.pk %}" method="post" class="d-inline">
+        <form action="{% url 'template_deploy' pk=template.pk %}" method="post" class="d-inline">
           {% csrf_token %}
           <button type="submit" class="btn btn-outline-success">Deploy</button>
         </form>
 
-        <form action="{% url 'deploy_template_duplicate' pk=template.pk %}" method="post" class="d-inline">
+        <form action="{% url 'template_duplicate' pk=template.pk %}" method="post" class="d-inline">
           {% csrf_token %}
           <button type="submit" class="btn btn-outline-dark">Duplicate</button>
         </form>

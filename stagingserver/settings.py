@@ -43,7 +43,8 @@ INSTALLED_APPS = [
 
     'template', # app for template type of deployment
     'iris', # app for IRIS repository deployment 
-    'main.apps.MainConfig',
+    'main',
+    # 'main.apps.MainConfig',
     'crispy_forms',
     "allauth_ui",
     'allauth',
