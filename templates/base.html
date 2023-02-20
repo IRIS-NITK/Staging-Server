@@ -23,7 +23,7 @@
   <body>
     <div class="container">
       <div class="row justify-content-center">
-        <div class="col-12"> 
+        <div class="col-18"> 
           <h1 class="mt-2">
             <a href="{% url 'iris_dashboard' %}">Staging Server</a>
             {% if user.is_authenticated %}
@@ -42,7 +42,6 @@
           {% block content %}
           {% endblock %}
           <hr>
-          <!-- footer -->
           <footer class="footer">
             <p>Staging Server, IRIS</p>
           </footer>
