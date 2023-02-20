@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
     <table class="table" style="text-align: center;">
         <thead>
             <tr>
@@ -15,7 +14,7 @@
             </tr>
         </thead>
         <tbody>
-          {% for instance in iris_instances %}
+          {% for instance in instances %}
             <tr>
                 <td>
                     {% if instance.social == 'github' %}
@@ -53,7 +52,6 @@
                 </td>
                 <td>
                     <div class="btn-group">
-                        <!-- TODO : add logs page -->
                     <form method="post" action="{% url 'instance_logs' instance.pk %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-primary btn-sm mx-1">Logs</button>
