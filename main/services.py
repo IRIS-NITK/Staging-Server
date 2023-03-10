@@ -158,7 +158,6 @@ def start_container(image_name, user_name, repo_name, branch_name, container_nam
         command.extend(["--network", docker_network])
 
     command.extend([image_name])
-
     result = run(
         command,
         stdout = PIPE,

@@ -23,4 +23,5 @@ urlpatterns = [
 
     path("iris/", include("iris.urls")),
     path("template/", include("template.urls")),
+    path("git_iris/", include("git_iris.urls")),
 ]
