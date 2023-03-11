@@ -1,5 +1,5 @@
 from dotenv import load_dotenv 
-import os, datetime, shutil, requests, socket
+import os, datetime, shutil, requests, socket, subprocess
 from subprocess import run, PIPE
 from contextlib import closing
 
@@ -49,89 +49,154 @@ def pretty_print(file, text):
     """
     file.write(f"{datetime.datetime.now()} : {text}\n")
 
-def pull_git_changes(url, user_name, vcs, repo_name, branch_name, token = None):
-    """
+def pull_git_changes(url, user_name,vcs,token = None, org_name = None, repo_name = None,branch_name = 'DEFAULT_BRANCH'):
+    """             
     Pulls the latest changes from the git repo, if the repo is not present, then it clones the repo
     """
-    assert vcs.lower() in ["github", "git.iris", "gitlab"], "VCS not supported"
+    print(url,user_name,org_name,repo_name,branch_name)
+    if not (org_name and repo_name):
+        return False, "Org name and repo name are required\n"
 
-    log_file_path = f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
 
-    # Check if the organization/user directory exists
-    if not os.path.exists(f"{PATH_TO_HOME_DIR}/{user_name}"):
-        os.mkdir(f"{PATH_TO_HOME_DIR}/{user_name}")
-    
-    # Check if the repo directory exists
-    if not os.path.exists(f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}"):
-        os.mkdir(f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}")
-    
-    # Check if DEFAULT_BRANCH directory exists
-    if not os.path.exists(f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/DEFAULT_BRANCH"):
-        os.mkdir(f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/DEFAULT_BRANCH")
-        
-        # TODO : Use Python Git API instead of subprocess, with access token
-        result = run(
-            ["git", "clone", f"{url}", f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/DEFAULT_BRANCH"],
-            stdout = PIPE,
-            stderr = PIPE,
-        )
+    # Check if the repo is already present
+    # Check if repository exists
+    if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):       
+        # Repository exists , check if branch exists
+        if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}"):
+            # Branch exists , pull latest changes
+            logger = open(log_file,"a")
+            pretty_print(logger, f"Pulling latest changes from branch {branch_name}")
 
-        if result.returncode != 0:
-            return False, result.stderr.decode("utf-8")
-        
-    # Check if the branch directory exists
-    if not os.path.exists(f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch_name}"):
-        os.mkdir(f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch_name}")
-        
-        # open log file
-        logger = open(log_file_path, "w")
-        # copy the contents of DEFAULT_BRANCH to the branch directory
-        result = run(
-            ["cp", "-r", f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.", f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch_name}/{repo_name}"],
-            stdout = PIPE,
-            stderr = PIPE,
-        )
-        pretty_print(logger, f"{branch_name} does not exist locally, creating a new branch")
-        
-        if result.returncode != 0:
+            res = run(
+                ['git', 'pull'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
+            )
+
+            if res.returncode != 0:
+                pretty_print(logger, f"Error while pulling latest changes from branch {branch_name}")
+                pretty_print(logger, res.stderr.decode('utf-8'))
+                logger.close()
+                return False, res.stderr.decode('utf-8')
+            pretty_print(logger, f"Successfully pulled latest changes from branch {branch_name}")
+            pretty_print(logger, res.stdout.decode('utf-8'))
             logger.close()
-            return False, result.stderr.decode("utf-8")
-        
-        # git checkout
-        result = run(
-            ["git", "checkout", f"{branch_name}"],
-            stdout = PIPE,
-            stderr = PIPE,
-            cwd = f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch_name}/{repo_name}"
-        )
-        
-        if result.returncode != 0:
+            return True, res.stdout.decode('utf-8')
+
+        else:
+            # Branch does not exist , could be a new branch  
+            # Pull latest changes from default branch
+            res = run(
+                ['git', 'checkout', branch_name],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
+            )
+
+            if res.returncode != 0:
+                return False, res.stderr.decode('utf-8')
+                
+            res = run(
+                ['git', 'pull'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
+            )
+
+            if res.returncode != 0:
+                return False, res.stderr.decode('utf-8')
+
+            os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
+            logger = open(log_file,"w")
+            pretty_print(logger, f"Branch {branch_name} does not exist locally, pulling it")
+            
+            # copy latest changes to branch direcotry
+            res = subprocess.run(
+                ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.", f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
+            )
+
+            if res.returncode != 0:
+                pretty_print(logger, f"Error while copying files from {DEFAULT_BRANCH} to {branch_name}")
+                pretty_print(logger, res.stderr.decode('utf-8'))
+                logger.close()
+                return False, res.stderr.decode('utf-8')
+            
+            pretty_print(logger, f"Successfully pulled branch {branch_name} locally")
             logger.close()
-            return False, result.stderr.decode("utf-8")
-        
-        pretty_print(logger, f"Pulled {branch_name} locally")
-        
+            return True, res.stdout.decode('utf-8')
+    # Repository does not exist , clone it
     else:
-        # open log file
-        logger = open(log_file_path, "a")
-        logger.write("\n")
-        pretty_print(logger, f"Pulled latest changes from {branch_name}")
-        
-        # git pull
-        result = run(
-            ["git", "pull"],
-            stdout = PIPE,
-            stderr = PIPE,
-            cwd = f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch_name}/{repo_name}"
+        temp_logging_text = ""
+        if not os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}"):
+            temp_logging_text = f'\n{datetime.datetime.now()} : Organization {org_name} does not exist locally, creating it\n'
+            os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}")
+
+        # org exists , repo does not exist , could be a new repo , so clone it
+        os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH")
+        temp_logging_text += f'\n{datetime.datetime.now()} : Repository {repo_name} does not exist locally, creating it\n'
+
+        # repo_url = "https://oauth2:"+token+"@github.com/"+user_name+"/"+repo_name+".git"
+        # if token and social.lower() == "github":
+        #     v1,v2 = get_org_and_repo_name_v2(url,'github')
+        #     url = f'https://{user_name}:{token}@github.com/{v1}/{v2}'
+        # else:
+        url = f'https://{user_name}:{token}@git.iris.nitk.ac.in/{org_name}/{repo_name}.git'
+
+        parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH"
+        local_dir = os.path.join(parent_dir, repo_name)
+
+        res = run(
+            ['git', 'clone', url , local_dir],
+            stdout=PIPE,
+            stderr=PIPE,
         )
+
+        temp_logging_text += f'\n{datetime.datetime.now()} : Repository {repo_name} does not exist locally, cloning it\n'
+        if res.returncode != 0:
+            return False, res.stderr.decode('utf-8')
+
+        os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
+        try:
+            logger = open(log_file,"a")
+        except:
+            logger = open(log_file,"w")
+        logger.write(temp_logging_text)
+        pretty_print(logger, f"Branch {branch_name} does not exist locally, creating it")
         
-        if result.returncode != 0:
-            logger.close()
-            return False, result.stderr.decode("utf-8")
+        # copy latest changes to branch direcotry
+        res = run(
+            ['git', 'checkout', branch_name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
+        )
+        if res.returncode != 0:
+            pretty_print(logger, f"Error while creating branch {branch_name}")
+            pretty_print(logger, res.stderr.decode('utf-8'))
+            return False, res.stderr.decode('utf-8')
         
-        pretty_print(logger, f"Pulled latest changes from {branch_name}")
+        pretty_print(logger, f"Successfully pulled latest changes from {branch_name} branch")
+       
+        # copy latest changes to branch direcotry
+        res = run(
+            ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.", f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
+        )
+
+        if res.returncode != 0:
+            pretty_print(logger, f"Error while copying files from {DEFAULT_BRANCH} to {branch_name}")
+            pretty_print(logger, res.stderr.decode('utf-8'))
+            return False, res.stderr.decode('utf-8')
+        pretty_print(logger, f"Successfully copied changes to branch {branch_name} locally")
         
-    return True, f"Deployed {user_name}/{repo_name}/{branch_name}"
+        return True, res.stdout.decode('utf-8') 
 
 
 def start_container(image_name, user_name, repo_name, branch_name, container_name, external_port, internal_port, volumes = {}, enviroment_variables = {}, docker_network = DEFAULT_NETWORK):
