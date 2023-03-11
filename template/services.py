@@ -1,4 +1,4 @@
-import os, datetime
+import os, datetime, requests
 
 from subprocess import PIPE, run
 from celery import shared_task
@@ -18,19 +18,20 @@ def pretty_print(file, text):
     file.write(f"{datetime.datetime.now()} : {text}\n")
 
 @shared_task(bind = True)
-def deploy(self, url, repo_name, user_name, vcs, branch, external_port, internal_port = 80, access_token = None, docker_image = None, docker_network = DEFAULT_NETWORK, dockerfile_path = None, docker_volumes = {}, docker_env_variables = {}):
+def deploy(self, url, user_name, org_name, repo_name, vcs, branch, external_port, internal_port = 80, access_token = None, docker_image = None, docker_network = DEFAULT_NETWORK, dockerfile_path = None, docker_volumes = {}, docker_env_variables = {}):
     """
     Pulls changes, builds/pulls docker image, starts container, configure NGINX
     """
-
+    org_name = "IRIS-NITK"
     # logfile where logs for this deployment are stored 
-    log_file = f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch}/{branch}.txt"
+    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch}/{branch}.txt"
     
     # Pull changes from git based vcs
     result, logs = pull_git_changes(
         url = url,
         user_name = user_name,
         vcs = vcs,
+        org_name = org_name,    
         repo_name = repo_name,
         branch_name = branch,
         token = access_token
@@ -46,22 +47,22 @@ def deploy(self, url, repo_name, user_name, vcs, branch, external_port, internal
         pass 
     else:
         # no docker image, build it from dockerfile 
-        if not dockerfile_path:
-            # no dockerfile path 
-            pretty_print(logger, "Dockerfile not provided")
-            logger.close()
-            return False, "Dockerfile not provided"
+        # if not dockerfile_path:
+        #     # no dockerfile path 
+        #     pretty_print(logger, "Dockerfile not provided")
+        #     logger.close()
+        #     return False, "Dockerfile not provided"
         
         pretty_print(logger, f"No Docker image provided") 
         pretty_print(logger, f"Building image from {dockerfile_path} ...")
 
         # building docker image and tagging it
-        docker_image = f"{user_name.lower()}_{repo_name.lower()}:{branch.lower()}"
+        docker_image = f"{org_name.lower()}_{repo_name.lower()}:{branch.lower()}"
         result = run(
-            ['docker', 'build', '--tag', docker_image, "-f", f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch}/{repo_name}/{dockerfile_path}", "."],
+            ['docker', 'build', '--tag', docker_image, "."],
             stdout = PIPE, 
             stderr = PIPE,
-            cwd = f"{PATH_TO_HOME_DIR}/{user_name}/{repo_name}/{branch}/{repo_name}/"
+            cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch}/{repo_name}/"
         ) 
 
         if result.returncode !=0:
@@ -73,7 +74,7 @@ def deploy(self, url, repo_name, user_name, vcs, branch, external_port, internal
             pretty_print(logger, f"Docker image built and tagged : {docker_image}")
         
         # check if this container is already running
-        container_name = f"{PREFIX}_{user_name}_{repo_name}_{branch}"
+        container_name = f"{PREFIX}_{org_name}_{repo_name}_{branch}"
         existing_container = run(
             ["docker", "container", "inspect", container_name], 
             stderr = PIPE, 
@@ -100,6 +101,7 @@ def deploy(self, url, repo_name, user_name, vcs, branch, external_port, internal
         result, logs = start_container(
             image_name = docker_image,
             user_name = user_name,
+            org_name = org_name,
             repo_name = repo_name,
             branch_name = branch,
             container_name = container_name,
@@ -119,7 +121,7 @@ def deploy(self, url, repo_name, user_name, vcs, branch, external_port, internal
 
         # Configure NGINX 
         nginx = run(
-            ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(user_name.lower()), str(repo_name.lower()), str(branch.lower()), str(external_port)],
+            ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(org_name.lower()), str(repo_name.lower()), str(branch.lower()), str(external_port)],
             stderr = PIPE, 
             stdout = PIPE 
         )
@@ -134,7 +136,7 @@ def deploy(self, url, repo_name, user_name, vcs, branch, external_port, internal
   
         pretty_print(logger, f"NGINX entry done")
         pretty_print(logger, f"Successully deployed 🥳")
-        pretty_print(logger, f"Visit it on : staging-{user_name.lower()}-{repo_name.lower()}-{branch.lower()}.iris.nitk.ac.in")
+        pretty_print(logger, f"Visit it on : staging-{org_name.lower()}-{repo_name.lower()}-{branch.lower()}.iris.nitk.ac.in")
         
         return True, logs # log will be container id 
 

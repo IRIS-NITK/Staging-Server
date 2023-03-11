@@ -55,15 +55,15 @@ def container_logs(request, pk):
 
 @login_required
 def instance_logs(request, pk):
-    try:
-        instance = RunningInstance.objects.get(pk = pk)
-        log_file_name = f"{PATH_TO_HOME_DIR}/{instance.organisation}/{instance.repo_name}/{instance.branch}/{instance.branch}.txt"
-        with open(log_file_name, "r") as file:
-            data = file.read()
-        context = {'data': data, 'instance' : instance }
-        return render(request, 'logs.html', context)
-    except:
-        return render(request, 'error_log.html')
+    # try:
+    instance = RunningInstance.objects.get(pk = pk)
+    log_file_name = f"{PATH_TO_HOME_DIR}/{instance.organisation}/{instance.repo_name}/{instance.branch}/{instance.branch}.txt"
+    with open(log_file_name, "r") as file:
+        data = file.read()
+    context = {'data': data, 'instance' : instance }
+    return render(request, 'logs.html', context)
+    # except:
+    #     return render(request, 'error_log.html')
 
 @login_required
 def homepage(request):
