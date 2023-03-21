@@ -53,7 +53,7 @@ def pull_git_changes(url, user_name,vcs,token = None, org_name = None, repo_name
     """             
     Pulls the latest changes from the git repo, if the repo is not present, then it clones the repo
     """
-    print(url,user_name,org_name,repo_name,branch_name)
+    # print(url,user_name,org_name,repo_name,branch_name)
     if not (org_name and repo_name):
         return False, "Org name and repo name are required\n"
 
