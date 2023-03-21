@@ -22,7 +22,6 @@ def deploy(self, url, user_name, org_name, repo_name, vcs, branch, external_port
     """
     Pulls changes, builds/pulls docker image, starts container, configure NGINX
     """
-    org_name = "IRIS-NITK"
     # logfile where logs for this deployment are stored 
     log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch}/{branch}.txt"
     
@@ -58,6 +57,9 @@ def deploy(self, url, user_name, org_name, repo_name, vcs, branch, external_port
 
         # building docker image and tagging it
         docker_image = f"{org_name.lower()}_{repo_name.lower()}:{branch.lower()}"
+
+        print(docker_image)
+        
         result = run(
             ['docker', 'build', '--tag', docker_image, "."],
             stdout = PIPE, 
