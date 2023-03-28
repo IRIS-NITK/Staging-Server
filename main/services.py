@@ -53,7 +53,6 @@ def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, re
     """             
     Pulls the latest changes from the git repo, if the repo is not present, then it clones the repo
     """
-    print(url,user_name,org_name,repo_name,branch_name)
     if not (org_name and repo_name):
         return False, "Org name and repo name are required\n"
 
@@ -141,7 +140,7 @@ def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, re
         temp_logging_text += f'\n{datetime.datetime.now()} : Repository {repo_name} does not exist locally, creating it\n'
 
         url = f'https://{user_name}:{token}@git.iris.nitk.ac.in/{org_name}/{repo_name}.git'
-        print(url)
+    
         parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH"
         local_dir = os.path.join(parent_dir, repo_name)
 
@@ -194,7 +193,7 @@ def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, re
         return True, res.stdout.decode('utf-8') 
 
 
-def start_container(image_name, user_name, repo_name, branch_name, container_name, external_port, internal_port, volumes = {}, enviroment_variables = {}, docker_network = DEFAULT_NETWORK):
+def start_container(image_name, user_name, org_name,repo_name, branch_name, container_name, external_port, internal_port, volumes = {}, enviroment_variables = {}, docker_network = DEFAULT_NETWORK):
     """
     Generalised function to start a container for any service
     """
@@ -218,6 +217,7 @@ def start_container(image_name, user_name, repo_name, branch_name, container_nam
         command.extend(["--network", docker_network])
 
     command.extend([image_name])
+
     result = run(
         command,
         stdout = PIPE,

@@ -8,7 +8,7 @@ from main.services import pull_git_changes, pretty_print, start_container
 
 load_dotenv()
 
-PREFIX = os.getenv("PREFIX", "dev")
+PREFIX = os.getenv("PREFIX", "iris_staging")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
 NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
@@ -56,10 +56,9 @@ def deploy(self, url, user_name, org_name, repo_name, vcs, branch, external_port
         pretty_print(logger, f"Building image from {dockerfile_path} ...")
 
         # building docker image and tagging it
-        docker_image = f"{org_name.lower()}_{repo_name.lower()}:{branch.lower()}"
+        docker_image = f"{PREFIX}_{org_name.lower()}_{repo_name.lower()}:{branch.lower()}"
 
-        print(docker_image)
-        
+       
         result = run(
             ['docker', 'build', '--tag', docker_image, "."],
             stdout = PIPE, 
@@ -76,7 +75,7 @@ def deploy(self, url, user_name, org_name, repo_name, vcs, branch, external_port
             pretty_print(logger, f"Docker image built and tagged : {docker_image}")
         
         # check if this container is already running
-        container_name = f"{PREFIX}_{org_name}_{repo_name}_{branch}"
+        container_name = f"{PREFIX}_{org_name.lower()}_{repo_name}_{branch}"
         existing_container = run(
             ["docker", "container", "inspect", container_name], 
             stderr = PIPE, 
@@ -99,6 +98,7 @@ def deploy(self, url, user_name, org_name, repo_name, vcs, branch, external_port
         
         pretty_print(logger, f"Starting container -> {container_name}")
         
+        print(docker_image)
         # start the container
         result, logs = start_container(
             image_name = docker_image,
