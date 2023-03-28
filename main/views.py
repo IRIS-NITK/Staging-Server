@@ -18,7 +18,7 @@ from .models import DeployTemplate
 from dotenv import load_dotenv
 
 load_dotenv()
-PREFIX = os.getenv("PREFIX", "iris_staging")
+PREFIX = os.getenv("PREFIX", "staging")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
 
 
