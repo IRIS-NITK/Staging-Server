@@ -49,7 +49,7 @@ def pretty_print(file, text):
     """
     file.write(f"{datetime.datetime.now()} : {text}\n")
 
-def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, repo_name = None,branch_name = 'DEFAULT_BRANCH'):
+def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, repo_name = None,branch_name = 'DEFAULT_BRANCH', default_branch_name = 'master'):
     """             
     Pulls the latest changes from the git repo, if the repo is not present, then it clones the repo
     """
@@ -66,9 +66,10 @@ def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, re
             # Branch exists , pull latest changes
             logger = open(log_file,"a")
             pretty_print(logger, f"Pulling latest changes from branch {branch_name}")
-
+	    
+            	
             res = run(
-                ['git', 'pull'],
+                ['git','checkout',default_branch_name,'&&', 'git', 'pull','&&' ,'git','checkout',branch_name],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
@@ -88,7 +89,7 @@ def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, re
             # Branch does not exist , could be a new branch  
             # Pull latest changes from default branch
             res = run(
-                ['git', 'checkout', branch_name],
+                ['git','checkout',default_branch_name,'&&' ,'git','pull','&&','git', 'checkout', branch_name],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
@@ -97,15 +98,17 @@ def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, re
             if res.returncode != 0:
                 return False, res.stderr.decode('utf-8')
                 
-            res = run(
-                ['git', 'pull'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
-            )
+	   
+           # res = run(
+           #     ['git', 'pull'],
+           #     stdout=subprocess.PIPE,
+           #     stderr=subprocess.PIPE,
+           #     cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
+           # )
 
-            if res.returncode != 0:
-                return False, res.stderr.decode('utf-8')
+           # if res.returncode != 0:
+           #     return False, res.stderr.decode('utf-8')
+	  
 
             os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
             logger = open(log_file,"w")
@@ -164,7 +167,7 @@ def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, re
         
         # copy latest changes to branch directory
         res = run(
-            ['git', 'checkout', branch_name],
+            ['git', 'checkout', default_branch_name, '&&', 'git', 'pull', '&&' , 'git', 'checkout', branch_name],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
@@ -193,7 +196,7 @@ def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, re
         return True, res.stdout.decode('utf-8') 
 
 
-def start_container(image_name, user_name, org_name,repo_name, branch_name, container_name, external_port, internal_port, volumes = {}, enviroment_variables = {}, docker_network = DEFAULT_NETWORK):
+def start_container(image_name, org_name,repo_name, branch_name, container_name, external_port, internal_port, volumes = {}, enviroment_variables = {}, docker_network = DEFAULT_NETWORK):
     """
     Generalised function to start a container for any service
     """
