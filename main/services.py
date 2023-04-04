@@ -1,5 +1,10 @@
-from dotenv import load_dotenv 
-import os, datetime, shutil, requests, socket, subprocess
+from dotenv import load_dotenv
+import os
+import datetime
+import shutil
+import requests
+import socket
+import subprocess
 from subprocess import run, PIPE
 from contextlib import closing
 
@@ -11,7 +16,7 @@ PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
 NGINX_ADD_CONFIG_SCRIPT_IRIS = os.getenv("NGINX_ADD_CONFIG_SCRIPT_IRIS_PATH")
 NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 DOCKER_IMAGE = os.getenv("BASE_IMAGE")
-DOCKER_DB_IMAGE = os.getenv("DOCKER_DB_IMAGE","mysql:5.7")
+DOCKER_DB_IMAGE = os.getenv("DOCKER_DB_IMAGE", "mysql:5.7")
 IRIS_DOCKER_NETWORK = os.getenv("IRIS_DOCKER_NETWORK", "IRIS")
 DOMAIN_PREFIX = os.getenv("DOMAIN_PREFIX", "staging")
 DOMAIN = os.getenv("DOMAIN", "iris.nitk.ac.in")
@@ -26,14 +31,16 @@ def find_free_port():
         s.bind(('', 0))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s.getsockname()[1]
-    
+
+
 def health_check(url, auth_header):
     """
-    Checking uptime status of site, uses auth header 
+    Checking uptime status of site, uses auth header
     """
     try:
         if auth_header:
-            response = requests.get(url, headers={"Authorization": auth_header})
+            response = requests.get(
+                url, headers={"Authorization": auth_header})
         else:
             response = requests.get(url)
         if response.status_code == 200:
@@ -42,15 +49,17 @@ def health_check(url, auth_header):
             return False
     except Exception as e:
         return False
-    
-def pretty_print(file, text):    
+
+
+def pretty_print(file, text):
     """
     Printing to log file with timestamp
     """
     file.write(f"{datetime.datetime.now()} : {text}\n")
 
-def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, repo_name = None,branch_name = 'DEFAULT_BRANCH', default_branch_name = 'master'):
-    """             
+
+def pull_git_changes(url, vcs, user_name=None, token=None, org_name=None, repo_name=None, branch_name='DEFAULT_BRANCH', default_branch_name='master'):
+    """
     Pulls the latest changes from the git repo, if the repo is not present, then it clones the repo
     """
     if not (org_name and repo_name):
@@ -60,55 +69,64 @@ def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, re
 
     # Check if the repo is already present
     # Check if repository exists
-    if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):       
+    if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):
         # Repository exists , check if branch exists
         if os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}"):
             # Branch exists , pull latest changes
-            logger = open(log_file,"a")
+            logger = open(log_file, "a")
+            pretty_print(logger, "\n")
             pretty_print(logger, f"Pulling latest changes from branch {branch_name}")
-	    
-            	
-            res = run(
-                ['git','checkout',default_branch_name,'&&', 'git', 'pull','&&' ,'git','checkout',branch_name],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
-            )
 
-            if res.returncode != 0:
-                pretty_print(logger, f"Error while pulling latest changes from branch {branch_name}")
-                pretty_print(logger, res.stderr.decode('utf-8'))
-                logger.close()
-                return False, res.stderr.decode('utf-8')
-            pretty_print(logger, f"Successfully pulled latest changes from branch {branch_name}")
-            pretty_print(logger, res.stdout.decode('utf-8'))
+            commands = [
+                ['git', 'checkout', default_branch_name],
+                ['git','pull'],
+                ['git', 'checkout', branch_name]
+            ]
+
+            for command in commands:
+                res = run(
+                    command, 
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
+                )
+
+                if res.returncode != 0:
+                    pretty_print(logger, f"Error while pulling latest changes from branch {branch_name}\n{res.stderr.decode('utf-8')}")
+                    logger.close()
+                    return False, f"Error while pulling latest changes from branch {branch_name}\n{res.stderr.decode('utf-8')}"
+                else:
+                    pretty_print(logger, res.stdout.decode('utf-8'))
+            
+            pretty_print(logger, f"Successfully pulled all the latest changes from branch {branch_name}")
             logger.close()
             return True, res.stdout.decode('utf-8')
 
         else:
-            # Branch does not exist , could be a new branch  
+            # Branch does not exist , could be a new branch
             # Pull latest changes from default branch
-            res = run(
-                ['git','checkout',default_branch_name,'&&' ,'git','pull','&&','git', 'checkout', branch_name],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
-            )
 
-            if res.returncode != 0:
-                return False, res.stderr.decode('utf-8')
-                
-	   
-           # res = run(
-           #     ['git', 'pull'],
-           #     stdout=subprocess.PIPE,
-           #     stderr=subprocess.PIPE,
-           #     cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
-           # )
 
-           # if res.returncode != 0:
-           #     return False, res.stderr.decode('utf-8')
-	  
+            commands = [
+                ['git', 'checkout', default_branch_name],
+                ['git','pull'],
+                ['git', 'checkout', branch_name]
+            ]
+
+            for command in commands:
+                res = run(
+                    command, 
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}"
+                )
+
+                if res.returncode != 0:
+                    pretty_print(logger, f"Failed while pulling new branch, error while pulling latest changes from branch {branch_name}\n{res.stderr.decode('utf-8')}")
+                    logger.close()
+                    return False, f"Failed while pulling new branch, error while pulling latest changes from branch {branch_name}\n{res.stderr.decode('utf-8')}"
+                else:
+                    pretty_print(logger, res.stdout.decode('utf-8'))
 
             os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
             logger = open(log_file,"w")
@@ -155,7 +173,7 @@ def pull_git_changes(url, vcs,user_name = None,token = None, org_name = None, re
 
         temp_logging_text += f'\n{datetime.datetime.now()} : Repository {repo_name} does not exist locally, cloning it\n'
         if res.returncode != 0:
-            return False, res.stderr.decode('utf-8')
+            return False, f"Git clone failed\n{res.stderr.decode('utf-8')}"
 
         os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
         try:

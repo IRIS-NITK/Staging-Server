@@ -43,7 +43,7 @@
         <li class="nav-item"><a href="/template/new" class="nav-link"><strong>Add Template</strong></a></li>
         <li class="nav-item"><a href="/template" class="nav-link"><strong>Dashboard</strong></a></li>
  
-    {% if user.isauthenticated%}
+    {% if user.is_authenticated%}
         <li class="nav-item"><a href="/accounts/logout" class="nav-link"><strong>Logout</strong></a></li>
 {% else %}
  <li class="nav-item"><a href="/accounts/login" class="nav-link"><strong>Login</strong></a></li>
