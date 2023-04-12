@@ -47,7 +47,7 @@ def health_check(url, auth_header):
             return True
         else:
             return False
-    except: # pylint: disable=bare-except
+    except:  # pylint: disable=bare-except
         return False
 
 
@@ -55,8 +55,8 @@ def pretty_print(logs, text, logger_not_file=False):
     """
     Printing to log file with timestamp
     """
-    if (logger_not_file):
-        logs=logs + '\n' + text
+    if logger_not_file:
+        logs = logs + '\n' + text
         return
     logs.write(f"{datetime.datetime.now()} : {text}\n")
 
@@ -75,14 +75,16 @@ def exec_commands(commands, cwd, logger, err, print_stderr=False, logger_not_fil
         )
         if res.returncode != 0:
             pretty_print(logger, err, logger_not_file)
-            if  (print_stderr) : 
-                pretty_print(logger, res.stderr.decode('utf-8'), logger_not_file)
+            if print_stderr:
+                pretty_print(logger, res.stderr.decode(
+                    'utf-8'), logger_not_file)
                 logger.close()
                 return False, (err + '\n' + res.stderr.decode('utf-8'))
             logger.close()
             return False, err
         pretty_print(logger, res.stdout.decode('utf-8'), logger_not_file)
         return True, ""
+
 
 def clone_repository(url='git.iris.nitk.ac.in', user_name=None, token=None, org_name=None, repo_name=None, branch_name='DEFAULT_BRANCH'):
     """
@@ -112,7 +114,7 @@ def clone_repository(url='git.iris.nitk.ac.in', user_name=None, token=None, org_
         err="Git clone failed",
         logger_not_file=True
     )
-    if not (status):
+    if not status:
         return False, err
 
     os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
@@ -121,22 +123,21 @@ def clone_repository(url='git.iris.nitk.ac.in', user_name=None, token=None, org_
 
     try:
         logger = open(log_file, "a", encoding='UTF-8')
-    except : # pylint: disable=bare-except
+    except:  # pylint: disable=bare-except
         logger = open(log_file, "w", encoding='UTF-8')
-    
+
     logger.write(temp_logging_text)
-    pretty_print(
-        logger, f"Branch {branch_name} does not exist locally, creating it")
-    
+    logger.close()
     return True, ""
 
-def pull_git_changes(vcs, 
-                     url='git.iris.nitk.ac.in', 
-                     user_name=None, 
-                     token=None, 
-                     org_name=None, 
-                     repo_name=None, 
-                     branch_name='DEFAULT_BRANCH', 
+
+def pull_git_changes(vcs,
+                     url='git.iris.nitk.ac.in',
+                     user_name=None,
+                     token=None,
+                     org_name=None,
+                     repo_name=None,
+                     branch_name='DEFAULT_BRANCH',
                      default_branch_name='master'):
     """
     Pulls the latest changes from the git repo, if the repo is not present, then it clones the repo
@@ -149,13 +150,13 @@ def pull_git_changes(vcs,
     # Check if repository exists
     if not os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):
         status, err = clone_repository(
-                         url=url,
-                         user_name=user_name,
-                         token=token,
-                         org_name=org_name,
-                         repo_name=repo_name,
-                         branch_name=branch_name,
-                         )
+            url=url,
+            user_name=user_name,
+            token=token,
+            org_name=org_name,
+            repo_name=repo_name,
+            branch_name=branch_name,
+        )
         if not status:
             return False, err
 
@@ -182,40 +183,52 @@ def pull_git_changes(vcs,
         err=f"Error while pulling latest changes from branch {branch_name}"
     )
     if not status:
+        logger.close()
         return False, err
-        
+
     pretty_print(
         logger,
         f"Successfully pulled all the latest changes from branch {branch_name} to base directory."
-        )
-    logger.close()
+    )
 
     status, err = exec_commands(commands=[
         ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.",
-        f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"]
+         f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"]
     ],
         cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}",
         logger=logger,
         err=f"Error while copying files from base directory to {branch_name}'s directory",
         print_stderr=True
-        )
-    if not (status):
+    )
+    if not status:
+        logger.close()
         return False, err
     pretty_print(
-            logger, f"Successfully pulled the branch {branch_name} locally")
+        logger, f"Successfully pulled the branch {branch_name} locally")
+   
     logger.close()
-    return True, res.stdout.decode('utf-8')
+    return True, ""
 
 
-def start_container(image_name, org_name, repo_name, branch_name, container_name, external_port, internal_port, volumes={}, enviroment_variables={}, docker_network=DEFAULT_NETWORK):
+def start_container(image_name,
+                    org_name,
+                    repo_name,
+                    branch_name,
+                    container_name,
+                    external_port,
+                    internal_port,
+                    volumes={},
+                    enviroment_variables={},
+                    docker_network=DEFAULT_NETWORK):
     """
     Generalised function to start a container for any service
     """
 
     command = ["docker", "run", "-d"]
 
-    # TODO : Add support for multiple ports to be exposed
-    # assert len(external_port) == len(internal_port), "Number of external ports and internal ports should be equal"
+    # TO DO : Add support for multiple ports to be exposed
+    # assert len(external_port) == len(internal_port), 
+    # "Number of external ports and internal ports should be equal"
 
     # for ext_port, int_port in zip(external_port, internal_port):
     #     command.extend(["-p", f"{ext_port}:{int_port}"])
@@ -231,17 +244,18 @@ def start_container(image_name, org_name, repo_name, branch_name, container_name
         command.extend(["--network", docker_network])
 
     command.extend([image_name])
-
-    result = run(
-        command,
-        stdout=PIPE,
-        stderr=PIPE
+    logger = ""
+    status, result = exec_commands(commands=[
+        command
+    ],
+    cwd=None,
+        logger=logger,
+        err="Error Deploying Container",
+        print_stderr=True
     )
-
-    if result.returncode != 0:
-        return False, result.stderr.decode("utf-8")
-    return True, result.stdout.decode("utf-8")
-
+    if not status:
+        return False, result
+    return True, result
 
 def clean_up(org_name, repo_name, remove_container=False, remove_volume=False, remove_network=False, remove_image=False, remove_branch_dir=False, remove_all_dir=False, remove_user_dir=False):
     """
@@ -250,30 +264,30 @@ def clean_up(org_name, repo_name, remove_container=False, remove_volume=False, r
 
     if remove_container:
         res = run(["docker", "rm", "-f", remove_container],
-                  stdout=PIPE, stderr=PIPE)
+                  stdout=PIPE, stderr=PIPE, check=False)
         if res.returncode != 0:
             return False, res.stderr.decode('utf-8')
         try:
             res = run(["sudo", "bash", NGINX_REMOVE_CONFIG_SCRIPT, org_name,
-                      repo_name, remove_branch_dir], stdout=PIPE, stderr=PIPE)
-        except:
+                      repo_name, remove_branch_dir], stdout=PIPE, stderr=PIPE, check=False)
+        except: # pylint: disable=bare-except
             pass
 
     if remove_volume:
         res = run(["docker", "volume", "rm", remove_volume],
-                  stdout=PIPE, stderr=PIPE)
+                  stdout=PIPE, stderr=PIPE, check=False)
         if res.returncode != 0:
             return False, res.stderr.decode('utf-8')
 
     if remove_network:
         res = run(["docker", "network", "rm", remove_network],
-                  stdout=PIPE, stderr=PIPE)
+                  stdout=PIPE, stderr=PIPE, check=False)
         if res.returncode != 0:
             return False, res.stderr.decode('utf-8')
 
     if remove_image:
         res = run(["docker", "image", "rm", remove_image],
-                  stdout=PIPE, stderr=PIPE)
+                  stdout=PIPE, stderr=PIPE, check=False)
         if res.returncode != 0:
             return False, res.stderr.decode('utf-8')
 
@@ -281,21 +295,21 @@ def clean_up(org_name, repo_name, remove_container=False, remove_volume=False, r
         try:
             absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{remove_branch_dir}"
             shutil.rmtree(absolute_path)
-        except Exception as e:
-            return False, f"Error in removing branch directory : {remove_branch_dir}\n" + str(e)
+        except Exception as exception: # pylint: disable=broad-exception-caught
+            return False, f"Error in removing branch directory : {remove_branch_dir}\n" + str(exception)
 
     if remove_all_dir:
         try:
             absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"
             shutil.rmtree(absolute_path)
-        except Exception as e:
-            return False, f"Error in removing all directories : {remove_all_dir}\n" + str(e)
+        except Exception as exception:  # pylint: disable=broad-exception-caught
+            return False, f"Error in removing all directories : {remove_all_dir}\n" + str(exception)
 
     if remove_user_dir:
         try:
             absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}"
             shutil.rmtree(absolute_path)
-        except Exception as e:
-            return False, f"Error in removing user directory : {remove_user_dir}\n" + str(e)
+        except Exception as exception:  # pylint: disable=broad-exception-caught
+            return False, f"Error in removing user directory : {remove_user_dir}\n" + str(exception)
 
     return True, "Clean up complete"
