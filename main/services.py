@@ -1,3 +1,6 @@
+"""
+main functions required for the staging server to work!!!
+"""
 import os
 import datetime
 import socket
@@ -48,6 +51,7 @@ def health_check(url, auth_header):
             return False
     except:  # pylint: disable=bare-except
         return False
+
 
 def clone_repository(url='git.iris.nitk.ac.in',
                      user_name=None,
@@ -219,6 +223,46 @@ def start_container(image_name,
         return False, result
     return True, result
 
+
+def start_db_container(db_image,
+                       db_name,
+                       db_dump_path,
+                       volume_name,
+                       volume_bind_path,
+                       db_env_variables,
+                       network_name
+                       ):
+    """
+    starts db container.
+    """
+    command = ["docker", "run"]
+    if db_name:
+        command.extend(["--name", db_name])
+    if db_dump_path:
+        command.extend(["-v", f"{db_dump_path}:/docker-entrypoint-initdb.d/"])
+    if volume_name and volume_bind_path:
+        command.extend(["-v", f"{volume_name}:{volume_bind_path}"])
+    if db_env_variables:
+        for key, value in db_env_variables.items():
+            command.extend(["--env", f"{key}={value}"])
+    if network_name:
+        command.extend(["--network", network_name])
+    command.extend(["--detach", "--rm", db_image])
+
+    # execute the start db container command
+    status, result = exec_commands(commands=[
+        command
+    ],
+        cwd=None,
+        err="Error starting database container.",
+        print_stderr=True,
+        logger_not_file=True
+    )
+    if not status:
+        return False, result
+    return True, result
+
+
 def clean_up(org_name,
              repo_name,
              branch_name=None,
@@ -238,17 +282,17 @@ def clean_up(org_name,
     else:
         logger = initiate_logger(
             f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{repo_name}.txt")
-        
+
     if remove_container:
         status, err = exec_commands(commands=[
-                                        ["docker", "rm", "-f", remove_container],
-                                        ["sudo", "bash", NGINX_REMOVE_CONFIG_SCRIPT, org_name,
-                                        repo_name, remove_branch_dir]
-                                    ],
-                                    logger=logger,
-                                    err="Error deleting the container and nginx config",
-                                    print_stderr=True
-                                    )
+            ["docker", "rm", "-f", remove_container],
+            ["sudo", "bash", NGINX_REMOVE_CONFIG_SCRIPT, org_name,
+             repo_name, remove_branch_dir]
+        ],
+            logger=logger,
+            err="Error deleting the container and nginx config",
+            print_stderr=True
+        )
         if not status:
             logger.close()
             return False, err
@@ -258,27 +302,27 @@ def clean_up(org_name,
 
     if remove_volume:
         status, err = exec_commands(commands=[
-                                        ["docker", "volume", "rm", remove_volume]
-                                    ],
-                                    logger=logger,
-                                    err="Error deleting the volume.",
-                                    print_stderr=True
-                                    )
+            ["docker", "volume", "rm", remove_volume]
+        ],
+            logger=logger,
+            err="Error deleting the volume.",
+            print_stderr=True
+        )
         if not status:
             logger.close()
             return False, err
         pretty_print(logger,
                      "Successfully deleted the docker volume."
                      )
-        
+
     if remove_network:
         status, err = exec_commands(commands=[
-                                        ["docker", "network", "rm", remove_network]
-                                    ],
-                                    logger=logger,
-                                    err="Error deleting the docker network.",
-                                    print_stderr=True
-                                    )
+            ["docker", "network", "rm", remove_network]
+        ],
+            logger=logger,
+            err="Error deleting the docker network.",
+            print_stderr=True
+        )
         if not status:
             logger.close()
             return False, err
@@ -288,12 +332,12 @@ def clean_up(org_name,
 
     if remove_image:
         status, err = exec_commands(commands=[
-                                        ["docker", "image", "rm", remove_image]
-                                    ],
-                                    logger=logger,
-                                    err="Error deleting the docker image.",
-                                    print_stderr=True
-                                    )
+            ["docker", "image", "rm", remove_image]
+        ],
+            logger=logger,
+            err="Error deleting the docker image.",
+            print_stderr=True
+        )
         if not status:
             logger.close()
             return False, err
@@ -302,22 +346,24 @@ def clean_up(org_name,
                      )
 
     if remove_branch_dir:
-        status, err = delete_directory(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{remove_branch_dir}")
+        status, err = delete_directory(
+            f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{remove_branch_dir}")
         if not status:
             logger.close()
             return False, err
         pretty_print(logger,
                      f"Successfully deleted the branch {remove_branch_dir} directory."
                      )
-        
+
     if remove_all_dir:
-        status, err = delete_directory(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}")
+        status, err = delete_directory(
+            f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}")
         if not status:
             logger.close()
             return False, err
         pretty_print(logger,
-            f"Successfully deleted all directories of the {remove_all_dir} repository."
-            )
+                     f"Successfully deleted all directories of the {remove_all_dir} repository."
+                     )
 
     if remove_user_dir:
         status, err = delete_directory(f"{PATH_TO_HOME_DIR}/{org_name}")
@@ -325,10 +371,10 @@ def clean_up(org_name,
             logger.close()
             return False, err
         pretty_print(logger,
-            f"Successfully deleted {remove_all_dir} user directory."
-            )
+                     f"Successfully deleted {remove_all_dir} user directory."
+                     )
     pretty_print(logger,
-            "Clean Up Complete"
-            )
+                 "Clean Up Complete"
+                 )
     logger.close()
     return True, "Clean up complete"

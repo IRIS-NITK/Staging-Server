@@ -28,8 +28,8 @@ def initiate_logger(file_path):
     return logger
 
 def exec_commands(commands,
-                  logger,
                   err,
+                  logger="",
                   cwd=None,
                   print_stderr=False,
                   logger_not_file=False
@@ -55,6 +55,8 @@ def exec_commands(commands,
             logger.close()
             return False, err
         pretty_print(logger, res.stdout.decode('utf-8'), logger_not_file)
+        if print_stderr:
+            return True, res.stdout.decode('utf-8')
         return True, ""
 
 def delete_directory(path):
