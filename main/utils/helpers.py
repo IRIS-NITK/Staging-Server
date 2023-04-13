@@ -1,3 +1,6 @@
+"""
+Helper functions
+"""
 import os
 import datetime
 import shutil
