@@ -30,7 +30,7 @@ def find_free_port():
     Finds a free port on the host machine
     """
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(('', 0))
+        s.bind(("", 0))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s.getsockname()[1]
 
@@ -42,9 +42,9 @@ def health_check(url, auth_header):
     try:
         if auth_header:
             response = requests.get(
-                url, headers={"Authorization": auth_header}, timeout=15)
+                url, headers={"Authorization": auth_header}, timeout=5)
         else:
-            response = requests.get(url, timeout=15)
+            response = requests.get(url, timeout=5)
         if response.status_code == 200:
             return True
         else:
@@ -92,7 +92,9 @@ def clone_repository(url='git.iris.nitk.ac.in',
 
     os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
 
-    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+    log_file = (
+        f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+    )
 
     logger = initiate_logger(log_file)
 
@@ -128,7 +130,9 @@ def pull_git_changes(vcs,
         if not status:
             return False, err
 
-    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+    log_file = (
+        f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+    )
 
     # Initiates Logger and also creates branch_name directory if it doesn't exist.
     logger = initiate_logger(log_file)
@@ -138,9 +142,11 @@ def pull_git_changes(vcs,
         logger, f"Pulling latest changes from branch {branch_name}")
 
     status, err = exec_commands(commands=[
-        ['git', 'checkout', default_branch_name],
-        ['git', 'pull'],
-        ['git', 'checkout', branch_name],
+        ["git", "checkout", "--force", default_branch_name],
+        ["git", "pull"],
+        ["git", "checkout", branch_name],
+        ["git", "pull"]
+
     ],
         cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}",
         logger=logger,
