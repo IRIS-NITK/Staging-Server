@@ -1,12 +1,11 @@
-from dotenv import load_dotenv
 import os
 import datetime
 import shutil
-import requests
 import socket
 import subprocess
-from subprocess import run, PIPE
 from contextlib import closing
+import requests
+from dotenv import load_dotenv
 
 load_dotenv()
 # environment variables are now loaded
@@ -51,7 +50,10 @@ def health_check(url, auth_header):
         return False
 
 
-def pretty_print(logs, text, logger_not_file=False):
+def pretty_print(logs,
+                 text,
+                 logger_not_file=False
+                 ):
     """
     Printing to log file with timestamp
     """
@@ -61,12 +63,18 @@ def pretty_print(logs, text, logger_not_file=False):
     logs.write(f"{datetime.datetime.now()} : {text}\n")
 
 
-def exec_commands(commands, cwd, logger, err, print_stderr=False, logger_not_file=False):
+def exec_commands(commands,
+                  logger,
+                  err,
+                  cwd=None,
+                  print_stderr=False,
+                  logger_not_file=False
+                  ):
     """
     Executes commands given in as an array.
     """
     for command in commands:
-        res = run(
+        res = subprocess.run(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -86,7 +94,13 @@ def exec_commands(commands, cwd, logger, err, print_stderr=False, logger_not_fil
         return True, ""
 
 
-def clone_repository(url='git.iris.nitk.ac.in', user_name=None, token=None, org_name=None, repo_name=None, branch_name='DEFAULT_BRANCH'):
+def clone_repository(url='git.iris.nitk.ac.in',
+                     user_name=None,
+                     token=None,
+                     org_name=None,
+                     repo_name=None,
+                     branch_name='DEFAULT_BRANCH'
+                     ):
     """
     Clones the Repository if it doesn't exist.
     """
@@ -121,10 +135,7 @@ def clone_repository(url='git.iris.nitk.ac.in', user_name=None, token=None, org_
 
     log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
 
-    try:
-        logger = open(log_file, "a", encoding='UTF-8')
-    except:  # pylint: disable=bare-except
-        logger = open(log_file, "w", encoding='UTF-8')
+    logger = initiate_logger(log_file)
 
     logger.write(temp_logging_text)
     logger.close()
@@ -145,8 +156,6 @@ def pull_git_changes(vcs,
     if not (org_name and repo_name):
         return False, "Org name and repo name are required\n"
 
-    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
-
     # Check if repository exists
     if not os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):
         status, err = clone_repository(
@@ -160,14 +169,10 @@ def pull_git_changes(vcs,
         if not status:
             return False, err
 
-    # check if branch exists
-    if not os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}"):
-        os.makedirs(
-            f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
-        logger = open(log_file, "w", encoding='UTF-8')
-    else:
-        logger = open(log_file, "a", encoding='UTF-8')
-        pretty_print(logger, "\n")
+    log_file = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+
+    # Initiates Logger and also creates branch_name directory if it doesn't exist.
+    logger = initiate_logger(log_file)
 
     # Branch exists , pull latest changes
     pretty_print(
@@ -204,8 +209,8 @@ def pull_git_changes(vcs,
         logger.close()
         return False, err
     pretty_print(
-        logger, f"Successfully pulled the branch {branch_name} locally")
-   
+        logger, f"Successfully copied the branch {branch_name} to its directory")
+
     logger.close()
     return True, ""
 
@@ -217,8 +222,8 @@ def start_container(image_name,
                     container_name,
                     external_port,
                     internal_port,
-                    volumes={},
-                    enviroment_variables={},
+                    volumes=None,
+                    enviroment_variables=None,
                     docker_network=DEFAULT_NETWORK):
     """
     Generalised function to start a container for any service
@@ -227,17 +232,19 @@ def start_container(image_name,
     command = ["docker", "run", "-d"]
 
     # TO DO : Add support for multiple ports to be exposed
-    # assert len(external_port) == len(internal_port), 
+    # assert len(external_port) == len(internal_port),
     # "Number of external ports and internal ports should be equal"
 
     # for ext_port, int_port in zip(external_port, internal_port):
     #     command.extend(["-p", f"{ext_port}:{int_port}"])
 
     command.extend(["-p", f"{external_port}:{internal_port}"])
-    for src, dest in volumes.items():
-        command.extend(["-v", f"{src}:{dest}"])
-    for k, v in enviroment_variables.items():
-        command.extend(["--env", f"{k}={v}"])
+    if volumes:
+        for src, dest in volumes.items():
+            command.extend(["-v", f"{src}:{dest}"])
+    if enviroment_variables:
+        for k, v in enviroment_variables.items():
+            command.extend(["--env", f"{k}={v}"])
     if container_name:
         command.extend(["--name", container_name])
     if docker_network:
@@ -248,7 +255,7 @@ def start_container(image_name,
     status, result = exec_commands(commands=[
         command
     ],
-    cwd=None,
+        cwd=None,
         logger=logger,
         err="Error Deploying Container",
         print_stderr=True
@@ -257,59 +264,139 @@ def start_container(image_name,
         return False, result
     return True, result
 
-def clean_up(org_name, repo_name, remove_container=False, remove_volume=False, remove_network=False, remove_image=False, remove_branch_dir=False, remove_all_dir=False, remove_user_dir=False):
+
+def initiate_logger(file_path):
+    """
+    opens log file, creates the file / directories for it if they doesn't exist.
+    """
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    if os.path.isfile(file_path):
+        oldfile = True
+    logger = open(file_path, "a", encoding='UTF-8')
+    if oldfile:
+        logger.write(f"\n{datetime.datetime.now()} : Logger Initiated\n")
+    return logger
+
+def delete_directory(path):
+    """
+    deletes the specified directory
+    """
+    try:
+        shutil.rmtree(path)
+    except Exception as exception:  # pylint: disable=broad-exception-caught
+        return False, f"Error in removing directory : {path}\n" + str(exception)
+    return True, ""
+
+def clean_up(org_name,
+             repo_name,
+             branch_name=None,
+             remove_container=False,
+             remove_volume=False,
+             remove_network=False,
+             remove_image=False,
+             remove_branch_dir=False,
+             remove_all_dir=False,
+             remove_user_dir=False):
     """
     Remove all the containers, volumes, networks and images related to the branch
     """
-
+    if branch_name:
+        logger = initiate_logger(
+            f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt")
+    else:
+        logger = initiate_logger(
+            f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{repo_name}.txt")
+        
     if remove_container:
-        res = run(["docker", "rm", "-f", remove_container],
-                  stdout=PIPE, stderr=PIPE, check=False)
-        if res.returncode != 0:
-            return False, res.stderr.decode('utf-8')
-        try:
-            res = run(["sudo", "bash", NGINX_REMOVE_CONFIG_SCRIPT, org_name,
-                      repo_name, remove_branch_dir], stdout=PIPE, stderr=PIPE, check=False)
-        except: # pylint: disable=bare-except
-            pass
+        status, err = exec_commands(commands=[
+                                        ["docker", "rm", "-f", remove_container],
+                                        ["sudo", "bash", NGINX_REMOVE_CONFIG_SCRIPT, org_name,
+                                        repo_name, remove_branch_dir]
+                                    ],
+                                    logger=logger,
+                                    err="Error deleting the container and nginx config",
+                                    print_stderr=True
+                                    )
+        if not status:
+            logger.close()
+            return False, err
+        pretty_print(logger,
+                     "Successfully Removed the container and nginx config."
+                     )
 
     if remove_volume:
-        res = run(["docker", "volume", "rm", remove_volume],
-                  stdout=PIPE, stderr=PIPE, check=False)
-        if res.returncode != 0:
-            return False, res.stderr.decode('utf-8')
-
+        status, err = exec_commands(commands=[
+                                        ["docker", "volume", "rm", remove_volume]
+                                    ],
+                                    logger=logger,
+                                    err="Error deleting the volume.",
+                                    print_stderr=True
+                                    )
+        if not status:
+            logger.close()
+            return False, err
+        pretty_print(logger,
+                     "Successfully deleted the docker volume."
+                     )
+        
     if remove_network:
-        res = run(["docker", "network", "rm", remove_network],
-                  stdout=PIPE, stderr=PIPE, check=False)
-        if res.returncode != 0:
-            return False, res.stderr.decode('utf-8')
+        status, err = exec_commands(commands=[
+                                        ["docker", "network", "rm", remove_network]
+                                    ],
+                                    logger=logger,
+                                    err="Error deleting the docker network.",
+                                    print_stderr=True
+                                    )
+        if not status:
+            logger.close()
+            return False, err
+        pretty_print(logger,
+                     "Successfully deleted the docker network."
+                     )
 
     if remove_image:
-        res = run(["docker", "image", "rm", remove_image],
-                  stdout=PIPE, stderr=PIPE, check=False)
-        if res.returncode != 0:
-            return False, res.stderr.decode('utf-8')
+        status, err = exec_commands(commands=[
+                                        ["docker", "image", "rm", remove_image]
+                                    ],
+                                    logger=logger,
+                                    err="Error deleting the docker image.",
+                                    print_stderr=True
+                                    )
+        if not status:
+            logger.close()
+            return False, err
+        pretty_print(logger,
+                     "Successfully deleted the docker network."
+                     )
 
     if remove_branch_dir:
-        try:
-            absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{remove_branch_dir}"
-            shutil.rmtree(absolute_path)
-        except Exception as exception: # pylint: disable=broad-exception-caught
-            return False, f"Error in removing branch directory : {remove_branch_dir}\n" + str(exception)
-
+        status, err = delete_directory(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{remove_branch_dir}")
+        if not status:
+            logger.close()
+            return False, err
+        pretty_print(logger,
+                     f"Successfully deleted the branch {remove_branch_dir} directory."
+                     )
+        
     if remove_all_dir:
-        try:
-            absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"
-            shutil.rmtree(absolute_path)
-        except Exception as exception:  # pylint: disable=broad-exception-caught
-            return False, f"Error in removing all directories : {remove_all_dir}\n" + str(exception)
+        status, err = delete_directory(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}")
+        if not status:
+            logger.close()
+            return False, err
+        pretty_print(logger,
+            f"Successfully deleted all directories of the {remove_all_dir} repository."
+            )
 
     if remove_user_dir:
-        try:
-            absolute_path = f"{PATH_TO_HOME_DIR}/{org_name}"
-            shutil.rmtree(absolute_path)
-        except Exception as exception:  # pylint: disable=broad-exception-caught
-            return False, f"Error in removing user directory : {remove_user_dir}\n" + str(exception)
-
+        status, err = delete_directory(f"{PATH_TO_HOME_DIR}/{org_name}")
+        if not status:
+            logger.close()
+            return False, err
+        pretty_print(logger,
+            f"Successfully deleted {remove_all_dir} user directory."
+            )
+    pretty_print(logger,
+            "Clean Up Complete"
+            )
+    logger.close()
     return True, "Clean up complete"
