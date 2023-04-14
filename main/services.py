@@ -137,6 +137,22 @@ def pull_git_changes(vcs,
     # Initiates Logger and also creates branch_name directory if it doesn't exist.
     logger = initiate_logger(log_file)
 
+    # Copy repository to branch's folder.
+    status, err = exec_commands(commands=[
+        ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.",
+         f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"]
+    ],
+        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}",
+        logger=logger,
+        err=f"Error while copying Repostiry from base directory to {branch_name}'s directory",
+        print_stderr=True
+    )
+    if not status:
+        logger.close()
+        return False, err
+    pretty_print(
+        logger, f"Successfully copied the branch {branch_name} to its directory")
+
     # Branch exists , pull latest changes
     pretty_print(
         logger, f"Pulling latest changes from branch {branch_name}")
@@ -148,7 +164,7 @@ def pull_git_changes(vcs,
         ["git", "pull"]
 
     ],
-        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}",
+        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}",
         logger=logger,
         err=f"Error while pulling latest changes from branch {branch_name}"
     )
@@ -160,21 +176,6 @@ def pull_git_changes(vcs,
         logger,
         f"Successfully pulled all the latest changes from branch {branch_name} to base directory."
     )
-
-    status, err = exec_commands(commands=[
-        ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.",
-         f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"]
-    ],
-        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}",
-        logger=logger,
-        err=f"Error while copying files from base directory to {branch_name}'s directory",
-        print_stderr=True
-    )
-    if not status:
-        logger.close()
-        return False, err
-    pretty_print(
-        logger, f"Successfully copied the branch {branch_name} to its directory")
 
     logger.close()
     return True, ""
