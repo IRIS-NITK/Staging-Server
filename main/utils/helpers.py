@@ -23,6 +23,7 @@ def initiate_logger(file_path):
     opens log file, creates the file / directories for it if they doesn't exist.
     """
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    oldfile=False
     if os.path.isfile(file_path):
         oldfile = True
     logger = open(file_path, "a", encoding='UTF-8')
@@ -31,7 +32,7 @@ def initiate_logger(file_path):
     return logger
 
 def exec_commands(commands,
-                  err,
+                  err="",
                   logger="",
                   cwd=None,
                   print_stderr=False,
@@ -53,9 +54,11 @@ def exec_commands(commands,
             if print_stderr:
                 pretty_print(logger, res.stderr.decode(
                     'utf-8'), logger_not_file)
-                logger.close()
+                if not logger_not_file:
+                    logger.close()
                 return False, (err + '\n' + res.stderr.decode('utf-8'))
-            logger.close()
+            if not logger_not_file:
+                logger.close()
             return False, err
         pretty_print(logger, res.stdout.decode('utf-8'), logger_not_file)
         if print_stderr:
