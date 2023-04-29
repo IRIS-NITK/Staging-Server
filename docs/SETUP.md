@@ -35,6 +35,8 @@
 ### 5. Run the app and log in as superuser
 > `python manage.py runserver`
 
+> In development mode, use --insecure flag to make django provide the static assets. 
+
 The app will be visible on [http://localhost:8000](http://localhost:8000)
 
 Go to [http://localhost:8000/admin](http://localhost:8000/admin)
