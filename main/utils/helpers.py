@@ -41,6 +41,7 @@ def exec_commands(commands,
     """
     Executes commands given in as an array.
     """
+    result = ""
     for command in commands:
         res = subprocess.run(
             command,
@@ -60,10 +61,11 @@ def exec_commands(commands,
             if not logger_not_file:
                 logger.close()
             return False, err
+        result = result + res.stdout.decode('utf-8') +"\n"
         pretty_print(logger, res.stdout.decode('utf-8'), logger_not_file)
-        if print_stderr:
-            return True, res.stdout.decode('utf-8')
-        return True, ""
+    if print_stderr:
+        return True, result
+    return True, "executed Successfully"
 
 def delete_directory(path):
     """
