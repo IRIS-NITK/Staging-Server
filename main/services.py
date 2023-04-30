@@ -293,10 +293,13 @@ def clean_up(org_name,
             f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{repo_name}.txt")
 
     if remove_container:
+        pretty_print(logger,
+                     "Removing the container and nginx config."
+                     )
         status, err = exec_commands(commands=[
             ["docker", "rm", "-f", remove_container],
             ["sudo", "bash", NGINX_REMOVE_CONFIG_SCRIPT, org_name,
-             repo_name, remove_branch_dir]
+             repo_name, branch_name]
         ],
             logger=logger,
             err="Error deleting the container and nginx config",
