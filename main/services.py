@@ -85,7 +85,8 @@ def clone_repository(url='git.iris.nitk.ac.in',
         cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/",
         logger=temp_logging_text,
         err="Git clone failed",
-        logger_not_file=True
+        logger_not_file=True,
+        print_stderr=True
     )
     if not status:
         return False, err
@@ -118,7 +119,7 @@ def pull_git_changes(vcs,
         return False, "Org name and repo name are required\n"
 
     # Check if repository exists
-    if not os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"):
+    if not os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.git"):
         status, err = clone_repository(
             url=url,
             user_name=user_name,
@@ -224,7 +225,8 @@ def start_container(image_name,
         cwd=None,
         logger=logger,
         err="Error Deploying Container",
-        print_stderr=True
+        print_stderr=True,
+        logger_not_file=True
     )
     if not status:
         return False, result
