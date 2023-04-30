@@ -13,54 +13,40 @@
     <script src="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"></script>
     <title>Staging Server</title>
     <style>
-      .footer {
-        background-color: rgb(255, 255, 255);
-        color: rgb(0, 0, 0);
-        text-align: center;
-        padding: 20px;
-        margin-top: 20px;
-      }
+      body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    footer {
+      margin-top: auto;
+    }
     </style>
   </head>
   <body>
+      {% include 'navbar.html' %}
       <div class="row justify-content-center">
         <div class="col-lg-12"> 
-
-<nav class="navbar navbar-expand-lg py-3 navbar-dark bg-dark shadow-sm">
-  <div class="container">
-    <a href="#" class="navbar-brand">
-      <a class="navbar-brand" href="{% url 'iris_dashboard' %}"><strong>Staging Server</strong></a>
-    </a>
-
-    <button type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler"><span class="navbar-toggler-icon"></span></button>
-
-    <div id="navbarSupportedContent" class="collapse navbar-collapse">
-      <ul class="navbar-nav ml-auto">
-        <li class="nav-item active"><a href="{% url 'iris_dashboard' %}" class="nav-link"><b>IRIS </b><span class="sr-only">(current)</span></a></li>
-        <li class="nav-item"><a href="{% url 'git_iris_dashboard' %}" class="nav-link"><strong>git.iris</strong></a></li>
-        <li class="nav-item"><a href="/template/list" class="nav-link"><strong>Templates</strong></a></li>
-        <li class="nav-item"><a href="/template/new" class="nav-link"><strong>Add Template</strong></a></li>
-        <li class="nav-item"><a href="/template" class="nav-link"><strong>Dashboard</strong></a></li>
- 
-    {% if user.is_authenticated%}
-        <li class="nav-item"><a href="/accounts/logout" class="nav-link"><strong>Logout</strong></a></li>
-{% else %}
- <li class="nav-item"><a href="/accounts/login" class="nav-link"><strong>Login</strong></a></li>
-{% endif %}
-      </ul>
-    </div>
-  </div>
-</nav>
           <hr class="mt-0 mb-4">
           <div class="col-lg-10 offset-lg-1">
             {% block content %}
             {% endblock %}
           </div>
           <hr>
-          <footer class="footer">
-            <p>Staging Server, IRIS</p>
-          </footer>
         </div>
       </div>
+      <footer class="footer">
+      <div class="body-c d-flex text-center bg-dark text-white">
+        <div class="container-md d-flex w-100 h-100 p-3 mx-auto flex-column">
+          <footer class="mt-auto text-white-75">
+            <p>
+              Copyright &copy; All rights reserved
+              <script>document.write(new Date().getFullYear());</script>
+              | Made with <i class="fa fa-heart-o" aria-hidden="true"></i> by Team IRIS.
+            </p>
+          </div>
+        </footer>
+          </div></div>
   </body>
 </html>
