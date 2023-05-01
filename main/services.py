@@ -9,6 +9,7 @@ import requests
 from dotenv import load_dotenv
 from main.utils.helpers import pretty_print, initiate_logger
 from main.utils.helpers import exec_commands, delete_directory
+from subprocess import PIPE, run
 
 load_dotenv()
 # environment variables are now loaded
@@ -90,7 +91,8 @@ def clone_repository(url='git.iris.nitk.ac.in',
     if not status:
         return False, err
 
-    os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}", exist_ok=True)
+    os.makedirs(
+        f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}", exist_ok=True)
 
     log_file = (
         f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
@@ -138,11 +140,14 @@ def pull_git_changes(vcs,
     # Initiates Logger and also creates branch_name directory if it doesn't exist.
     logger = initiate_logger(log_file)
 
+    default_branch_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/."
+    deploy_branch_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
+    
+    os.makedirs(deploy_branch_path, exist_ok=True)
     # Copy repository to branch's folder.
     status, err = exec_commands(commands=[
-        ['mkdir', '-p', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}"],
-        ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.",
-         f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"]
+        ['sudo', 'rm', '-rf', deploy_branch_path],
+        ['cp', '-rf', default_branch_path, deploy_branch_path]
     ],
         cwd=None,
         logger=logger,
@@ -163,8 +168,6 @@ def pull_git_changes(vcs,
         ["git", "checkout", "--force", default_branch_name],
         ["git", "pull", clone_url],
         ["git", "checkout", branch_name],
-        ["git", "pull", clone_url]
-
     ],
         cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}",
         logger=logger,
@@ -288,8 +291,8 @@ def clean_up(org_name,
     """
     Remove all the containers, volumes, networks and images related to the branch
     """
-    errors=""
-    cleanup_status=True
+    errors = ""
+    cleanup_status = True
 
     if branch_name:
         logger = initiate_logger(
@@ -311,10 +314,10 @@ def clean_up(org_name,
         )
         if status:
             pretty_print(logger,
-                     "Successfully stopped and deleted the container."
-                     )
-            errors= errors + err +"\n"
-            cleanup_status=False
+                         "Successfully stopped and deleted the container."
+                         )
+            errors = errors + err + "\n"
+            cleanup_status = False
 
     if remove_nginx_conf:
         pretty_print(logger,
@@ -330,10 +333,10 @@ def clean_up(org_name,
         )
         if status:
             pretty_print(logger,
-                     "Successfully deleted the nginx config."
-                     )
-            errors= errors + err +"\n"
-            cleanup_status=False
+                         "Successfully deleted the nginx config."
+                         )
+            errors = errors + err + "\n"
+            cleanup_status = False
 
     if remove_volume:
         status, err = exec_commands(commands=[
@@ -345,10 +348,10 @@ def clean_up(org_name,
         )
         if status:
             pretty_print(logger,
-                     "Successfully deleted the docker volume."
-                     )
-            errors= errors + err +"\n"
-            cleanup_status=False
+                         "Successfully deleted the docker volume."
+                         )
+            errors = errors + err + "\n"
+            cleanup_status = False
 
     if remove_network:
         status, err = exec_commands(commands=[
@@ -360,11 +363,10 @@ def clean_up(org_name,
         )
         if status:
             pretty_print(logger,
-                     "Successfully deleted the docker network."
-                     )
-            errors= errors + err +"\n"
-            cleanup_status=False
-        
+                         "Successfully deleted the docker network."
+                         )
+            errors = errors + err + "\n"
+            cleanup_status = False
 
     if remove_image:
         status, err = exec_commands(commands=[
@@ -376,11 +378,11 @@ def clean_up(org_name,
         )
         if status:
             pretty_print(logger,
-                     "Successfully deleted the docker network."
-                     )
-            errors= errors + err +"\n"
-            cleanup_status=False
-        
+                         "Successfully deleted the docker network."
+                         )
+            errors = errors + err + "\n"
+            cleanup_status = False
+
     if remove_branch_dir:
         pretty_print(logger,
                      "Deleting the branch directory"
@@ -389,33 +391,36 @@ def clean_up(org_name,
             f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
         if status:
             pretty_print(logger,
-                     f"Successfully deleted the branch {branch_name} directory."
-                     )
-            errors= errors + err +"\n"
-            cleanup_status=False
-        else: pretty_print(logger, err)
+                         f"Successfully deleted the branch {branch_name} directory."
+                         )
+            errors = errors + err + "\n"
+            cleanup_status = False
+        else:
+            pretty_print(logger, err)
 
     if remove_all_dir:
         status, err = delete_directory(
             f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}")
         if status:
             pretty_print(logger,
-                     f"Successfully deleted all directories of the {remove_all_dir} repository."
-                     )
-            errors= errors + err +"\n"
-            cleanup_status=False
-        else: pretty_print(logger, err)
+                         f"Successfully deleted all directories of the {remove_all_dir} repository."
+                         )
+            errors = errors + err + "\n"
+            cleanup_status = False
+        else:
+            pretty_print(logger, err)
 
     if remove_user_dir:
         status, err = delete_directory(f"{PATH_TO_HOME_DIR}/{org_name}")
         if status:
             pretty_print(logger,
-                     f"Successfully deleted {remove_all_dir} user directory."
-                     )
-            errors= errors + err +"\n"
-            cleanup_status=False
-        else: pretty_print(logger, err)
-    
+                         f"Successfully deleted {remove_all_dir} user directory."
+                         )
+            errors = errors + err + "\n"
+            cleanup_status = False
+        else:
+            pretty_print(logger, err)
+
     pretty_print(logger, f"Clean Up Errors (If Any):\n {errors}")
     pretty_print(logger,
                  "Clean Up Complete"
@@ -423,20 +428,50 @@ def clean_up(org_name,
     logger.close()
     return cleanup_status, "Clean up complete"
 
+
 def clean_logs(org_name, repo_name, branch_name):
     """
     Cleans up the main log and archives the text.
     """
-    log_dir=f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/"
-    log_file_path=f"{log_dir}/{branch_name}.txt"
-    arhive_file_path=f"{log_dir}/archive.txt"
+    log_dir = f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/"
+    log_file_path = f"{log_dir}/{branch_name}.txt"
+    arhive_file_path = f"{log_dir}/archive.txt"
     print("this is working")
     print(log_file_path)
     if os.path.isfile(log_file_path):
         print("file exists")
         with open(log_file_path, "r", encoding='UTF-8') as log_file, \
-            open(arhive_file_path, "a", encoding='UTF-8') as arhive_file:
+                open(arhive_file_path, "a", encoding='UTF-8') as arhive_file:
             arhive_file.write(log_file.read())
         # delete the source file
         os.remove(log_file_path)
     return True, ""
+
+def stop_containers(container_name, logger):
+    """
+    stops a container with container_name provided
+    """
+    pretty_print(logger, 
+                 f"Checking if there is any existing container {container_name}")
+    inspect_container = run(
+        ["docker", "container", "inspect", container_name],
+        stderr=PIPE,
+        stdout=PIPE,
+        check=False
+    )
+
+    if inspect_container.returncode == 0:
+        pretty_print(logger, f"Container {container_name} already exists")
+        pretty_print(logger, f"Stopping and removing existing container {container_name}")
+        status, err = exec_commands(commands=[
+                                    ["docker", "rm", "-f", container_name]],
+                                    logger=logger,
+                                    err="Error while removing existing container",
+                                    print_stderr=True
+                                    )
+        if not status:
+            return False, err
+        pretty_print(logger, f"Existing container {container_name} removed\n")
+    else:
+        pretty_print(logger, f"No existing container {container_name} running.")
+    return True, "success"
