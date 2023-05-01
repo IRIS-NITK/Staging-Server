@@ -2,7 +2,7 @@
 
 set -e
 
-if [[ $# -ne 1 ]]; then
+if [[ $# -ne 3 ]]; then
         echo "Usage: $0 <org> <repo> <branch>"
         exit 1
 fi
