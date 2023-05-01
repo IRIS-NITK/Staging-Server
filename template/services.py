@@ -42,7 +42,7 @@ def deploy(self, url, user_name, org_name, repo_name, vcs, branch, external_port
     logger = open(log_file, 'a')
 
     if docker_image:
-        # TODO : deal with docker images in templates 
+        # TO DO : deal with docker images in templates 
         pass 
     else:
         # no docker image, build it from dockerfile 

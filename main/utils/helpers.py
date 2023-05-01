@@ -55,11 +55,7 @@ def exec_commands(commands,
             if print_stderr:
                 pretty_print(logger, res.stderr.decode(
                     'utf-8'), logger_not_file)
-                if not logger_not_file:
-                    logger.close()
                 return False, (err + '\n' + res.stderr.decode('utf-8'))
-            if not logger_not_file:
-                logger.close()
             return False, err
         result = result + res.stdout.decode('utf-8') +"\n"
         pretty_print(logger, result, logger_not_file)
