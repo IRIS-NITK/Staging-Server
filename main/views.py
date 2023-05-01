@@ -12,7 +12,7 @@ from main.models import RunningInstance
 from django.template import Context, loader
 from .forms import DeployTemplateForm
 from .models import DeployTemplate
-
+from main.services import clean_logs
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -56,13 +56,27 @@ def container_logs(request, pk):
 def instance_logs(request, pk):
     try:
         instance = RunningInstance.objects.get(pk=pk)
-        log_file_name = f"{PATH_TO_HOME_DIR}/{instance.organisation}/{instance.repo_name}/{instance.branch}/{instance.branch}.txt"
+        log_file_name = f"{PATH_TO_HOME_DIR}/logs/{instance.organisation}/{instance.repo_name}/{instance.branch}/{instance.branch}.txt"
         with open(log_file_name, "r", encoding='UTF-8') as file:
             data = file.read()
         context = {'data': data, 'instance': instance}
         return render(request, 'logs.html', context)
     except:  # pylint: disable=bare-except
         return render(request, 'error_log.html')
+
+
+@login_required
+def archive_logs(request, pk):
+    """
+    cleans logs and saves them to the archive
+    """
+    try:
+        instance = RunningInstance.objects.get(pk=pk)
+    except:  # pylint: disable=bare-except
+        return redirect("iris_dashboard")
+    clean_logs(org_name=instance.organisation,
+               repo_name=instance.repo_name, branch_name=instance.branch)
+    return redirect("iris_dashboard")
 
 
 @login_required

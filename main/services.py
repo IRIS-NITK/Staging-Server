@@ -68,11 +68,11 @@ def clone_repository(url='git.iris.nitk.ac.in',
     # Create Org directory if it doesn't exist
     if not os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}"):
         temp_logging_text = f'\n{datetime.datetime.now()} : Organization {org_name} does not exist locally, creating it\n'
-        os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}")
+        os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}", exist_ok=True)
 
     # org exists , repo does not exist , could be a new repo , so clone it
     os.makedirs(
-        f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH")
+        f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH", exist_ok=True)
     temp_logging_text += f'\n{datetime.datetime.now()} : Repository {repo_name} does not exist locally, cloning it\n'
 
     parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH"
@@ -90,10 +90,10 @@ def clone_repository(url='git.iris.nitk.ac.in',
     if not status:
         return False, err
 
-    os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
+    os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}", exist_ok=True)
 
     log_file = (
-        f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+        f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
     )
 
     logger = initiate_logger(log_file)
@@ -132,7 +132,7 @@ def pull_git_changes(vcs,
             return False, err
 
     log_file = (
-        f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+        f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
     )
 
     # Initiates Logger and also creates branch_name directory if it doesn't exist.
@@ -140,12 +140,13 @@ def pull_git_changes(vcs,
 
     # Copy repository to branch's folder.
     status, err = exec_commands(commands=[
+        ['mkdir', '-p', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}"],
         ['cp', '-r', f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.",
          f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"]
     ],
-        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}",
+        cwd=None,
         logger=logger,
-        err=f"Error while copying Repostiry from base directory to {branch_name}'s directory",
+        err=f"Error while copying Repository from Default branch's directory to {branch_name}'s directory",
         print_stderr=True
     )
     if not status:
@@ -421,3 +422,21 @@ def clean_up(org_name,
                  )
     logger.close()
     return cleanup_status, "Clean up complete"
+
+def clean_logs(org_name, repo_name, branch_name):
+    """
+    Cleans up the main log and archives the text.
+    """
+    log_dir=f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/"
+    log_file_path=f"{log_dir}/{branch_name}.txt"
+    arhive_file_path=f"{log_dir}/archive.txt"
+    print("this is working")
+    print(log_file_path)
+    if os.path.isfile(log_file_path):
+        print("file exists")
+        with open(log_file_path, "r", encoding='UTF-8') as log_file, \
+            open(arhive_file_path, "a", encoding='UTF-8') as arhive_file:
+            arhive_file.write(log_file.read())
+        # delete the source file
+        os.remove(log_file_path)
+    return True, ""
