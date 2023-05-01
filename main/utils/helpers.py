@@ -62,7 +62,7 @@ def exec_commands(commands,
                 logger.close()
             return False, err
         result = result + res.stdout.decode('utf-8') +"\n"
-        pretty_print(logger, res.stdout.decode('utf-8'), logger_not_file)
+        pretty_print(logger, result, logger_not_file)
     if print_stderr:
         return True, result
     return True, "executed Successfully"

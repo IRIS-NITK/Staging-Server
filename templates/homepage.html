@@ -1,10 +1,59 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="container">
+    <div class="card-deck homepage">
+      <a href="/iris" class="card">
+        <div class="custom-card-img">
+          <img class="card-img-top" src="/static/iris_home.png" alt="Card image cap">
+        </div>
+        <div class="card-body">
+          <h5 class="card-title">IRIS-NITK (ROR)</h5>
+          <p class="card-text">Deploy and Test any Branches of the main IRIS Website</p>
+          <p class="card-text"><small class="text-muted">Faster Loading times compared to Dev Server  ^-^</small></p>
+        </div>
+      </a>
+      <a href="/git_iris" class="card">
+        <div class="custom-card-img">
+          <img class="card-img-top" src="/static/gitlab_home.png" alt="Card image cap">
+        </div>
+        <div class="card-body">
+          <h5 class="card-title">IRIS-GITLAB</h5>
+          <p class="card-text">Deploy and Test dockerized branches of any repository on IRIS's Gitlab</p>
+          <p class="card-text"><small class="text-muted">^-^</small></p>
+        </div>
+      </a>
+    </div>
+  </div>  
+<style>
+.custom-card-img {
+  height: 175px;
+}
 
-<div>
-    Staging Server @ IRIS 2023
-</div>
+.card-img-top {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+}
+
+.homepage a:link {
+    color: black;
+    text-decoration: none;
+  }
+
+  /* visited link */
+  .homepage a:visited {
+    color: black;
+    text-decoration: none;
+  }
+
+  /* mouse over link */
+  .homepage a:hover {
+    color: black;
+    text-decoration: underline;
+  }
+
+</style>
 
 
 {% endblock %}
