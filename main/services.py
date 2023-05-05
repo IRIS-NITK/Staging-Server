@@ -316,8 +316,8 @@ def clean_up(org_name,
             pretty_print(logger,
                          "Successfully stopped and deleted the container."
                          )
-            errors = errors + err + "\n"
-            cleanup_status = False
+        else:
+            pretty_print(logger, err)
 
     if remove_nginx_conf:
         pretty_print(logger,
@@ -335,8 +335,8 @@ def clean_up(org_name,
             pretty_print(logger,
                          "Successfully deleted the nginx config."
                          )
-            errors = errors + err + "\n"
-            cleanup_status = False
+        else:
+            pretty_print(logger, err)
 
     if remove_volume:
         status, err = exec_commands(commands=[
@@ -350,8 +350,8 @@ def clean_up(org_name,
             pretty_print(logger,
                          "Successfully deleted the docker volume."
                          )
-            errors = errors + err + "\n"
-            cleanup_status = False
+        else:
+            pretty_print(logger, err)
 
     if remove_network:
         status, err = exec_commands(commands=[
@@ -365,8 +365,8 @@ def clean_up(org_name,
             pretty_print(logger,
                          "Successfully deleted the docker network."
                          )
-            errors = errors + err + "\n"
-            cleanup_status = False
+        else:
+            pretty_print(logger, err)
 
     if remove_image:
         status, err = exec_commands(commands=[
@@ -380,8 +380,8 @@ def clean_up(org_name,
             pretty_print(logger,
                          "Successfully deleted the docker network."
                          )
-            errors = errors + err + "\n"
-            cleanup_status = False
+        else:
+            pretty_print(logger, err)
 
     if remove_branch_dir:
         pretty_print(logger,
@@ -393,8 +393,6 @@ def clean_up(org_name,
             pretty_print(logger,
                          f"Successfully deleted the branch {branch_name} directory."
                          )
-            errors = errors + err + "\n"
-            cleanup_status = False
         else:
             pretty_print(logger, err)
 
@@ -405,8 +403,6 @@ def clean_up(org_name,
             pretty_print(logger,
                          f"Successfully deleted all directories of the {remove_all_dir} repository."
                          )
-            errors = errors + err + "\n"
-            cleanup_status = False
         else:
             pretty_print(logger, err)
 
@@ -416,8 +412,6 @@ def clean_up(org_name,
             pretty_print(logger,
                          f"Successfully deleted {remove_all_dir} user directory."
                          )
-            errors = errors + err + "\n"
-            cleanup_status = False
         else:
             pretty_print(logger, err)
 
@@ -436,10 +430,7 @@ def clean_logs(org_name, repo_name, branch_name):
     log_dir = f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/"
     log_file_path = f"{log_dir}/{branch_name}.txt"
     arhive_file_path = f"{log_dir}/archive.txt"
-    print("this is working")
-    print(log_file_path)
     if os.path.isfile(log_file_path):
-        print("file exists")
         with open(log_file_path, "r", encoding='UTF-8') as log_file, \
                 open(arhive_file_path, "a", encoding='UTF-8') as arhive_file:
             arhive_file.write(log_file.read())
