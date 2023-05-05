@@ -43,7 +43,8 @@ def deploy(self,
            docker_db_volume_name=None,
            docker_db_bind_path=None,
            docker_db_env_variables=None,
-           docker_db_dump_path=None
+           docker_db_dump_path=None,
+           docker_db_container_name=None,
            ):
     """
     Pulls changes, builds/pulls docker image, starts container, configure NGINX
@@ -101,24 +102,25 @@ def deploy(self,
     # start db container if required
 
     if docker_db_image:
-        db_container_name = f"db_{container_name}"
+        if not docker_db_container_name:
+            docker_db_container_name = f"db_{container_name}"
 
         inspect_container = run(
-            ["docker", "container", "inspect", db_container_name],
+            ["docker", "container", "inspect", docker_db_container_name],
             stderr=PIPE,
             stdout=PIPE,
             check=False
         )
 
         if inspect_container.returncode == 0:
-            pretty_print(logger, f"{db_container_name} already exists")
+            pretty_print(logger, f"{docker_db_container_name} already exists")
         else:
             pretty_print(
-                logger, f"Starting database Container : {db_container_name}")
+                logger, f"Starting database Container : {docker_db_container_name}")
 
             result, logs = start_db_container(
                 db_image=docker_db_image,
-                db_name=db_container_name,
+                db_name=docker_db_container_name,
                 db_dump_path=docker_db_dump_path,
                 db_env_variables=docker_db_env_variables,
                 volume_bind_path=docker_db_bind_path,
@@ -127,7 +129,7 @@ def deploy(self,
             )
 
             if not result:
-                return False, f"Failed to start {db_container_name}, {logs}"
+                return False, f"Failed to start {docker_db_container_name}, {logs}"
         
     # start the container
 
@@ -178,3 +180,4 @@ def deploy(self,
             -{repo_name.lower()}-{branch.lower()}.iris.nitk.ac.in")
 
     return True, logs  # log will be container id
+
