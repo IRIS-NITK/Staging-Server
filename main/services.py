@@ -5,6 +5,7 @@ import os
 import datetime
 import socket
 from contextlib import closing
+import urllib.parse
 import requests
 from dotenv import load_dotenv
 from main.utils.helpers import pretty_print, initiate_logger
@@ -54,10 +55,7 @@ def health_check(url, auth_header):
         return False
 
 
-def clone_repository(url='git.iris.nitk.ac.in',
-                     clone_url="",
-                     user_name=None,
-                     token=None,
+def clone_repository(clone_url="",
                      org_name=None,
                      repo_name=None,
                      branch_name='DEFAULT_BRANCH'
@@ -106,26 +104,24 @@ def clone_repository(url='git.iris.nitk.ac.in',
 
 
 def pull_git_changes(vcs,
-                     url='git.iris.nitk.ac.in',
+                     url='https://git.iris.nitk.ac.in/',
                      user_name=None,
                      token=None,
                      org_name=None,
                      repo_name=None,
-                     branch_name='DEFAULT_BRANCH',
-                     default_branch_name='master'):
+                     branch_name='master'):
     """
     Pulls the latest changes from the git repo, if the repo is not present, then it clones the repo
     """
     if not (org_name and repo_name):
         return False, "Org name and repo name are required\n"
-    clone_url = f'https://{user_name}:{token}@{url}/{org_name}/{repo_name}.git'
+
+    parsed_url = urllib.parse.urlparse(url)
+    clone_url = f'{parsed_url.scheme}://{user_name}:{token}@{parsed_url.hostname}{parsed_url.path}'
     # Check if repository exists
     if not os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.git"):
         status, err = clone_repository(
-            url=url,
             clone_url=clone_url,
-            user_name=user_name,
-            token=token,
             org_name=org_name,
             repo_name=repo_name,
             branch_name=branch_name,
@@ -142,7 +138,7 @@ def pull_git_changes(vcs,
 
     default_branch_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/."
     deploy_branch_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
-    
+
     os.makedirs(deploy_branch_path, exist_ok=True)
     # Copy repository to branch's folder.
     status, err = exec_commands(commands=[
@@ -165,7 +161,6 @@ def pull_git_changes(vcs,
         logger, f"Pulling latest changes from branch {branch_name}")
 
     status, err = exec_commands(commands=[
-        ["git", "checkout", "--force", default_branch_name],
         ["git", "pull", clone_url],
         ["git", "checkout", branch_name],
     ],
@@ -438,11 +433,12 @@ def clean_logs(org_name, repo_name, branch_name):
         os.remove(log_file_path)
     return True, ""
 
+
 def stop_containers(container_name, logger):
     """
     stops a container with container_name provided
     """
-    pretty_print(logger, 
+    pretty_print(logger,
                  f"Checking if there is any existing container {container_name}")
     inspect_container = run(
         ["docker", "container", "inspect", container_name],
@@ -453,7 +449,8 @@ def stop_containers(container_name, logger):
 
     if inspect_container.returncode == 0:
         pretty_print(logger, f"Container {container_name} already exists")
-        pretty_print(logger, f"Stopping and removing existing container {container_name}")
+        pretty_print(
+            logger, f"Stopping and removing existing container {container_name}")
         status, err = exec_commands(commands=[
                                     ["docker", "rm", "-f", container_name]],
                                     logger=logger,
@@ -464,5 +461,6 @@ def stop_containers(container_name, logger):
             return False, err
         pretty_print(logger, f"Existing container {container_name} removed\n")
     else:
-        pretty_print(logger, f"No existing container {container_name} running.")
+        pretty_print(
+            logger, f"No existing container {container_name} running.")
     return True, "success"
