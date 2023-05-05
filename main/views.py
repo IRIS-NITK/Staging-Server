@@ -12,8 +12,9 @@ from main.models import RunningInstance
 from django.template import Context, loader
 from .forms import DeployTemplateForm
 from .models import DeployTemplate
-from main.services import clean_logs
+from main.services import clean_logs, clean_up
 from dotenv import load_dotenv
+from django.http import HttpResponseRedirect
 
 load_dotenv()
 PREFIX = os.getenv("PREFIX", "staging")
@@ -73,12 +74,31 @@ def archive_logs(request, pk):
     try:
         instance = RunningInstance.objects.get(pk=pk)
     except:  # pylint: disable=bare-except
-        return redirect("iris_dashboard")
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
     clean_logs(org_name=instance.organisation,
                repo_name=instance.repo_name, branch_name=instance.branch)
-    return redirect("iris_dashboard")
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
 
 @login_required
 def homepage(request):
     return render(request, "homepage.html")
+
+
+@login_required
+def delete_default(request, pk):
+    """
+    Deletes default branch directory.
+    """
+    # stop container
+    try:
+        instance = RunningInstance.objects.get(pk=pk)
+    except:  # pylint: disable=bare-except
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+    status, err = clean_up(
+        org_name=instance.organisation,
+        repo_name=instance.repo_name,
+        branch_name="DEFAULT_BRANCH",
+        remove_branch_dir="DEFAULT_BRANCH",
+    )
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
