@@ -43,8 +43,10 @@ def deploy(self,
     logger = initiate_logger(log_file)
 
     # closing existing container if it exists.
-    container_name = f"{PREFIX}_{org_name.lower()}_{repo_name.lower()}_{branch.lower()}"
-    stop_containers(container_name=container_name, logger=logger)
+    app_container_name = docker_app.get(
+        'container_name', 
+        f"{PREFIX}_{org_name.lower()}_{repo_name.lower()}_{branch.lower()}")
+    stop_containers(container_name=app_container_name, logger=logger)
     logger.close()
 
     # Pull changes from git based vcs
@@ -94,7 +96,7 @@ def deploy(self,
     if docker_db:
         pretty_print(logger, "checking for existing database container")
         docker_db_container_name = docker_db.get('container_name',
-                                                  f"db_{container_name}")
+                                                  f"db_{app_container_name}")
 
         inspect_container = run(
             ["docker", "container", "inspect", docker_db_container_name],
@@ -134,7 +136,7 @@ def deploy(self,
         if status:
             pretty_print(logger,pre_deploy_scripts.get("msg_success",""))
     # start the container
-    pretty_print(logger, f"Starting container -> {container_name}")
+    pretty_print(logger, f"Starting app container -> {app_container_name}")
     pretty_print(logger, f"Base image : {docker_image}")
 
     result, logs = start_container(
@@ -142,7 +144,7 @@ def deploy(self,
         org_name=org_name,
         repo_name=repo_name,
         branch_name=branch,
-        container_name=container_name,
+        container_name=app_container_name,
         external_port=external_port,
         internal_port=internal_port,
         volumes=docker_app.get('volumes', None),
@@ -151,7 +153,7 @@ def deploy(self,
     )
     if not result:
         pretty_print(
-            logger, f"Error while starting container : {container_name}")
+            logger, f"Error while starting container : {app_container_name}")
         pretty_print(logger, logs)
         logger.close()
         return False, logs
