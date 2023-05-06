@@ -11,6 +11,7 @@ from main.services import health_check as main_health_check
 from template.models import Template
 from template.forms import TemplateForm 
 from template.services import deploy as deploy_template
+from django.http import HttpResponseRedirect
 
 from dotenv import load_dotenv
 
@@ -141,7 +142,7 @@ def stop(request, pk):
         instance.delete()
     else:
         print(f"Stop in templates failed\nLogs : {logs}")
-    return redirect("template_dashboard")
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
 @login_required
 def deploy(request, pk):  
@@ -195,7 +196,7 @@ def deploy(request, pk):
             docker_env_variables = json.loads(template.docker_env_vars)
         )
 
-    return redirect("template_dashboard")
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
 @login_required
 def health_check(request, pk):
@@ -212,5 +213,22 @@ def health_check(request, pk):
         instance.status = RunningInstance.STATUS_PENDING
 
     instance.save()
-    return redirect("template_dashboard")
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
     
+@login_required
+def delete_default(request, pk):
+    """
+    Deletes default branch directory.
+    """
+    # stop container
+    try:
+        instance = RunningInstance.objects.get(pk=pk)
+    except:  # pylint: disable=bare-except
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+    status, err = clean_up(
+        org_name=instance.organisation,
+        repo_name=instance.repo_name,
+        branch_name="DEFAULT_BRANCH",
+        remove_branch_dir="DEFAULT_BRANCH",
+    )
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))

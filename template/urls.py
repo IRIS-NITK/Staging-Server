@@ -16,6 +16,7 @@ urlpatterns = [
     # related to deployment
     path("deploy/<int:pk>", views.deploy, name = "template_deploy"),
     path("stop/<int:pk>", views.stop, name = "template_stop"),
+    path("delete_default/<int:pk>", views.delete_default, name = "template_delete_default"),
     path("healhcheck/<int:pk>", views.health_check, name = "template_healthcheck")
 
 ]
