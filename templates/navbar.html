@@ -1,31 +1,43 @@
 {% url 'iris_dashboard' as iris_dashboard_url %}
 {% url 'git_iris_dashboard' as git_iris_dashboard_url %}
 
-<nav class="navbar navbar-expand-lg  navbar-dark bg-dark shadow-sm">
-        <a href="#" class="navbar-brand">
-            <i class="fa fa-rocket" aria-hidden="true"></i>
-          <a class="navbar-brand" href="{% url 'homepage' %}"><strong>IRIS-NITK Staging Server</strong></a>
-        </a>
-        <button type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler"><span class="navbar-toggler-icon"></span></button>
-        <div id="navbarSupportedContent" class="collapse navbar-collapse">
-          <ul class="navbar-nav ml-auto">
-            <li class="nav-item {% if request.path == iris_dashboard_url %} active {%endif%}"><a href="{% url 'iris_dashboard' %}" class="nav-link"><b>IRIS </b><span class="sr-only">(current)</span></a></li>
-            <li class="nav-item {% if request.path == git_iris_dashboard_url %} active {%endif%}"><a href="{% url 'git_iris_dashboard' %}" class="nav-link"><strong>GITLAB-IRIS</strong></a></li>
-            <li class="nav-item dropdown {% if request.path|slice:'1:' == '/template' %}active{% endif %}">
-              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <strong>Templates</strong>
-              </a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a class="dropdown-item" href="/template">Dashboard</a>
-                <a class="dropdown-item" href="/template/list">List Templates</a>
-                <a class="dropdown-item" href="/template/new">Add Template</a>
-              </div>
-            </li>
-        {% if user.is_authenticated%}
-            <li class="nav-item"><a href="/accounts/logout" class="nav-link"><strong>Logout</strong></a></li>
-    {% else %}
-     <li class="nav-item"><a href="/accounts/login" class="nav-link"><strong>Login</strong></a></li>
-    {% endif %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{% url 'homepage' %}">
+      <i class="fa-brands fa-docker"></i>
+      IRIS Staging Server</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link {% if request.path == iris_dashboard_url %} active {%endif%}" aria-current="page" href="{% url 'iris_dashboard' %}">IRIS</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path == git_iris_dashboard_url %} active {%endif%}" href="{% url 'git_iris_dashboard' %}">Gitlab-IRIS</a>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Templates
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <li><a class="dropdown-item" href="/template">Dashboard</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="/template/list">List Templates</a></li>
+            <li><a class="dropdown-item" href="/template/new">Add Template</a></li>
           </ul>
-        </div>
-    </nav>
+        </li>
+        {% if user.is_authenticated%}
+            <li class="nav-item">
+              <a href="/accounts/logout" class="nav-link">Logout</a>
+            </li>
+      {% else %}
+     <li class="nav-item">
+      <a href="/accounts/login" class="nav-link">Login</a>
+    </li>
+      {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>

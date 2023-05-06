@@ -1,36 +1,45 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
 <div class="container">
-    <div class="card-deck homepage">
-      <a href="/iris" class="card">
+  <div class="row row-cols-1 row-cols-md-2 g-4 homepage">
+    <div class="col">
+      <div class="card h-100">
         <div class="custom-card-img">
-          <img class="card-img-top" src="/static/iris_home.png" alt="Card image cap">
-        </div>
+        <img src="/static/iris_home.png" class="card-img-top" alt="...">
+      </div>
+      <a href="/iris">
         <div class="card-body">
-          <h5 class="card-title">IRIS-NITK (ROR)</h5>
+          <h5 class="card-title">IRIS-NITK</h5>
           <p class="card-text">Deploy and Test any Branches of the main IRIS Website</p>
-          <p class="card-text"><small class="text-muted">Faster Loading times compared to Dev Server  ^-^</small></p>
+          <p class="card-text"><small class="text-muted">Faster deployment times compared to Dev Server  ^-^</small></p>
         </div>
       </a>
-      <a href="/git_iris" class="card">
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100">
         <div class="custom-card-img">
-          <img class="card-img-top" src="/static/gitlab_home.png" alt="Card image cap">
+        <img src="/static/gitlab_home.png" class="card-img-top" alt="...">
         </div>
+        <a href="/git_iris">
         <div class="card-body">
           <h5 class="card-title">IRIS-GITLAB</h5>
           <p class="card-text">Deploy and Test dockerized branches of any repository on IRIS's Gitlab</p>
-          <p class="card-text"><small class="text-muted">^-^</small></p>
         </div>
       </a>
+      </div>
     </div>
-  </div>  
+  </div>
+</div>
+
 <style>
 .custom-card-img {
   height: 175px;
 }
 
-.card-img-top {
+.custom-card-img img {
   max-width: 100%;
   max-height: 100%;
   object-fit: cover;

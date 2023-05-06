@@ -19,10 +19,6 @@ NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 DEFAULT_NETWORK = os.getenv("DEFAULT_NETWORK", "IRIS")
 
 
-def pretty_print(file, text):
-    file.write(f"{datetime.datetime.now()} : {text}\n")
-
-
 @shared_task(bind=True)
 def deploy(self,
            url,
@@ -34,17 +30,10 @@ def deploy(self,
            external_port,
            internal_port=80,
            access_token=None,
-           docker_image=None,
-           docker_network=DEFAULT_NETWORK,
-           dockerfile_path=None,
-           docker_volumes={},
-           docker_env_variables={},
-           docker_db_image=None,
-           docker_db_volume_name=None,
-           docker_db_bind_path=None,
-           docker_db_env_variables=None,
-           docker_db_dump_path=None,
-           docker_db_container_name=None,
+           docker_app=None,
+           docker_db=None,
+           post_deploy_scripts=None,
+           pre_deploy_scripts=None
            ):
     """
     Pulls changes, builds/pulls docker image, starts container, configure NGINX
@@ -74,10 +63,12 @@ def deploy(self,
 
     logger = initiate_logger(log_file)
 
+    docker_image = docker_app.get('image', None)
     if not docker_image:
         pretty_print(logger, "No Docker image provided")
+        dockerfile_path = docker_app.get('dockerfile_path', None)
         if not dockerfile_path:
-            dockerfile_path=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch}/{repo_name}/"
+            dockerfile_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch}/{repo_name}/"
         pretty_print(logger, f"Building image from {dockerfile_path} ...")
 
         # building docker image and tagging it
@@ -100,10 +91,10 @@ def deploy(self,
         pretty_print(logger, f"Docker image {docker_image} already provided.")
 
     # start db container if required
-
-    if docker_db_image:
-        if not docker_db_container_name:
-            docker_db_container_name = f"db_{container_name}"
+    if docker_db:
+        pretty_print(logger, "checking for existing database container")
+        docker_db_container_name = docker_db.get('container_name',
+                                                  f"db_{container_name}")
 
         inspect_container = run(
             ["docker", "container", "inspect", docker_db_container_name],
@@ -119,20 +110,30 @@ def deploy(self,
                 logger, f"Starting database Container : {docker_db_container_name}")
 
             result, logs = start_db_container(
-                db_image=docker_db_image,
+                db_image=docker_db.get('image',None),
                 db_name=docker_db_container_name,
-                db_dump_path=docker_db_dump_path,
-                db_env_variables=docker_db_env_variables,
-                volume_bind_path=docker_db_bind_path,
-                volume_name=docker_db_volume_name,
-                network_name=docker_network,
+                db_dump_path=docker_db.get('dump_path',None),
+                db_env_variables=docker_db.get('env_variables',None),
+                volume_bind_path=docker_db.get('bind_path',None),
+                volume_name=docker_db.get('volume_name',None),
+                network_name=docker_app.get('network', DEFAULT_NETWORK),
             )
 
             if not result:
                 return False, f"Failed to start {docker_db_container_name}, {logs}"
-        
-    # start the container
 
+    # Execute Pre Deployment scripts
+    if pre_deploy_scripts:
+        pretty_print(logger, "Executing pre deployment Scripts")
+        status, err = exec_commands(
+            commands=pre_deploy_scripts.get('commands',[]),
+            logger=logger,
+            err=pre_deploy_scripts.get("msg_error",""),
+            print_stderr=True
+        )
+        if status:
+            pretty_print(logger,pre_deploy_scripts.get("msg_success",""))
+    # start the container
     pretty_print(logger, f"Starting container -> {container_name}")
     pretty_print(logger, f"Base image : {docker_image}")
 
@@ -144,9 +145,9 @@ def deploy(self,
         container_name=container_name,
         external_port=external_port,
         internal_port=internal_port,
-        volumes=docker_volumes,
-        enviroment_variables=docker_env_variables,
-        docker_network=docker_network
+        volumes=docker_app.get('volumes', None),
+        enviroment_variables=docker_app.get('env_variables', None),
+        docker_network=docker_app.get('network', DEFAULT_NETWORK)
     )
     if not result:
         pretty_print(
@@ -154,30 +155,23 @@ def deploy(self,
         pretty_print(logger, logs)
         logger.close()
         return False, logs
-    
+
     if not result:
         pretty_print(logger, " ⚠️ Error while starting container")
         pretty_print(logger, logs)
         logger.close()
         return False, logs
+    # to execute commands after deployments, like to setup nginx config.
+    if post_deploy_scripts:
+        pretty_print(logger, "Executing post deployment Scripts")
+        status, err = exec_commands(post_deploy_scripts.get('commands',[]),
+            logger=logger,
+            err=post_deploy_scripts.get('msg_error',""),
+            print_stderr=True
+        )
+        if status:
+            pretty_print(logger, post_deploy_scripts.get('msg_success',""))
 
-    # Configure NGINX
-    status, err = exec_commands([
-        ["sudo", "bash", NGINX_ADD_CONFIG_SCRIPT, str(org_name.lower()), str(
-            repo_name.lower()), str(branch.lower()), str(external_port)]
-    ],
-        logger=logger,
-        err="Error while adding nginx config",
-        print_stderr=True
-    )
-    if not status:
-        return False, err
-
-    pretty_print(logger, "Nginx config added successfully")
     pretty_print(logger, "Successully deployed 🥳")
-    pretty_print(
-        logger, f"Visit it on : staging-{org_name.lower()}\
-            -{repo_name.lower()}-{branch.lower()}.iris.nitk.ac.in")
 
     return True, logs  # log will be container id
-

@@ -84,21 +84,3 @@ def archive_logs(request, pk):
 def homepage(request):
     return render(request, "homepage.html")
 
-
-@login_required
-def delete_default(request, pk):
-    """
-    Deletes default branch directory.
-    """
-    # stop container
-    try:
-        instance = RunningInstance.objects.get(pk=pk)
-    except:  # pylint: disable=bare-except
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
-    status, err = clean_up(
-        org_name=instance.organisation,
-        repo_name=instance.repo_name,
-        branch_name="DEFAULT_BRANCH",
-        remove_branch_dir="DEFAULT_BRANCH",
-    )
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
