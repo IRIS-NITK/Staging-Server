@@ -24,7 +24,12 @@ class RunningInstance(models.Model):
     exposed_port = models.IntegerField(default=3000)
     dockerfile_path = models.TextField(blank=True)
     internal_port = models.IntegerField(default=80)
-
+    deployed_url = models.URLField(max_length=255, blank=True)
+    project_url = models.URLField(max_length=255, blank=True)
+    app_container_name = models.TextField(blank=True)
+    db_container_name = models.TextField(blank=True)
+    app_docker_image = models.TextField(blank=True)
+    db_docker_image = models.TextField(blank=True)
 class DeployTemplate(models.Model):
     social_type = models.TextField(
         choices=[
