@@ -162,8 +162,7 @@ def pull_git_changes(vcs,
 
     status, err = exec_commands(commands=[
         ["git", "pull", clone_url],
-        ["git", "checkout", branch_name],
-        ["git", "pull", clone_url]
+        ["git", "checkout", branch_name]
     ],
         cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}",
         logger=logger,
