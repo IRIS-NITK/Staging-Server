@@ -1,0 +1,37 @@
+{% extends 'base.html' %} 
+
+{% block title %}
+IRIS NITK
+{% endblock %} 
+
+{% block content %}
+<div class="card">
+<div class="card-header">
+    <h3>Container Logs</h3>
+  </div>
+  <div class="card-body">
+    <p><strong>Organization:</strong> {{ instance.organisation }}</p>
+    <p><strong>Repo Name:</strong> {{ instance.repo_name }}</p>
+    <p><strong>Branch:</strong> {{ instance.branch }}</p>
+  </div>
+</div>
+<div class="card">
+    <div class="card-body">
+      <div id="logs" class="border" style="border: 1px solid black; width: 100%; min-height: 1000px;"></div>
+    </div>
+</div>
+<script>
+const logsDiv = document.getElementById('logs');
+const socket = new WebSocket('ws://' + window.location.host +
+        '/logs/{{ instance.pk }}/');
+socket.onmessage = (event) => {
+    logsDiv.innerHTML += '</br>' + event.data;
+    };
+socket.onclose = (event) => {
+    logsDiv.innerHTML += '</br> Disconnected from the Server .';
+    };
+socket.addEventListener('open', (event) => {
+        logsDiv.innerHTML += "Connected to the Container, Fetching logs...";
+    });
+</script>
+{% endblock %}

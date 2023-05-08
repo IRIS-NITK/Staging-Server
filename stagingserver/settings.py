@@ -33,6 +33,7 @@ CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_ALLOWED_HOSTS').split(',')
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -54,7 +55,19 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.gitlab',
     "widget_tweaks",
     "django_celery_results",
+    "docker",
+    "chardet"
 ]
+
+# Add channels layer
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -85,6 +98,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'stagingserver.wsgi.application'
+ASGI_APPLICATION = 'stagingserver.asgi.application'
 
 
 # Database
@@ -147,7 +161,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 # CRISPY_TEMPLATE_PACK = "bootstrap5"
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"

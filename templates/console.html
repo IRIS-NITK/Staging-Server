@@ -1,0 +1,66 @@
+{% extends 'base.html' %} 
+
+{% block title %}
+IRIS NITK
+{% endblock %} 
+
+{% block content %}
+  <div class="card mb-2">
+    <div class="card-header">
+      <h3>Container Console</h3>
+    </div>
+    <div class="card-body">
+      <p><strong>Organization:</strong> {{ instance.organisation }}</p>
+      <p><strong>Repo Name:</strong> {{ instance.repo_name }}</p>
+      <p><strong>Branch:</strong> {{ instance.branch }}</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div id="console" class="bg-dark text-white overflow-auto border" style="border: 1px solid black; width: 100%; height: 400px;"></div>
+    </div>
+    <div class="card-body">
+      <form id="console-form" class="row row-cols-lg-auto g-3 align-items-center">
+        {% csrf_token %}
+        <div class="input-group">
+          <input id="console-input" class="form-control" type="text">
+          <button class="btn btn-primary" type="submit" id="button-addon2">Send</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script>
+    const socket = new WebSocket('ws://' + window.location.host +
+        '/console/{{ instance.pk }}/');
+    const consoleDiv = document.getElementById('console');
+
+    socket.onmessage = (event) => {
+      if (consoleDiv.innerHTML=="" ){
+        consoleDiv.innerHTML += event.data;
+      } else {
+        consoleDiv.innerHTML += '</br>' + event.data;
+      }
+      consoleDiv.scrollTop = consoleDiv.scrollHeight; // scroll to bottom
+    };
+
+    socket.onclose = (event) => {
+      consoleDiv.innerHTML += '</br>Disconnected from container console.';
+    };
+
+    const form = document.getElementById('console-form');
+    const input = document.getElementById('console-input');
+    
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = input.value;
+      input.value = '';
+      if(data=="clear"){
+        document.getElementById('console').innerHTML=""
+        return false;
+      }
+      socket.send(data);
+      input.value = '';
+      return false;
+    });
+  </script>
+{% endblock %}
