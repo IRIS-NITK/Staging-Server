@@ -22,5 +22,11 @@ urlpatterns = [
     path('', views.homepage, name="homepage"),
     path('delete_logs/<int:pk>', views.archive_logs, name = "archive_logs"),
     path('logs/<int:pk>', views.instance_logs, name = "instance_logs"),
+    path('console/<int:pk>/', views.console, name='console'),
     path('container_logs/<int:pk>', views.container_logs, name = "container_logs"),
+]
+
+websocket_urlpatterns = [
+    path('logs/<int:pk>/', views.LogsConsumer.as_asgi()),
+    path('console/<int:pk>/', views.ConsoleConsumer.as_asgi()),
 ]
