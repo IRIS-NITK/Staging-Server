@@ -22,7 +22,8 @@ from main.services import clean_logs
 load_dotenv()
 PREFIX = os.getenv("PREFIX", "staging")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
-
+DOCKER_SOCKET_HOST = os.getenv("DOCKER_SOCKET_HOST","127.0.0.1")
+DOCKER_SOCKET_PORT = os.getenv("DOCKER_SOCKET_PORT","2375")
 
 response_header = loader.get_template("response_header.html")
 
@@ -101,6 +102,8 @@ class LogsConsumer(WebsocketConsumer):
         super().__init__(*args, **kwargs)
         self.client = docker.APIClient()
         self.container_name = None
+        self.kill_send = False
+        self.stream = None
 
     def fetch_container_name(self, pk):
         """
@@ -112,7 +115,7 @@ class LogsConsumer(WebsocketConsumer):
         except:  # pylint: disable=bare-except
             pass
         return False
-    
+
     def connect(self):
         self.accept()
         pk= self.scope['url_route']['kwargs']['pk']
@@ -122,13 +125,24 @@ class LogsConsumer(WebsocketConsumer):
             self.close()
             return
         try:
-            stream = self.client.logs(self.container_name, stream=True, follow=True)
+            self.stream = self.client.logs(self.container_name, stream=True, follow=True)
         except:  # pylint: disable=bare-except
             self.send("Error connecting to container. It may not have been created yet.")
             self.close()
             return
-        for data in stream:
+        self.thread = threading.Thread(target=self.send_logs)
+        self.thread.start()
+
+    def send_logs(self):
+        for data in self.stream:
+            if self.kill_send:
+                break
             self.send(data.decode())
+
+    def disconnect(self, code):
+        self.kill_send = True
+        self.close()
+        return super().disconnect(code)
 
 
 class ConsoleConsumer(WebsocketConsumer):
@@ -137,8 +151,8 @@ class ConsoleConsumer(WebsocketConsumer):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.host='127.0.0.1'
-        self.port='2375'
+        self.host=DOCKER_SOCKET_HOST
+        self.port=DOCKER_SOCKET_PORT
         self.socket_url=f'tcp://{self.host}:{self.port}'
         self.client = docker.APIClient(base_url=self.socket_url)
         self.exec_id = None
@@ -166,7 +180,7 @@ class ConsoleConsumer(WebsocketConsumer):
                 'Upgrade': 'tcp'
             }
             http_conn.request('POST', f'/exec/{self.exec_id["Id"]}/start', body=params, headers=headers)
-            response = http_conn.getresponse()
+            _ = http_conn.getresponse()
         except:  # pylint: disable=bare-except
             self.accept()
             self.send("Error connecting to container")
