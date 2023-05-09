@@ -6,7 +6,7 @@ IRIS NITK
 
 {% block content %}
 
-<link rel="stylesheet" href="https://unpkg.com/xterm@5.1.0/css/xterm.css" />
+<link rel="stylesheet" href="/static/xterm/xterm.css" />
 
   <div class="card mb-2">
     <div class="card-header">
@@ -25,10 +25,10 @@ IRIS NITK
   </div>
 
 
-  <script src="https://unpkg.com/xterm@5.1.0/lib/xterm.js"></script>
-  <script src="http://localhost:7070/xterm-addon-attach/lib/xterm-addon-attach.js"></script>
-  <script src="http://localhost:7070/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
-  <script src="http://localhost:7070/xterm-addon-search/lib/xterm-addon-search.js"></script>
+  <script src="/static/xterm/xterm.js"></script>
+  <script src="/static/xterm/xterm-addon-attach.js"></script>
+  <script src="/static/xterm/xterm-addon-fit.js"></script>
+  <script src="/static/xterm/xterm-addon-search.js"></script>
 
   <script type="text/javascript">
     var term = new Terminal({
@@ -46,31 +46,22 @@ IRIS NITK
 
     // Socket handling
     socket.onopen = (ev) => { 
-      socket.send("\n")
       term.loadAddon(attachAddon);
       term.loadAddon(fitAddon);
       term.loadAddon(searchAddon);
-      fitAddon.fit();
-      term.resize(15, 50)
-      console.log(`size: ${term.cols} columns, ${term.rows} rows`)
       fitAddon.fit()
-      term.write("\nWelcome to {{ instance.repo_name }}'s Container!\n\n\r")
-      term.write("!! THIS is a limited, create a reverse shell for smoother use. :) \n\r")
-      term.write("To load data, use the stream-loader or REST API server.\n\r")
-      term.write("***********************************************************\n\r")
+      console.log(`size: ${term.cols} columns, ${term.rows} rows`)
      };
     socket.onclose = function(ev){
         console.log('Connection closed.');
     };
-
     //terminal handling
     term.focus()
+    window.onresize = resize
+    window.onload = resize
     // function resize(){
     //     fitAddon.fit();
     //     socket.send('{"cols": term.cols, "rows": term.rows}')
     // }
-
-      window.onresize = resize
-      window.onload = resize
 </script>
 {% endblock %}
