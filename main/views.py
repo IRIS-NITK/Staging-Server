@@ -5,21 +5,17 @@ import os
 import subprocess
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, StreamingHttpResponse
-from django.shortcuts import render, redirect
-from django.core.exceptions import ObjectDoesNotExist
-from main.models import RunningInstance
-from django.template import Context, loader
-from .forms import DeployTemplateForm
-from .models import DeployTemplate
-from main.services import clean_logs, clean_up
+from django.shortcuts import render
+from django.template import loader
 from dotenv import load_dotenv
 from django.http import HttpResponseRedirect
 import chardet
 import docker
 import threading
-import unicodedata
-from channels.generic.websocket import WebsocketConsumer, AsyncWebsocketConsumer
+from channels.generic.websocket import WebsocketConsumer
+import json
+from main.models import RunningInstance
+from main.services import clean_logs
 
 load_dotenv()
 PREFIX = os.getenv("PREFIX", "staging")
@@ -85,13 +81,23 @@ def container_logs(request, pk):
     return render(request, 'container_logs.html', {'instance':instance})
 
 
+def is_valid_json(json_str):
+    """
+    Check if a string is valid JSON.
+    """
+    try:
+        json.loads(json_str)
+        return True
+    except json.JSONDecodeError:
+        return False
+        
 class ConsoleConsumer(WebsocketConsumer):
     """
     websocket for container Console.
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.client = docker.APIClient()
+        self.client = docker.APIClient(base_url='tcp://127.0.0.1:2376')
         self.exec_id = None
         self.socket = None
         self.container_name = None
@@ -113,19 +119,34 @@ class ConsoleConsumer(WebsocketConsumer):
             self.send(Exception)
             self.close()
         self.socket = self.client.exec_start(
-            self.exec_id, stream=True, socket=True, tty=True)
+            self.exec_id, socket=True, stream=True, tty=True)
         self.socket._sock.settimeout(120)
         self.accept()
-        self.send("Connected to the container Successfully.")
         # Start a new thread to receive data from the container's socket
-        threading.Thread(target=self.receive_data_from_socket).start()
+        self.stop_thread=False
+        self.t = threading.Thread(target=self.receive_data_from_socket)
+        self.t.start()
 
     def receive(self, text_data, *_):
-        # Send data received from the WebSocket to the container's socket
-        minicmd = text_data + "\n"
-        self.socket._sock.send(minicmd.encode('utf-8'))
+        """
+        Handle incoming data from the WebSocket.
+        """
+        if is_valid_json(text_data):
+            request_type = text_data.get('type', None)
+            if request_type == 'resize':
+                cols = text_data.get('cols', None)
+                rows = text_data.get('rows', None)
+                if cols is not None and rows is not None:
+                    self.client.exec_resize(self.exec_id, cols, rows)
+        else:
+            # Handle regular message
+                self.socket._sock.send(text_data.encode('utf-8'))
 
     def disconnect(self, *_):
+        """
+        overriding disconnect of websocket to close thread and docker exec socket.
+        """
+        self.stop_thread=True
         self.socket.close()
 
     def receive_data_from_socket(self):
@@ -133,17 +154,17 @@ class ConsoleConsumer(WebsocketConsumer):
         # Receive data from the container's socket and send it back to the WebSocket
         """
         while True:
+            if self.stop_thread:
+                break
             try:
                 for output in self.socket:
                     if output:
                         encoding = chardet.detect(output)['encoding']
-                        output = output.decode(encoding)
-                        output = ''.join(
-                            ch for ch in output if unicodedata.category(ch)[0] != 'C')
+                        output = output.decode('utf-8')
                         self.send(output)
             except:  # pylint: disable=bare-except
                 pass
-
+                
 class LogsConsumer(WebsocketConsumer):
     """
     streams container logs via a websocket.

@@ -8,7 +8,7 @@ https://docs.djangoproject.com/en/4.1/howto/deployment/asgi/
 """
 
 import os
-
+import daphne
 from django.core.asgi import get_asgi_application
 from django.urls import path
 from channels.routing import ProtocolTypeRouter, URLRouter
@@ -21,7 +21,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'stagingserver.settings')
 
 django_asgi_app = get_asgi_application()
 
-
+daphne.server.http.HTTP_PROTOCOL = "h2"
+daphne.server.http.http_timeout = 120  # increase timeout to 120 seconds
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
     "websocket": AllowedHostsOriginValidator(
