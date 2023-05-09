@@ -20,9 +20,11 @@ IRIS NITK
       <div id="logs" class="border" style="border: 1px solid black; width: 100%; min-height: 1000px;"></div>
     </div>
 </div>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.js'
+></script>
 <script>
 const logsDiv = document.getElementById('logs');
-const socket = new WebSocket('ws://' + window.location.host +
+const socket = new ReconnectingWebSocket('ws://' + window.location.host +
         '/logs/{{ instance.pk }}/');
 socket.onmessage = (event) => {
     logsDiv.innerHTML += '</br>' + event.data;
@@ -34,4 +36,5 @@ socket.addEventListener('open', (event) => {
         logsDiv.innerHTML += "Connected to the Container, Fetching logs...";
     });
 </script>
+
 {% endblock %}
