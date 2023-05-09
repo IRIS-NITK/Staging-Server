@@ -2,7 +2,10 @@
 views for main
 """
 import os
-import subprocess
+import socket
+import json
+import http.client
+
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
@@ -13,7 +16,6 @@ import chardet
 import docker
 import threading
 from channels.generic.websocket import WebsocketConsumer
-import json
 from main.models import RunningInstance
 from main.services import clean_logs
 
@@ -90,80 +92,6 @@ def is_valid_json(json_str):
         return True
     except json.JSONDecodeError:
         return False
-        
-class ConsoleConsumer(WebsocketConsumer):
-    """
-    websocket for container Console.
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.client = docker.APIClient(base_url='tcp://127.0.0.1:2376')
-        self.exec_id = None
-        self.socket = None
-        self.container_name = None
-
-    def connect(self):
-        try:
-            instance = RunningInstance.objects.get(
-                pk=self.scope['url_route']['kwargs']['pk'])
-        except:  # pylint: disable=bare-except
-            self.close()
-        container_name = instance.app_container_name
-        cmd = ['/bin/bash']
-        try:
-            self.exec_id = self.client.exec_create(
-                container_name, cmd, stdout=True, stderr=True, stdin=True, tty=True)
-        except:  # pylint: disable=bare-except
-            self.accept()
-            self.send("Error connecting to container")
-            self.send(Exception)
-            self.close()
-        self.socket = self.client.exec_start(
-            self.exec_id, socket=True, stream=True, tty=True)
-        self.socket._sock.settimeout(120)
-        self.accept()
-        # Start a new thread to receive data from the container's socket
-        self.stop_thread=False
-        self.t = threading.Thread(target=self.receive_data_from_socket)
-        self.t.start()
-
-    def receive(self, text_data, *_):
-        """
-        Handle incoming data from the WebSocket.
-        """
-        if is_valid_json(text_data):
-            request_type = text_data.get('type', None)
-            if request_type == 'resize':
-                cols = text_data.get('cols', None)
-                rows = text_data.get('rows', None)
-                if cols is not None and rows is not None:
-                    self.client.exec_resize(self.exec_id, cols, rows)
-        else:
-            # Handle regular message
-                self.socket._sock.send(text_data.encode('utf-8'))
-
-    def disconnect(self, *_):
-        """
-        overriding disconnect of websocket to close thread and docker exec socket.
-        """
-        self.stop_thread=True
-        self.socket.close()
-
-    def receive_data_from_socket(self):
-        """
-        # Receive data from the container's socket and send it back to the WebSocket
-        """
-        while True:
-            if self.stop_thread:
-                break
-            try:
-                for output in self.socket:
-                    if output:
-                        encoding = chardet.detect(output)['encoding']
-                        output = output.decode('utf-8')
-                        self.send(output)
-            except:  # pylint: disable=bare-except
-                pass
                 
 class LogsConsumer(WebsocketConsumer):
     """
@@ -201,3 +129,76 @@ class LogsConsumer(WebsocketConsumer):
             return
         for data in stream:
             self.send(data.decode())
+
+
+class ConsoleConsumer(WebsocketConsumer):
+    """
+    websocket for container Console.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.host='127.0.0.1'
+        self.port='2375'
+        self.socket_url=f'tcp://{self.host}:{self.port}'
+        self.client = docker.APIClient(base_url=self.socket_url)
+        self.exec_id = None
+        self.socket = None
+        self.container_name= None
+        self.conn = None
+    def connect(self):
+        try:
+            instance = RunningInstance.objects.get(
+                pk=self.scope['url_route']['kwargs']['pk'])
+        except:  # pylint: disable=bare-except
+            self.close()
+        self.container_name = instance.app_container_name
+        cmd = '/bin/bash'
+        try:
+            self.exec_id = self.client.exec_create(self.container_name, cmd, stdout=True, stderr=True, stdin=True, tty=True)
+            self.socket = socket.create_connection((self.host, self.port))
+            http_conn = http.client.HTTPConnection(self.host, self.port)
+            http_conn.sock = self.socket
+            params = json.dumps({'Detach': False, 'Tty': True})
+            headers = {
+                'User-Agent': 'Docker-Client',
+                'Content-Type': 'application/json',
+                'Connection': 'Upgrade',
+                'Upgrade': 'tcp'
+            }
+            http_conn.request('POST', f'/exec/{self.exec_id["Id"]}/start', body=params, headers=headers)
+            response = http_conn.getresponse()
+        except:  # pylint: disable=bare-except
+            self.accept()
+            self.send("Error connecting to container")
+            self.send(Exception)
+            self.close()
+        self.accept()
+        # Start a new thread to receive data from the container's socket
+        self.stop_thread=False
+        self.t = threading.Thread(target=self.receive_data_from_socket)
+        self.send("-------IRIS Staging Server\n")
+        self.send(f"Successfully Connected to {instance.app_container_name} container\n")
+        self.t.start()
+
+    def receive(self, text_data, *_):
+        """
+        Handle incoming data from the WebSocket.
+        """
+        self.socket.sendall(text_data.encode('ISO-8859-1'))
+
+    def disconnect(self, *_):
+        """
+        overriding disconnect of websocket to close thread and docker exec socket.
+        """
+        self.stop_thread=True
+        self.socket.close()
+
+    def receive_data_from_socket(self):
+        """
+        # Receive data from the container's socket and send it back to the WebSocket
+        """
+        while True:
+            if self.stop_thread:
+                break
+            msg = self.socket.recv(1024)
+            self.send(msg.decode('ISO-8859-1'))
