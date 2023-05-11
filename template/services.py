@@ -92,6 +92,30 @@ def deploy(self,
     else:
         pretty_print(logger, f"Docker image {docker_image} already provided.")
 
+    network_name=docker_app.get('network', DEFAULT_NETWORK)
+
+    if network_name:
+        pretty_print(logger, f"Checking if the docker network {network_name} exists.")
+        inspect_network = run(
+            ["docker", "network", "inspect", network_name],
+            stderr=PIPE,
+            stdout=PIPE,
+            check=False
+        )
+        if inspect_network.returncode == 0:
+            pretty_print(logger, f"Docker network {network_name} already exists")
+        else:
+            pretty_print(logger, f"Docker network {network_name} does not exist, creating it")
+            status, err = exec_commands(
+                commands=[['docker', 'network', 'create', network_name]],
+                logger=logger,
+                err=f"Error creating docker network {network_name}",
+                print_stderr=False
+            )
+            if status:
+                pretty_print(logger,f"Successfully created docker network {network_name}")
+            else:
+                return status, err
     # start db container if required
     if docker_db:
         pretty_print(logger, "checking for existing database container")
@@ -118,7 +142,7 @@ def deploy(self,
                 db_env_variables=docker_db.get('env_variables',None),
                 volume_bind_path=docker_db.get('bind_path',None),
                 volume_name=docker_db.get('volume_name',None),
-                network_name=docker_app.get('network', DEFAULT_NETWORK),
+                network_name=network_name,
             )
 
             if not result:
@@ -149,7 +173,7 @@ def deploy(self,
         internal_port=internal_port,
         volumes=docker_app.get('volumes', None),
         enviroment_variables=docker_app.get('env_variables', None),
-        docker_network=docker_app.get('network', DEFAULT_NETWORK)
+        docker_network=network_name
     )
     if not result:
         pretty_print(

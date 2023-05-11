@@ -27,6 +27,6 @@ urlpatterns = [
 ]
 
 websocket_urlpatterns = [
-    path('logs/<int:pk>/', views.LogsConsumer.as_asgi()),
-    path('console/<int:pk>/', views.ConsoleConsumer.as_asgi()),
+    path('ws/logs/<int:pk>/', views.LogsConsumer.as_asgi()),
+    path('ws/console/<int:pk>/', views.ConsoleConsumer.as_asgi()),
 ]

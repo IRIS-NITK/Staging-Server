@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-jq**bq4fw)y*z%eshlkg9f0fc(*k2-5i0b41#i^1#2@@1d&wol'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get('DEBUG', False)
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_ALLOWED_HOSTS').split(',')
@@ -56,7 +56,6 @@ INSTALLED_APPS = [
     "widget_tweaks",
     "django_celery_results",
     "docker",
-    "chardet"
 ]
 
 # Add channels layer
@@ -64,7 +63,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [("redis", 6379)],
         },
     },
 }
@@ -97,7 +96,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'stagingserver.wsgi.application'
+# WSGI_APPLICATION = 'stagingserver.wsgi.application'
 ASGI_APPLICATION = 'stagingserver.asgi.application'
 
 
@@ -207,11 +206,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 #Celery conf
 
 
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379'
-CELERY_ACCEPT_CONTENT = ['application/json']
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'Asia/Kolkata'
-
-
-CELERY_RESULT_BACKEND = 'django-db'
+CELERY_BROKER_URL = 'redis://redis:6379'
+result_backend = 'redis://redis:6379'
+accept_content = ['application/json']
+result_serializer = 'json'
+task_serializer = 'json'
+timezone = 'Asia/Kolkata'

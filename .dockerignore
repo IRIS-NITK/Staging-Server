@@ -1,0 +1,5 @@
+STAGING_DIR
+env
+db.sqlite3
+staging_logs.out
+celery_logs.out

@@ -12,6 +12,6 @@ cd /etc/nginx/
 BRANCH=$1
 
 # Delete Config files if exits
-sudo rm -f sites-enabled/dev-${BRANCH}.conf
-sudo rm -f sites-available/dev-${BRANCH}.conf
+rm -f sites-enabled/dev-${BRANCH}.conf
+rm -f sites-available/dev-${BRANCH}.conf
 

@@ -142,7 +142,7 @@ def pull_git_changes(vcs,
     os.makedirs(deploy_branch_path, exist_ok=True)
     # Copy repository to branch's folder.
     status, err = exec_commands(commands=[
-        ['sudo', 'rm', '-rf', deploy_branch_path],
+        ['rm', '-rf', deploy_branch_path],
         ['cp', '-rf', default_branch_path, deploy_branch_path]
     ],
         cwd=None,
@@ -319,7 +319,7 @@ def clean_up(org_name,
                      "Removing the nginx config."
                      )
         status, err = exec_commands(commands=[
-            ["sudo", "bash", NGINX_REMOVE_CONFIG_SCRIPT, org_name,
+            ["bash", NGINX_REMOVE_CONFIG_SCRIPT, org_name,
              repo_name, branch_name]
         ],
             logger=logger,

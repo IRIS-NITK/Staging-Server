@@ -12,9 +12,9 @@ cd /etc/nginx/
 BRANCH=$1
 PORT=$2
 
-sudo sed -e "s/<BRANCH_NAME>/$BRANCH/g" -e "s/<PORT>/$PORT/g" sites-available/dev-template.conf > sites-available/dev-${BRANCH}.conf
-sudo ln -f -s ../sites-available/dev-${BRANCH}.conf sites-enabled/dev-${BRANCH}.conf
-sudo service nginx reload
+sed -e "s/<BRANCH_NAME>/$BRANCH/g" -e "s/<PORT>/$PORT/g" sites-available/dev-template.conf > sites-available/dev-${BRANCH}.conf
+ln -f -s ../sites-available/dev-${BRANCH}.conf sites-enabled/dev-${BRANCH}.conf
+service nginx reload
 
 
 
