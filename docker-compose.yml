@@ -1,0 +1,46 @@
+services:
+  app: 
+    build: .
+    command: "python manage.py runserver 0.0.0.0:8000 > staging_logs.out"
+    volumes:
+      - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
+      - "./STAGING_DIR:/STAGING_DIR"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./staging_logs.out:/STAGING_APP/staging_logs.out"
+      - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
+      - "/etc/nginx/sites-available:/etc/nginx/sites-available"
+    environment:
+      - DEBUG=True
+    depends_on:
+      - redis
+    # ports:
+      # - '8000:8000'
+  redis:
+    image: redis:alpine
+  celery:
+    build: .
+    command: "celery -A stagingserver worker -l debug > celery_logs.out"
+    volumes:
+      - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
+      - "./STAGING_DIR:/STAGING_DIR"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./celery_logs.out:/STAGING_APP/celery_logs.out"
+      - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
+      - "/etc/nginx/sites-available:/etc/nginx/sites-available"
+    depends_on:
+      - app
+      - redis
+  nginx:
+    image: nginx
+    volumes:
+      - './dev.conf:/etc/nginx/conf.d/nginx.conf:ro'
+      - './assets:/var/www/public/:ro'
+    depends_on:
+      - app
+    ports:
+      - '8000:8000'
+  socat:
+    image: alpine/socat
+    command: "TCP-LISTEN:2375,reuseaddr,fork UNIX-CONNECT:/var/run/docker.sock"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"

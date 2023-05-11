@@ -12,7 +12,6 @@ from django.shortcuts import render
 from django.template import loader
 from dotenv import load_dotenv
 from django.http import HttpResponseRedirect
-import chardet
 import docker
 import threading
 from channels.generic.websocket import WebsocketConsumer
@@ -22,7 +21,7 @@ from main.services import clean_logs
 load_dotenv()
 PREFIX = os.getenv("PREFIX", "staging")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
-DOCKER_SOCKET_HOST = os.getenv("DOCKER_SOCKET_HOST","127.0.0.1")
+DOCKER_SOCKET_HOST = os.getenv("DOCKER_SOCKET_HOST","socat")
 DOCKER_SOCKET_PORT = os.getenv("DOCKER_SOCKET_PORT","2375")
 
 response_header = loader.get_template("response_header.html")
@@ -115,7 +114,7 @@ class LogsConsumer(WebsocketConsumer):
         except:  # pylint: disable=bare-except
             pass
         return False
-
+    
     def connect(self):
         self.accept()
         pk= self.scope['url_route']['kwargs']['pk']
@@ -159,6 +158,7 @@ class ConsoleConsumer(WebsocketConsumer):
         self.socket = None
         self.container_name= None
         self.conn = None
+
     def connect(self):
         try:
             instance = RunningInstance.objects.get(

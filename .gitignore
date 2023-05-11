@@ -30,3 +30,6 @@ local_tests.py
 #logs from deployment
 
 *.out
+
+# Staging
+STAGING_DIR

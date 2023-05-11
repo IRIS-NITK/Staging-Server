@@ -38,7 +38,7 @@ IRIS NITK
     // Attach the socket to term
     const container = document.getElementById('terminal-container');
     term.open(container);
-    const socket = new WebSocket('ws://' + window.location.host +'/console/{{ instance.pk }}/');
+    const socket = new WebSocket('ws://' + window.location.host +'/ws/console/{{ instance.pk }}/');
 
     const attachAddon = new AttachAddon.AttachAddon(socket);
     const fitAddon = new FitAddon.FitAddon();
