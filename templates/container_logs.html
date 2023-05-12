@@ -22,7 +22,9 @@ IRIS NITK
 </div>
 <script>
 const logsDiv = document.getElementById('logs');
-const socket = new WebSocket('ws://' + window.location.host +
+
+let protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+const socket = new WebSocket(protocol + '://' + window.location.host +
         '/ws/logs/{{ instance.pk }}/');
 socket.onmessage = (event) => {
     logsDiv.innerHTML += '</br>' + event.data;
