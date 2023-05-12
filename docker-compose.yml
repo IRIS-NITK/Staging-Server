@@ -22,7 +22,7 @@ services:
     image: redis:alpine
   celery:
     build: .
-    command: "celery -A stagingserver worker -l debug >> celery_logs.out"
+    command: "celery -A stagingserver worker -l info"
     volumes:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
@@ -40,6 +40,9 @@ services:
       - './assets:/var/www/public/:ro'
     ports:
       - '127.0.0.1:8000:8000'
+    depends_on:
+      - gunicorn
+      - daphne
   socat:
     image: alpine/socat
     command: "TCP-LISTEN:2375,reuseaddr,fork UNIX-CONNECT:/var/run/docker.sock"
