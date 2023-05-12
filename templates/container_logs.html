@@ -25,7 +25,7 @@ const logsDiv = document.getElementById('logs');
 
 let protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 const socket = new WebSocket(protocol + '://' + window.location.host +
-        '/ws/logs/{{ instance.pk }}/');
+        '/websocket/logs/{{ instance.pk }}/');
 socket.onmessage = (event) => {
     logsDiv.innerHTML += '</br>' + event.data;
     };
