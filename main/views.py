@@ -5,7 +5,7 @@ import os
 import socket
 import json
 import http.client
-
+import re
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
@@ -103,32 +103,22 @@ class LogsConsumer(WebsocketConsumer):
         self.container_name = None
         self.kill_send = False
         self.stream = None
-
-    def fetch_container_name(self, pk):
-        """
-        fetches container Name
-        """
-        try:
-            instance = RunningInstance.objects.get(pk=pk)
-            return instance.app_container_name
-        except:  # pylint: disable=bare-except
-            pass
-        return False
+        self.thread = None
     
     def connect(self):
         self.accept()
-        pk= self.scope['url_route']['kwargs']['pk']
-        self.container_name =  self.fetch_container_name(pk)
-        if not self.container_name:
-            self.send("There's been a error")
-            self.close()
-            return
+        try:
+            instance = RunningInstance.objects.get(
+                pk=self.scope['url_route']['kwargs']['pk'])
+            self.container_name = instance.app_container_name
+        except:  # pylint: disable=bare-except
+            self.send("Could not find the Instance.")
+            return self.disconnect(self)
         try:
             self.stream = self.client.logs(self.container_name, stream=True, follow=True)
-        except:  # pylint: disable=bare-except
-            self.send("Error connecting to container. It may not have been created yet.")
-            self.close()
-            return
+        except  Exception as error:  # pylint: disable=bare-except
+            self.send(f'An Error occurred:{type(error).__name__} – {redact_url(str(error))}')
+            return self.disconnect(self)
         self.thread = threading.Thread(target=self.send_logs)
         self.thread.start()
 
@@ -140,9 +130,15 @@ class LogsConsumer(WebsocketConsumer):
 
     def disconnect(self, code):
         self.kill_send = True
-        self.close()
         return super().disconnect(code)
 
+
+def redact_url(text: str) -> str:
+    """
+    for redacting any URL from being printed to the user while displaying errors.
+    """
+    url_pattern = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
+    return url_pattern.sub("[REDACTED URL]", text)
 
 class ConsoleConsumer(WebsocketConsumer):
     """
@@ -158,14 +154,18 @@ class ConsoleConsumer(WebsocketConsumer):
         self.socket = None
         self.container_name= None
         self.conn = None
+        self.stop_thread= False
+        self.thread = None
 
     def connect(self):
+        self.accept()
         try:
             instance = RunningInstance.objects.get(
                 pk=self.scope['url_route']['kwargs']['pk'])
+            self.container_name = instance.app_container_name
         except:  # pylint: disable=bare-except
-            self.close()
-        self.container_name = instance.app_container_name
+            self.send("Could not find the Instance.")
+            return self.disconnect(self)
         cmd = '/bin/bash'
         try:
             self.exec_id = self.client.exec_create(self.container_name, cmd, stdout=True, stderr=True, stdin=True, tty=True)
@@ -181,18 +181,14 @@ class ConsoleConsumer(WebsocketConsumer):
             }
             http_conn.request('POST', f'/exec/{self.exec_id["Id"]}/start', body=params, headers=headers)
             _ = http_conn.getresponse()
-        except:  # pylint: disable=bare-except
-            self.accept()
-            self.send("Error connecting to container")
-            self.send(Exception)
-            self.close()
-        self.accept()
+        except  Exception as error:  # pylint: disable=bare-except
+            self.send(f'An Error occurred:{type(error).__name__} := {redact_url(str(error))}')
+            return self.disconnect(self)
         # Start a new thread to receive data from the container's socket
-        self.stop_thread=False
-        self.t = threading.Thread(target=self.receive_data_from_socket)
-        self.send("-------IRIS Staging Server\n")
-        self.send(f"Successfully Connected to {instance.app_container_name} container\n")
-        self.t.start()
+        self.thread = threading.Thread(target=self.receive_data_from_socket)
+        self.send("\x1b[1;36m" + "-------IRIS Staging Server-------\n" + "\x1b[0m")
+        self.send("\x1b[1;32m" + f"Successfully Connected to {instance.app_container_name} container\n" + "\x1b[0m")
+        self.thread.start()
 
     def receive(self, text_data, *_):
         """
@@ -200,12 +196,13 @@ class ConsoleConsumer(WebsocketConsumer):
         """
         self.socket.sendall(text_data.encode('ISO-8859-1'))
 
-    def disconnect(self, *_):
+    def disconnect(self, code):
         """
         overriding disconnect of websocket to close thread and docker exec socket.
         """
         self.stop_thread=True
         self.socket.close()
+        return super().disconnect(code)
 
     def receive_data_from_socket(self):
         """
