@@ -39,7 +39,7 @@ IRIS NITK
     const container = document.getElementById('terminal-container');
     term.open(container);
     let protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const socket = new WebSocket( protocol + "://" + window.location.host +'/ws/console/{{ instance.pk }}/');
+    const socket = new WebSocket( protocol + "://" + window.location.host +'/websocket/console/{{ instance.pk }}/');
 
     const attachAddon = new AttachAddon.AttachAddon(socket);
     const fitAddon = new FitAddon.FitAddon();
