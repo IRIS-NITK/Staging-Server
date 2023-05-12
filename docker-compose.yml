@@ -1,7 +1,7 @@
 services:
-  app: 
+  gunicorn: &app_c
     build: .
-    command: "python manage.py runserver 0.0.0.0:8000 > staging_logs.out"
+    command: "gunicorn --bind 0.0.0.0:8000 --workers 3 stagingserver.wsgi:application"
     volumes:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
@@ -10,16 +10,19 @@ services:
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
     environment:
-      - DEBUG=False
+      - DEBUG=0
     depends_on:
       - redis
     # ports:
       # - '8000:8000'
+  daphne:
+    <<: *app_c
+    command: "daphne stagingserver.asgi:application --bind 0.0.0.0 --port 8001"
   redis:
     image: redis:alpine
   celery:
     build: .
-    command: "celery -A stagingserver worker -l debug > celery_logs.out"
+    command: "celery -A stagingserver worker -l debug >> celery_logs.out"
     volumes:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
@@ -28,15 +31,13 @@ services:
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
     depends_on:
-      - app
+      - gunicorn
       - redis
   nginx:
     image: nginx
     volumes:
-      - './dev.conf:/etc/nginx/conf.d/nginx.conf:ro'
+      - './docker/dev.conf:/etc/nginx/conf.d/default.conf:ro'
       - './assets:/var/www/public/:ro'
-    depends_on:
-      - app
     ports:
       - '8000:8000'
   socat:
