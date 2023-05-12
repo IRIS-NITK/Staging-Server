@@ -39,7 +39,7 @@ services:
       - './docker/dev.conf:/etc/nginx/conf.d/default.conf:ro'
       - './assets:/var/www/public/:ro'
     ports:
-      - '8000:8000'
+      - '127.0.0.1:8000:8000'
   socat:
     image: alpine/socat
     command: "TCP-LISTEN:2375,reuseaddr,fork UNIX-CONNECT:/var/run/docker.sock"
