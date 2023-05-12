@@ -10,7 +10,7 @@ services:
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
     environment:
-      - DEBUG=True
+      - DEBUG=False
     depends_on:
       - redis
     # ports:
