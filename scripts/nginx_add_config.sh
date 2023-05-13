@@ -16,7 +16,6 @@ PORT=$4
 
 sed -e "s/<ORG_NAME>/$ORG/g" -e "s/<REPO_NAME>/$REPO/g" -e "s/<BRANCH_NAME>/$BRANCH/g" -e "s/<PORT>/$PORT/g" sites-available/dev-gen-template.conf > sites-available/dev-gen-${ORG}-${REPO}-${BRANCH}.conf
 ln -f -s ../sites-available/dev-gen-${ORG}-${REPO}-${BRANCH}.conf sites-enabled/dev-gen-${ORG}-${REPO}-${BRANCH}.conf
-service nginx reload
 
 
 
