@@ -29,7 +29,8 @@ DEBUG = 1
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_ALLOWED_HOSTS').split(',')
-
+REDIS_HOST=os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_PORT=os.getenv("REDIS_PORT", "6379")
 # Application definition
 
 INSTALLED_APPS = [
@@ -63,7 +64,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(os.getenv("REDIS_HOST", "127.0.0.1"), 6379)],
+            "hosts": [(REDIS_HOST, int(REDIS_PORT))],
         },
     },
 }
@@ -206,8 +207,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 #Celery conf
 
 
-CELERY_BROKER_URL = f'redis://{os.getenv("REDIS_HOST", "127.0.0.1")}:6379'
-result_backend = f'redis://{os.getenv("REDIS_HOST", "127.0.0.1")}:6379'
+CELERY_BROKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}'
+result_backend = f'redis://{REDIS_HOST}:{REDIS_PORT}'
 accept_content = ['application/json']
 result_serializer = 'json'
 task_serializer = 'json'
