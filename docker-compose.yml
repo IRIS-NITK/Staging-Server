@@ -1,7 +1,7 @@
 services:
   gunicorn: &app_c
     build: .
-    command: "gunicorn --bind 0.0.0.0:8000 --workers 3 stagingserver.asgi:application -k uvicorn.workers.UvicornWorker"
+    command: "gunicorn --bind 0.0.0.0:8000 --workers 3 stagingserver.wsgi:application"
     volumes:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
@@ -13,6 +13,11 @@ services:
       - DEBUG=0
     depends_on:
       - redis
+    # ports:
+      # - '8000:8000'
+  daphne:
+    <<: *app_c
+    command: "daphne stagingserver.asgi:application --bind 0.0.0.0 --port 8001"
   redis:
     image: redis:alpine
   celery:
@@ -37,6 +42,7 @@ services:
       - '127.0.0.1:8000:8000'
     depends_on:
       - gunicorn
+      - daphne
   socat:
     image: alpine/socat
     command: "TCP-LISTEN:2375,reuseaddr,fork UNIX-CONNECT:/var/run/docker.sock"
