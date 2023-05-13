@@ -201,7 +201,10 @@ class ConsoleConsumer(WebsocketConsumer):
         overriding disconnect of websocket to close thread and docker exec socket.
         """
         self.stop_thread=True
-        self.socket.close()
+        try:
+            self.socket.close()
+        except:  # pylint: disable=bare-except
+            pass
         return super().disconnect(code)
 
     def receive_data_from_socket(self):
