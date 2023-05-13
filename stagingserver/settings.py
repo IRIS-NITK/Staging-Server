@@ -63,7 +63,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("redis", 6379)],
+            "hosts": [(os.getenv("REDIS_HOST", "127.0.0.1"), 6379)],
         },
     },
 }
@@ -206,8 +206,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 #Celery conf
 
 
-CELERY_BROKER_URL = 'redis://redis:6379'
-result_backend = 'redis://redis:6379'
+CELERY_BROKER_URL = f'redis://{os.getenv("REDIS_HOST", "127.0.0.1")}:6379'
+result_backend = f'redis://{os.getenv("REDIS_HOST", "127.0.0.1")}:6379'
 accept_content = ['application/json']
 result_serializer = 'json'
 task_serializer = 'json'
