@@ -1,7 +1,7 @@
 services:
   gunicorn: &app_c
     build: .
-    command: "gunicorn --bind 127.0.0.1:7000 --workers 3 stagingserver.wsgi:application"
+    command: "/bin/bash -c 'chmod +x ./deploy/gunicorn.sh && ./deploy/gunicorn.sh'"
     volumes:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
@@ -16,9 +16,12 @@ services:
   daphne:
     <<: *app_c
     command: "daphne stagingserver.asgi:application --bind 127.0.0.1 --port 7001"
+    depends_on:
+      - gunicorn
   redis:
     image: redis:alpine
-    network_mode: host
+    ports:
+      - "127.0.0.1:6380:6379"
   celery:
     <<: *app_c
     command: "celery -A stagingserver worker -l info"
