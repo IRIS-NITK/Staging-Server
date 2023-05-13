@@ -1,0 +1,13 @@
+[Unit]
+Description=Nginx Watcher Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/systems/staging-server/deploy/nginx_watcher.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+#// Save the file as /etc/systemd/system/nginx_watcher.service.
