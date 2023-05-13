@@ -21,7 +21,7 @@ from main.services import clean_logs
 load_dotenv()
 PREFIX = os.getenv("PREFIX", "staging")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
-DOCKER_SOCKET_HOST = os.getenv("DOCKER_SOCKET_HOST","socat")
+DOCKER_SOCKET_HOST = os.getenv("DOCKER_SOCKET_HOST","127.0.0.1")
 DOCKER_SOCKET_PORT = os.getenv("DOCKER_SOCKET_PORT","2375")
 
 response_header = loader.get_template("response_header.html")
