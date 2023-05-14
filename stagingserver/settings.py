@@ -69,6 +69,11 @@ CHANNEL_LAYERS = {
     },
 }
 
+CHANNELS_API = {
+    'DEFAULT_PERMISSION_CLASSES': ('channels_api.permissions.IsAuthenticated',)
+
+}
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
