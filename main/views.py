@@ -106,6 +106,10 @@ class LogsConsumer(WebsocketConsumer):
         self.thread = None
     
     def connect(self):
+        self.user = self.scope['user']
+        if not self.user.is_authenticated:
+            self.close()
+            return
         self.accept()
         try:
             instance = RunningInstance.objects.get(
@@ -158,6 +162,10 @@ class ConsoleConsumer(WebsocketConsumer):
         self.thread = None
 
     def connect(self):
+        self.user = self.scope['user']
+        if not self.user.is_authenticated:
+            self.close()
+            return
         self.accept()
         try:
             instance = RunningInstance.objects.get(
