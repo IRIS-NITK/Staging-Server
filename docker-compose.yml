@@ -8,6 +8,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
+      - "./:/STAGING_APP:rw"
     environment:
       - DEBUG=0
     depends_on:
