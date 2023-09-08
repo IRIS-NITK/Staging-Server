@@ -33,3 +33,6 @@ local_tests.py
 
 # Staging
 STAGING_DIR
+
+# virtual environment file
+iris_staging_console
