@@ -8,12 +8,12 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
-      - "./:/STAGING_APP:rw"
     environment:
       - DEBUG=0
     depends_on:
       - redis
     network_mode: host
+    restart: always
   daphne:
     <<: *app_c
     command: "daphne stagingserver.asgi:application --bind 127.0.0.1 --port 7001"
@@ -21,6 +21,7 @@ services:
       - gunicorn
   redis:
     image: redis:alpine
+    restart: always
     ports:
       - "127.0.0.1:6380:6379"
   celery:
@@ -35,3 +36,4 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
     ports:
       - "127.0.0.1:2375:2375"
+    restart: always
