@@ -205,7 +205,7 @@ def start_container(image_name,
     # for ext_port, int_port in zip(external_port, internal_port):
     #     command.extend(["-p", f"{ext_port}:{int_port}"])
 
-    command.extend(["-p", f"{external_port}:{internal_port}"])
+    command.extend(["-p", f"127.0.0.1:{external_port}:{internal_port}"])
     if volumes:
         for src, dest in volumes.items():
             command.extend(["-v", f"{src}:{dest}"])
