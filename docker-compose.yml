@@ -4,31 +4,56 @@ services:
     command: "/bin/bash -c 'chmod +x ./deploy/gunicorn.sh && ./deploy/gunicorn.sh'"
     volumes:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
-      - "./STAGING_DIR:/STAGING_DIR"
+      # - "./STAGING_DIR:/STAGING_DIR"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
+      - "./:/STAGING_APP:rw"      # for easy development, remove during prod
+      - configs:/STAGING_APP/configs
     environment:
       - DEBUG=0
     depends_on:
       - redis
-    network_mode: host
-    restart: always
+    ports:
+      - "127.0.0.1:7000:7000"
+    networks:
+      - IRIS
+    # network_mode: host
   daphne:
     <<: *app_c
-    command: "daphne stagingserver.asgi:application --bind 127.0.0.1 --port 7001"
+    command: "daphne stagingserver.asgi:application --port 7001"
     depends_on:
       - gunicorn
-  redis:
-    image: redis:alpine
-    restart: always
     ports:
-      - "127.0.0.1:6380:6379"
+      - "127.0.0.1:7001:7001"
+    networks:
+      - IRIS
+      - socat-network
+  redis:
+    container_name: redis-stagingserver
+    image: redis:alpine
+    networks:
+      - IRIS
+    # ports:
+    #   - "127.0.0.1:6380:6379"
+    # expose:
+    #   - 6379
   celery:
-    <<: *app_c
+    build: .
     command: "celery -A stagingserver worker -l info"
+    volumes:
+      - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
+      # - "./STAGING_DIR:/STAGING_DIR"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
+      - "/etc/nginx/sites-available:/etc/nginx/sites-available"
+      - "./:/STAGING_APP:rw"
+    environment:
+      - DEBUG=1
     depends_on:
       - redis
+    networks:
+      - IRIS
   socat:
     image: alpine/socat
     command: "TCP-LISTEN:2375,reuseaddr,fork UNIX-CONNECT:/var/run/docker.sock"
@@ -36,4 +61,25 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
     ports:
       - "127.0.0.1:2375:2375"
-    restart: always
+    expose:
+      - 2375
+    networks:
+      - socat-network
+  nginx:
+    image: nginx:1.25.2-alpine
+    depends_on:
+      - daphne
+      - celery
+    ports:
+      - "127.0.0.1:9000:80"
+    volumes:
+      - configs:/etc/nginx/sites-enabled
+    networks:
+      - IRIS
+
+networks:
+  IRIS:
+  socat-network:
+
+volumes:
+  configs:
