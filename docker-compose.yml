@@ -4,7 +4,7 @@ services:
     command: "/bin/bash -c 'chmod +x ./deploy/gunicorn.sh && ./deploy/gunicorn.sh'"
     volumes:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
-      # - "./STAGING_DIR:/STAGING_DIR"
+      - "./STAGING_DIR:/STAGING_DIR"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
@@ -18,7 +18,6 @@ services:
       - "127.0.0.1:7000:7000"
     networks:
       - IRIS
-    # network_mode: host
   daphne:
     <<: *app_c
     command: "daphne stagingserver.asgi:application --port 7001"
@@ -34,16 +33,12 @@ services:
     image: redis:alpine
     networks:
       - IRIS
-    # ports:
-    #   - "127.0.0.1:6380:6379"
-    # expose:
-    #   - 6379
   celery:
     build: .
     command: "celery -A stagingserver worker -l info"
     volumes:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
-      # - "./STAGING_DIR:/STAGING_DIR"
+      - "./STAGING_DIR:/STAGING_DIR"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
@@ -66,6 +61,7 @@ services:
     networks:
       - socat-network
   nginx:
+    container_name: nginx-stagingserver
     image: nginx:1.25.2-alpine
     depends_on:
       - daphne
@@ -73,13 +69,15 @@ services:
     ports:
       - "127.0.0.1:9000:80"
     volumes:
-      - configs:/etc/nginx/sites-enabled
+      - configs:/etc/nginx/conf.d
     networks:
       - IRIS
 
 networks:
   IRIS:
+    name: IRIS
   socat-network:
+    name: socat-network
 
 volumes:
   configs:
