@@ -1,0 +1,38 @@
+.no-horiz-padding {
+  padding-left: 0px;
+  padding-right: 0px;
+}
+
+
+.log {
+  white-space: pre-wrap;
+  font-size: 0.85em;
+  background: inherit;
+  border: 0;
+  background-color: #2f3238;
+  color: #7f8289;
+  padding: 0;
+}
+
+.log .inner-line {
+  padding: 0 15px;
+  margin-left: 84pt;
+  text-indent: -84pt;
+  margin-bottom: 0;
+}
+
+.log .inner-line:empty::after {
+  content: '.';
+  visibility: hidden;
+  content: '.';
+  visibility: hidden;
+}
+
+.log.no-indent .inner-line {
+  margin-left: 0;
+  text-indent: 0;
+}
+
+.log .line-selected {
+  background-color: #302436;
+}

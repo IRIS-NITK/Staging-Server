@@ -134,6 +134,9 @@ class LogsConsumer(WebsocketConsumer):
         self.thread = threading.Thread(target=self.send_logs)
         self.thread.start()
 
+    def receive(self, text_data=None, bytes_data=None):
+        return
+    
     def send_logs(self):
         for data in self.stream:
             if self.kill_send:
