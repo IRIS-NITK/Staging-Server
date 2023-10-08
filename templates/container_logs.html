@@ -5,36 +5,49 @@ IRIS NITK
 {% endblock %} 
 
 {% block content %}
+<link rel="stylesheet" type="text/css" href="/static/frontail/styles/default.css"> 
 <div class="card">
-<div class="card-header">
-    <h3>Container Logs</h3>
-  </div>
-  <div class="card-body">
-    <p><strong>Organization:</strong> {{ instance.organisation }}</p>
-    <p><strong>Repo Name:</strong> {{ instance.repo_name }}</p>
-    <p><strong>Branch:</strong> {{ instance.branch }}</p>
-  </div>
-</div>
-<div class="card">
-    <div class="card-body">
-      <div id="logs" class="border" style="border: 1px solid black; width: 100%; min-height: 1000px;"></div>
+    <div class="card-header">
+      <h3>Container Logs</h3>
     </div>
-</div>
-<script>
-const logsDiv = document.getElementById('logs');
+    <div class="card-body d-flex">
+      <div class="flex-grow-1">
+        <p><strong>Organization:</strong> {{ instance.organisation }}</p>
+        <p><strong>Repo Name:</strong> {{ instance.repo_name }}</p>
+        <p><strong>Branch:</strong> {{ instance.branch }}</p>
+      </div>
+      <div class="flex-grow-1 card-body">
+        <div class="mb-3">
+            <label for="filter" class="form-label">Filter by Keyword:</label>
+            <input type="search" class="form-control query w-50" id="filter" placeholder="Filter text">
+          </div>
+      </div>
+    </div>
+  </div>
+    <div class="card">
+        <div class="card-body no-horiz-padding">
+          <div id="log" class="log bg-dark border" style="border: 0.3px solid black; width: 100%;"></div>
+        </div>
+    </div>
 
-let protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-const socket = new WebSocket(protocol + '://' + window.location.host +
-        '/websocket/logs/{{ instance.pk }}/');
-socket.onmessage = (event) => {
-    logsDiv.innerHTML += '</br>' + event.data;
-    };
-socket.onclose = (event) => {
-    logsDiv.innerHTML += '</br> Disconnected from the Server .';
-    };
-socket.addEventListener('open', (event) => {
-        logsDiv.innerHTML += "Connected to the Container, Fetching logs...";
-    });
-</script>
+    <!-- <script src="/static/frontail/socket.io/client-dist/socket.io.js"></script> -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/static/frontail/tinycon.min.js"></script>
+    <script src="/static/frontail/ansi_up.js"></script>
+    <script src="/static/frontail/app.js"></script>
+    <script type="text/javascript">
+        let protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        let socket = new WebSocket(protocol + '://' + window.location.host +
+            '/websocket/logs/{{ instance.pk }}/?EIO=4&transport=websocket');
+        window.load = App.init({
+            socket: socket,
+            container: document.getElementById('log'),
+            filterInput: document.getElementsByClassName('query')[0],
+            // pauseBtn: document.getElementsByClassName('btn-pause')[0],
+            topbar: document.getElementsByClassName('topbar')[0],
+            body: document.getElementsByTagName('body')[0]
+        });
+    </script>
+
 
 {% endblock %}
