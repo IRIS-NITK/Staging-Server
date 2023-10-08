@@ -8,21 +8,22 @@ IRIS NITK
 
 <link rel="stylesheet" href="/static/xterm/xterm.css" />
 
-  <div class="card mb-2">
-    <div class="card-header">
-      <h3>Container Console</h3>
-    </div>
-    <div class="card-body">
-      <p><strong>Organization:</strong> {{ instance.organisation }}</p>
-      <p><strong>Repo Name:</strong> {{ instance.repo_name }}</p>
-      <p><strong>Branch:</strong> {{ instance.branch }}</p>
-    </div>
+<div class="card mb-2">
+  <div class="card-header">
+    <h3>Container Console</h3>
   </div>
-  <div class="card">
-    <div class="card-header">
-      <div id="terminal-container"></div>
-    </div>
+  <div class="card-body">
+    <p><strong>Organization:</strong> {{ instance.organisation }}</p>
+    <p><strong>Repo Name:</strong> {{ instance.repo_name }}</p>
+    <p><strong>Branch:</strong> {{ instance.branch }}</p>
   </div>
+  <button id="resize-btn" class="btn btn-warning" style="position: absolute; bottom: 10px; right: 10px;">Fix Console Size</button>
+</div>
+<div class="card">
+  <div class="card-header">
+    <div id="terminal-container"></div>
+  </div>
+</div>
 
 
   <script src="/static/xterm/xterm.js"></script>
@@ -57,12 +58,13 @@ IRIS NITK
         console.log('Connection closed.');
     };
     //terminal handling
-    term.focus()
-    window.onresize = resize
-    window.onload = resize
-    // function resize(){
-    //     fitAddon.fit();
-    //     socket.send('{"cols": term.cols, "rows": term.rows}')
-    // }
+    term.focus()    
+    function resize(){
+        fitAddon.fit();
+        socket.send("CONSOLE_RESIZE:" + JSON.stringify({cols: term.cols, rows: term.rows}))
+    }
+    window.addEventListener('resize', resize);
+    window.addEventListener('load', resize);
+    document.getElementById('resize-btn').addEventListener('click', resize);
 </script>
 {% endblock %}

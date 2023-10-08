@@ -18,6 +18,14 @@ from channels.generic.websocket import WebsocketConsumer
 from main.models import RunningInstance
 from main.services import clean_logs
 
+
+# import the logging library
+import logging
+
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
+
+
 load_dotenv()
 PREFIX = os.getenv("PREFIX", "staging")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
@@ -160,7 +168,8 @@ class ConsoleConsumer(WebsocketConsumer):
         self.conn = None
         self.stop_thread= False
         self.thread = None
-
+        self.RESIZE_PREFIX = "CONSOLE_RESIZE:"
+        self.RESIZE_PREFIX_LEN = len(self.RESIZE_PREFIX)
     def connect(self):
         self.user = self.scope['user']
         if not self.user.is_authenticated:
@@ -180,7 +189,10 @@ class ConsoleConsumer(WebsocketConsumer):
             self.socket = socket.create_connection((self.host, self.port))
             http_conn = http.client.HTTPConnection(self.host, self.port)
             http_conn.sock = self.socket
-            params = json.dumps({'Detach': False, 'Tty': True})
+            params = json.dumps({
+                'Detach': False,
+                'Tty': True
+                })
             headers = {
                 'User-Agent': 'Docker-Client',
                 'Content-Type': 'application/json',
@@ -202,7 +214,17 @@ class ConsoleConsumer(WebsocketConsumer):
         """
         Handle incoming data from the WebSocket.
         """
-        self.socket.sendall(text_data.encode('ISO-8859-1'))
+        # check for message starting with text CONSOLE_RESIZE:
+        if(len(text_data)>self.RESIZE_PREFIX_LEN and text_data[:self.RESIZE_PREFIX_LEN]==self.RESIZE_PREFIX):
+            try:
+                # parse the message to get the new size of the console
+                size = json.loads(text_data[self.RESIZE_PREFIX_LEN:])
+                # resize the console
+                self.client.exec_resize(self.exec_id["Id"], height=size["rows"], width=size["cols"])
+            except Exception as error:  # pylint: disable=bare-except
+                logger.error(f"Error resizing console: {type(error).__name__} := {redact_url(str(error))}")
+        else:
+            self.socket.sendall(text_data.encode('utf-8'))
 
     def disconnect(self, code):
         """
