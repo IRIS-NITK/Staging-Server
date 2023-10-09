@@ -273,12 +273,18 @@ window.App = (function app(window, document) {
       // socket.io init
       _socket = opts.socket;
       _socket.addEventListener("message", (event) => {
-        let line=event.data;
+        let data=event.data;
+        let lines = data.split("\n")
+        if (lines[lines.length - 1] === "") {
+          lines.pop();
+        }
         if (_isPaused) {
           _skipCounter += 1;
           self.log('==> SKIPPED: ' + _skipCounter + ' <==', (_skipCounter > 1));
         } else {
-          self.log(line);
+          for (let line of lines) {
+            self.log(line);
+          }
         }
       });
       // _socket
