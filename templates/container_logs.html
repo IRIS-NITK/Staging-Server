@@ -38,7 +38,7 @@ IRIS NITK
     <script type="text/javascript">
         let protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         let socket = new WebSocket(protocol + '://' + window.location.host +
-            '/websocket/logs/{{ instance.pk }}/?EIO=4&transport=websocket');
+            '/websocket/logs/{{ instance.pk }}/');
         window.load = App.init({
             socket: socket,
             container: document.getElementById('log'),
