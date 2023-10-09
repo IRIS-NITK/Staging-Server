@@ -17,7 +17,7 @@ import threading
 from channels.generic.websocket import WebsocketConsumer
 from main.models import RunningInstance
 from main.services import clean_logs
-
+import time
 
 # import the logging library
 import logging
@@ -126,18 +126,21 @@ class LogsConsumer(WebsocketConsumer):
         except:  # pylint: disable=bare-except
             self.send("Could not find the Instance.")
             return self.disconnect(self)
-        try:
-            self.stream = self.client.logs(self.container_name, stream=True, follow=True)
-        except  Exception as error:  # pylint: disable=bare-except
-            self.send(f'An Error occurred:{type(error).__name__} – {redact_url(str(error))}')
-            return self.disconnect(self)
         self.thread = threading.Thread(target=self.send_logs)
         self.thread.start()
 
-    def receive(self, text_data=None, bytes_data=None):
+    def receive(self):
         return
     
     def send_logs(self):
+        try:
+            current_time = int(time.time())
+            initial_logs = self.client.logs(self.container_name, stream=False, follow=False, until=current_time)
+            self.send(initial_logs.decode())
+            self.stream = self.client.logs(self.container_name, stream=True, follow=True, since=current_time)
+        except  Exception as error:  # pylint: disable=bare-except
+            self.send(f'An Error occurred:{type(error).__name__} – {redact_url(str(error))}')
+            return self.disconnect(self)
         for data in self.stream:
             if self.kill_send:
                 break
