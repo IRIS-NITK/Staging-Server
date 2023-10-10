@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-jq**bq4fw)y*z%eshlkg9f0fc(*k2-5i0b41#i^1#2@@1d&wol'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = 0
+DEBUG = os.getenv("DEBUG", False)
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_ALLOWED_HOSTS').split(',')
@@ -81,6 +81,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'stagingserver.middleware.oauth_session_enforcement',
 ]
 
 ROOT_URLCONF = 'stagingserver.urls'
@@ -185,6 +186,9 @@ SOCIALACCOUNT_PROVIDERS = {
             'user',
             'repo',
         ],
+        'AUTH_PARAMS': {
+            'access_type': 'offline',
+        }
     },
     # https://django-allauth.readthedocs.io/en/latest/providers.html#gitlab
     # https://docs.gitlab.com/ee/integration/oauth_provider.html
@@ -235,5 +239,12 @@ LOGGING = {
             ],
             'level': 'INFO'
         },
+        'gunicorn': {
+            'handlers': [
+                'console',
+            ],
+            'level': 'INFO',
+            'propagate': False,
+        }
     },
 }
