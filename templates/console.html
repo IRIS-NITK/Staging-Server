@@ -44,7 +44,11 @@ IRIS NITK
 
     const attachAddon = new AttachAddon.AttachAddon(socket);
     const fitAddon = new FitAddon.FitAddon();
-    const searchAddon = new SearchAddon.SearchAddon();
+    const searchAddon = new SearchAddon.SearchAddon();    
+    function resize(){
+        fitAddon.fit();
+        socket.send("CONSOLE_RESIZE:" + JSON.stringify({cols: term.cols, rows: term.rows}))
+    }
 
     // Socket handling
     socket.onopen = (ev) => { 
@@ -53,16 +57,13 @@ IRIS NITK
       term.loadAddon(searchAddon);
       fitAddon.fit()
       console.log(`size: ${term.cols} columns, ${term.rows} rows`)
+      resize()
      };
     socket.onclose = function(ev){
         console.log('Connection closed.');
     };
     //terminal handling
-    term.focus()    
-    function resize(){
-        fitAddon.fit();
-        socket.send("CONSOLE_RESIZE:" + JSON.stringify({cols: term.cols, rows: term.rows}))
-    }
+    term.focus()
     window.addEventListener('resize', resize);
     window.addEventListener('load', resize);
     document.getElementById('resize-btn').addEventListener('click', resize);
