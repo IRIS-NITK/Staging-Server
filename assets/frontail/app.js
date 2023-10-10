@@ -2,6 +2,11 @@
 
 window.App = (function app(window, document) {
   'use strict';
+  /**
+   * @type {HTMLElement}
+   * @private
+   */
+  var _loading;
 
   /**
    * @type {Object}
@@ -27,6 +32,16 @@ window.App = (function app(window, document) {
    */
   var _filterValue = '';
 
+  /**
+   * @type {String}
+   * @private
+   */
+  var _sourceType = 'socket';
+  /**
+   * @type {String}
+   * @private
+   */
+  var _data = '';
   // /**
   //  * @type {HTMLElement}
   //  * @private
@@ -223,10 +238,11 @@ window.App = (function app(window, document) {
       _logContainer = opts.container;
       _filterInput = opts.filterInput;
       _filterInput.focus();
+      _sourceType = opts.sourceType;
       // _pauseBtn = opts.pauseBtn;
       _topbar = opts.topbar;
       _body = opts.body;
-
+      _loading = opts.loading;
       _setFilterValueFromURL(_filterInput, window.location.toString());
 
       // Filter input bind
@@ -269,11 +285,7 @@ window.App = (function app(window, document) {
         },
         true,
       );
-
-      // socket.io init
-      _socket = opts.socket;
-      _socket.addEventListener("message", (event) => {
-        let data=event.data;
+      let process_data = (data)=>{
         let lines = data.split("\n")
         if (lines[lines.length - 1] === "") {
           lines.pop();
@@ -282,11 +294,25 @@ window.App = (function app(window, document) {
           _skipCounter += 1;
           self.log('==> SKIPPED: ' + _skipCounter + ' <==', (_skipCounter > 1));
         } else {
-          for (let line of lines) {
-            self.log(line);
+          for (let i in lines) {
+            self.log(lines[i]);
+            if(i==0){
+              _loading.style.display = 'none';
+            }
           }
         }
-      });
+      }
+      if(_sourceType==="socket"){
+            // websocket init
+          _socket = opts.socket;
+          _socket.addEventListener("message", (event) => {
+            let data=event.data;
+            process_data(data)
+          });
+      } else if(_sourceType==="data"){
+        _data= opts.data;
+        process_data(_data);
+      }
       // _socket
       //   .on('options:lines', function(limit) {
       //     _linesLimit = limit;

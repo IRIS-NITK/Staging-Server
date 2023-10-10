@@ -191,7 +191,8 @@ def start_container(image_name,
                     internal_port,
                     volumes=None,
                     enviroment_variables=None,
-                    docker_network=DEFAULT_NETWORK):
+                    docker_network=DEFAULT_NETWORK,
+                    restart_always=True):
     """
     Generalised function to start a container for any service
     """
@@ -216,7 +217,8 @@ def start_container(image_name,
         command.extend(["--name", container_name])
     if docker_network:
         command.extend(["--network", docker_network])
-
+    if restart_always:
+        command.extend(["--restart", "always"])
     command.extend([image_name])
     logger = ""
     status, result = exec_commands(commands=[
@@ -239,7 +241,8 @@ def start_db_container(db_image,
                        volume_name,
                        volume_bind_path,
                        db_env_variables,
-                       network_name
+                       network_name,
+                       restart_always=True
                        ):
     """
     starts db container.
@@ -254,9 +257,11 @@ def start_db_container(db_image,
     if db_env_variables:
         for key, value in db_env_variables.items():
             command.extend(["--env", f"{key}={value}"])
+    if restart_always:
+        command.extend(["--restart", "always"])        
     if network_name:
         command.extend(["--network", network_name])
-    command.extend(["--detach", "--rm", db_image])
+    command.extend(["--detach", db_image])
 
     # execute the start db container command
     status, result = exec_commands(commands=[

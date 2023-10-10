@@ -17,6 +17,7 @@ IRIS NITK
         <p><strong>Branch:</strong> {{ instance.branch }}</p>
       </div>
       <div class="flex-grow-1 card-body">
+        <p><span id="loading">Please Wait, Logs are being Processed...</span></p>
         <div class="mb-3">
             <label for="filter" class="form-label">Filter by Keyword:</label>
             <input type="search" class="form-control query w-50" id="filter" placeholder="Filter text">
@@ -38,11 +39,13 @@ IRIS NITK
             '/websocket/logs/{{ instance.pk }}/');
         window.load = App.init({
             socket: socket,
+            sourceType: 'socket',
             container: document.getElementById('log'),
             filterInput: document.getElementsByClassName('query')[0],
             // pauseBtn: document.getElementsByClassName('btn-pause')[0],
             topbar: document.getElementsByClassName('topbar')[0],
-            body: document.getElementsByTagName('body')[0]
+            body: document.getElementsByTagName('body')[0],
+            loading: document.getElementById('loading'),
         });
     </script>
 

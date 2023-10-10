@@ -1,26 +1,53 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} 
+
+{% block title %}
+IRIS NITK
+{% endblock %} 
 
 {% block content %}
-
-<div class="card mb-3">
-    <div class="card-body">
+<link rel="stylesheet" type="text/css" href="/static/frontail/styles/default.css"> 
+<div class="card">
+    <div class="card-header">
+      <h3>Deployment Logs</h3>
+    </div>
+    <div class="card-body d-flex">
+      <div class="flex-grow-1">
         <h5 class="card-title">{{ instance.repo_name }}</h5>
         <h6 class="card-subtitle mb-2 text-muted">{{ instance.branch }}</h6>
         <p class="card-text"><strong>Deployed by:</strong> {{ instance.owner }}</p>
         <p class="card-text"><strong>VCS:</strong> {{ instance.social }}</p>
         <p class="card-text"><strong>Internal Port:</strong> {{ instance.internal_port }}</p>
+      </div>
+      <div class="flex-grow-1 card-body">
+        <p><span id="loading">Please Wait, Logs are being Processed...</span></p>
+        <div class="mb-3">
+            <label for="filter" class="form-label">Filter by Keyword:</label>
+            <input type="search" class="form-control query w-50" id="filter" placeholder="Filter text">
+          </div>
+      </div>
     </div>
-</div>
-
-<div class="card">
-    <div class="card-header">
-        <h5 class="card-title">Logs</h5>
+  </div>
+    <div class="card">
+        <div class="card-body no-horiz-padding">
+          <div id="log" class="log bg-dark border" style="border: 0.3px solid black; width: 100%;"></div>
+        </div>
     </div>
-    <div class="card-body">
-        <pre>{{ data }}</pre>
-    </div>
-</div>
-
+    <script src="/static/frontail/tinycon.min.js"></script>
+    <script src="/static/frontail/ansi_up.js"></script>
+    <script src="/static/frontail/app.js"></script>
+    <script type="text/javascript">
+        
+        window.load = App.init({
+            sourceType: 'data',
+            data:`{{ data|escapejs|safe }}`,
+            container: document.getElementById('log'),
+            filterInput: document.getElementsByClassName('query')[0],
+            // pauseBtn: document.getElementsByClassName('btn-pause')[0],
+            topbar: document.getElementsByClassName('topbar')[0],
+            body: document.getElementsByTagName('body')[0],
+            loading: document.getElementById('loading'),
+        });
+    </script>
 
 
 {% endblock %}
