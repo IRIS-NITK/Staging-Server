@@ -324,8 +324,7 @@ def clean_up(org_name,
                      "Removing the nginx config."
                      )
         status, err = exec_commands(commands=[
-            ["bash", NGINX_REMOVE_CONFIG_SCRIPT, org_name,
-             repo_name, branch_name]
+            ["bash", NGINX_REMOVE_CONFIG_SCRIPT, branch_name]
         ],
             logger=logger,
             err="Error deleting the nginx config",
