@@ -41,6 +41,7 @@ def exec_commands(commands,
     """
     Executes commands given in as an array.
     """
+    print(commands)
     result = ""
     for command in commands:
         res = subprocess.run(

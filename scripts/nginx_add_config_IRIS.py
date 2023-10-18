@@ -3,7 +3,7 @@ import os
 
 branch = sys.argv[1]
 port = sys.argv[2]
-container_name = sys.argv[3] # staging_iris-nitk_iris
+container_name = sys.argv[3]    # will be of format staging_iris-nitk_iris_*
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 template_path  = os.path.join(current_path,'dev-template.conf')

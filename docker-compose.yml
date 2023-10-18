@@ -27,7 +27,6 @@ services:
       - "127.0.0.1:7001:7001"
     networks:
       - IRIS
-      - socat-network
   redis:
     container_name: redis-stagingserver
     image: redis:alpine
@@ -42,7 +41,8 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
-      - "./:/STAGING_APP:rw"
+      - "./:/STAGING_APP:rw"         # for easy development, remove during prod
+      - configs:/STAGING_APP/configs
     environment:
       - DEBUG=1
     depends_on:
@@ -59,10 +59,10 @@ services:
     expose:
       - 2375
     networks:
-      - socat-network
+      - IRIS
   nginx:
     container_name: nginx-stagingserver
-    image: nginx:1.25.2-alpine
+    image: nginx:1.25.2
     depends_on:
       - daphne
       - celery
@@ -76,8 +76,6 @@ services:
 networks:
   IRIS:
     name: IRIS
-  socat-network:
-    name: socat-network
 
 volumes:
   configs:

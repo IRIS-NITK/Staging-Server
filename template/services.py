@@ -14,8 +14,6 @@ load_dotenv()
 
 PREFIX = os.getenv("PREFIX", "iris_staging")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
-NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
-NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 DEFAULT_NETWORK = os.getenv("DEFAULT_NETWORK", "IRIS")
 
 
