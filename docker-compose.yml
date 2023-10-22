@@ -2,6 +2,7 @@ services:
   gunicorn: &app_c
     build: .
     command: "/bin/bash -c 'chmod +x ./deploy/gunicorn.sh && ./deploy/gunicorn.sh'"
+    container_name: gunicorn-stagingserver
     volumes:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
@@ -9,32 +10,41 @@ services:
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
       - "./:/STAGING_APP:rw"      # for easy development, remove during prod
-      - configs:/STAGING_APP/configs
+      - ./configs:/STAGING_APP/configs
     environment:
       - DEBUG=0
     depends_on:
       - redis
-    ports:
-      - "127.0.0.1:7000:7000"
+    expose:
+      - 7000
+    # ports:
+    #   - "127.0.0.1:7000:7000"
     networks:
-      - IRIS
+      - staging-network
+
   daphne:
     <<: *app_c
-    command: "daphne stagingserver.asgi:application --port 7001"
+    command: "daphne stagingserver.asgi:application -b 0.0.0.0 --port 7001"
+    container_name: daphne-stagingserver
     depends_on:
       - gunicorn
-    ports:
-      - "127.0.0.1:7001:7001"
+    expose:
+      - 7001
+    # ports:
+    #   - "127.0.0.1:7001:7001"
     networks:
-      - IRIS
+      - staging-network
+
   redis:
     container_name: redis-stagingserver
     image: redis:alpine
     networks:
-      - IRIS
+      - staging-network
+
   celery:
     build: .
     command: "celery -A stagingserver worker -l info"
+    container_name: celery-stagingserver
     volumes:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
@@ -42,15 +52,17 @@ services:
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
       - "./:/STAGING_APP:rw"         # for easy development, remove during prod
-      - configs:/STAGING_APP/configs
+      - ./configs:/STAGING_APP/configs
     environment:
       - DEBUG=1
     depends_on:
       - redis
     networks:
-      - IRIS
+      - staging-network
+
   socat:
     image: alpine/socat
+    container_name: socat-stagingserver
     command: "TCP-LISTEN:2375,reuseaddr,fork UNIX-CONNECT:/var/run/docker.sock"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
@@ -59,7 +71,8 @@ services:
     expose:
       - 2375
     networks:
-      - IRIS
+      - staging-network
+      
   nginx:
     container_name: nginx-stagingserver
     image: nginx:1.25.2
@@ -69,11 +82,15 @@ services:
     ports:
       - "127.0.0.1:9000:80"
     volumes:
-      - configs:/etc/nginx/conf.d
+      - ./configs:/etc/nginx/conf.d
+      - ./assets:/assets
     networks:
       - IRIS
+      - staging-network
 
 networks:
+  staging-network:
+    name: staging-network
   IRIS:
     name: IRIS
 
