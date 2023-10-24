@@ -134,6 +134,7 @@ def stop(request, pk):
     result, logs = clean_up(
         org_name = instance.organisation,
         repo_name = instance.repo_name,
+        branch=instance.branch,
         remove_container = container_name
     )
 
@@ -228,6 +229,7 @@ def delete_default(request, pk):
     status, err = clean_up(
         org_name=instance.organisation,
         repo_name=instance.repo_name,
+        branch=instance.branch,
         branch_name="DEFAULT_BRANCH",
         remove_branch_dir="DEFAULT_BRANCH",
     )

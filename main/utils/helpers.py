@@ -5,6 +5,22 @@ import os
 import datetime
 import shutil
 import subprocess
+import hashlib
+
+def hash_string_and_time(input_string):
+    """
+    Hashing branch name to shorten domain name
+    """
+    current_time = str(datetime.datetime.now())
+    combined_string = input_string + current_time
+    sha256_hash = hashlib.sha256()
+    sha256_hash.update(combined_string.encode('utf-8'))
+    hex_digest = sha256_hash.hexdigest()
+
+    # Get the first 10 characters of the hash
+    hash_result = hex_digest[:10]
+
+    return hash_result
 
 def pretty_print(logs,
                  text,
@@ -41,7 +57,9 @@ def exec_commands(commands,
     """
     Executes commands given in as an array.
     """
-    print(commands)
+
+    print(commands) # Log the commands being executed
+    
     result = ""
     for command in commands:
         res = subprocess.run(
