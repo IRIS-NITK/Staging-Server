@@ -4,7 +4,7 @@ services:
     command: "/bin/bash -c 'chmod +x ./deploy/gunicorn.sh && ./deploy/gunicorn.sh'"
     container_name: gunicorn-stagingserver
     volumes:
-      - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
+      # - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
@@ -17,8 +17,6 @@ services:
       - redis
     expose:
       - 7000
-    # ports:
-    #   - "127.0.0.1:7000:7000"
     networks:
       - staging-network
 
@@ -30,8 +28,6 @@ services:
       - gunicorn
     expose:
       - 7001
-    # ports:
-    #   - "127.0.0.1:7001:7001"
     networks:
       - staging-network
 
@@ -46,7 +42,7 @@ services:
     command: "celery -A stagingserver worker -l info"
     container_name: celery-stagingserver
     volumes:
-      - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
+      # - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
