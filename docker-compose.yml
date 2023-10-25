@@ -19,6 +19,7 @@ services:
       - 7000
     networks:
       - staging-network
+    restart: always
 
   daphne:
     <<: *app_c
@@ -36,6 +37,7 @@ services:
     image: redis:alpine
     networks:
       - staging-network
+    restart: always
 
   celery:
     build: .
@@ -55,6 +57,7 @@ services:
       - redis
     networks:
       - staging-network
+    restart: always
 
   socat:
     image: alpine/socat
@@ -68,6 +71,7 @@ services:
       - 2375
     networks:
       - staging-network
+    restart: always
       
   nginx:
     container_name: nginx-stagingserver
@@ -83,6 +87,7 @@ services:
     networks:
       - IRIS
       - staging-network
+    restart: always
 
 networks:
   staging-network:
