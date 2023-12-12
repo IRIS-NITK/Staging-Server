@@ -14,6 +14,8 @@ load_dotenv()
 
 PREFIX = os.getenv("PREFIX", "iris_staging")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
+NGINX_ADD_CONFIG_SCRIPT = os.getenv("NGINX_ADD_CONFIG_SCRIPT_PATH")
+NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 DEFAULT_NETWORK = os.getenv("DEFAULT_NETWORK", "IRIS")
 
 
@@ -25,8 +27,7 @@ def deploy(self,
            repo_name,
            vcs,
            branch,
-        #    external_port,
-           hashed_branch,
+           external_port,
            internal_port=80,
            access_token=None,
            docker_app=None,
@@ -44,7 +45,7 @@ def deploy(self,
     # closing existing container if it exists.
     app_container_name = docker_app.get(
         'container_name', 
-        f"{PREFIX}_{repo_name.lower()[0:4]}_{branch.lower()[0:10]}{hashed_branch}")
+        f"{PREFIX}_{org_name.lower()}_{repo_name.lower()}_{branch.lower()}")
     stop_containers(container_name=app_container_name, logger=logger)
     logger.close()
 
@@ -64,23 +65,26 @@ def deploy(self,
 
     logger = initiate_logger(log_file)
 
-    # Building docker image
     docker_image = docker_app.get('image', None)
+    cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch}/{repo_name}/"
     if not docker_image:
         pretty_print(logger, "No Docker image provided")
-        dockerfile_path = docker_app.get('dockerfile_path', None)
-        if not dockerfile_path:
-            dockerfile_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch}/{repo_name}/"
-        pretty_print(logger, f"Building image from {dockerfile_path} ...")
+        pretty_print(logger, f"Building image with {docker_app.get('dockerfile_path', 'Dockerfile')} ...")
 
         # building docker image and tagging it
         docker_image = f"{PREFIX}_{org_name.lower()}_{repo_name.lower()}_{branch.lower()}"
+        exec_dockerfile = []
+        if docker_app.get('dockerfile_path', None):
+            exec_dockerfile = ["-f", f"./{docker_app.get('dockerfile_path', '')}"]
+            print(exec_dockerfile)
+        elif os.path.exists(f"{cwd}/Dockerfile.Staging"):
+                exec_dockerfile = ["-f", f"./Dockerfile.Staging"]
         status, err = exec_commands(commands=[
-            ['docker', 'build', '--tag', docker_image, "."]
+            ['docker', 'build', '--tag', docker_image, *exec_dockerfile, '.']
         ],
             logger=logger,
-            cwd=dockerfile_path,
-            err=f"Error while building docker image from {dockerfile_path}",
+            cwd=cwd, # Not sure rn
+            err=f"Error while building docker image {docker_image}",
             print_stderr=True
         )
         if status:
@@ -92,8 +96,8 @@ def deploy(self,
     else:
         pretty_print(logger, f"Docker image {docker_image} already provided.")
 
-    # Creating docker network for the container
     network_name=docker_app.get('network', DEFAULT_NETWORK)
+
     if network_name:
         pretty_print(logger, f"Checking if the docker network {network_name} exists.")
         inspect_network = run(
@@ -116,7 +120,6 @@ def deploy(self,
                 pretty_print(logger,f"Successfully created docker network {network_name}")
             else:
                 return status, err
-
     # start db container if required
     if docker_db:
         pretty_print(logger, "checking for existing database container")
@@ -160,7 +163,6 @@ def deploy(self,
         )
         if status:
             pretty_print(logger,pre_deploy_scripts.get("msg_success",""))
-
     # start the container
     pretty_print(logger, f"Starting app container -> {app_container_name}")
     pretty_print(logger, f"Base image : {docker_image}")
@@ -171,13 +173,12 @@ def deploy(self,
         repo_name=repo_name,
         branch_name=branch,
         container_name=app_container_name,
-        # external_port=external_port,
+        external_port=external_port,
         internal_port=internal_port,
         volumes=docker_app.get('volumes', None),
         enviroment_variables=docker_app.get('env_variables', None),
         docker_network=network_name
     )
-
     if not result:
         pretty_print(
             logger, f"Error while starting container : {app_container_name}")
