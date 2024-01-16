@@ -22,7 +22,7 @@ NGINX_PYTHON_REMOVE_SCRIPT_IRIS = os.getenv("NGINX_PYTHON_REMOVE_SCRIPT_IRIS")
 DOCKER_IMAGE = os.getenv("BASE_IMAGE")
 DOCKER_DB_IMAGE = os.getenv("DOCKER_DB_IMAGE", "mysql:5.7")
 IRIS_DOCKER_NETWORK = os.getenv("IRIS_DOCKER_NETWORK", "IRIS")
-DOMAIN_PREFIX = os.getenv("DOMAIN_PREFIX", "staging")
+SUBDOMAIN_PREFIX = os.getenv("SUBDOMAIN_PREFIX", "staging")
 DOMAIN = os.getenv("DOMAIN", "iris.nitk.ac.in")
 DEFAULT_NETWORK = os.getenv("DEFAULT_NETWORK", "IRIS")
 
@@ -281,7 +281,7 @@ def start_db_container(db_image,
 def clean_up(org_name,
              repo_name,
              branch,
-             hashed_branch=None,
+             deployment_id=None,
              branch_name=None,
              remove_container=False,
              remove_volume=False,
@@ -331,8 +331,9 @@ def clean_up(org_name,
         #      repo_name, branch_name]
         # ],
         status, err = exec_commands(commands=[
-            ["python3", NGINX_PYTHON_REMOVE_SCRIPT_IRIS, f"{branch.lower()[0:10]}{hashed_branch}"],
-            ["docker", "exec", "nginx-stagingserver", "/bin/sh", "rm", f"etc/nginx/conf.d/dev-{branch.lower()[0:10]}{hashed_branch}.conf"],
+            ["python3", NGINX_PYTHON_REMOVE_SCRIPT_IRIS, 
+             str(deployment_id)],
+            ["docker", "exec", "nginx-stagingserver", "/bin/sh", "rm", f"etc/nginx/conf.d/dev-{deployment_id}.conf"],
             ["docker", "exec", "nginx-stagingserver", "nginx", "-s", "reload"]
         ],
             logger=logger,

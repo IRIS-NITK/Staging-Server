@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from main.services import pull_git_changes, start_container
 from main.services import start_db_container, stop_containers
-from main.utils.helpers import pretty_print, initiate_logger, exec_commands
+from main.utils.helpers import pretty_print, initiate_logger, exec_commands, get_app_container_name, get_db_container_name
 
 load_dotenv()
 
@@ -26,7 +26,7 @@ def deploy(self,
            vcs,
            branch,
         #    external_port,
-           hashed_branch,
+           deployment_id,
            internal_port=80,
            access_token=None,
            docker_app=None,
@@ -44,7 +44,7 @@ def deploy(self,
     # closing existing container if it exists.
     app_container_name = docker_app.get(
         'container_name', 
-        f"{PREFIX}_{repo_name.lower()[0:4]}_{branch.lower()[0:10]}{hashed_branch}")
+        str(get_app_container_name(PREFIX, deployment_id)))
     stop_containers(container_name=app_container_name, logger=logger)
     logger.close()
 
@@ -125,7 +125,7 @@ def deploy(self,
     if docker_db:
         pretty_print(logger, "checking for existing database container")
         docker_db_container_name = docker_db.get('container_name',
-                                                  f"db_{app_container_name}")
+                                                  str(get_db_container_name(PREFIX, deployment_id)))
 
         inspect_container = run(
             ["docker", "container", "inspect", docker_db_container_name],

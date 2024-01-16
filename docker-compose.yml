@@ -4,13 +4,13 @@ services:
     command: "/bin/bash -c 'chmod +x ./deploy/gunicorn.sh && ./deploy/gunicorn.sh'"
     container_name: gunicorn-stagingserver
     volumes:
-      # - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
+      - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
-      - "./:/STAGING_APP:rw"      # for easy development, remove during prod
-      - ./configs:/STAGING_APP/configs
+      # - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
+      - ./nginx/configs:/STAGING_APP/nginx/configs
     environment:
       - DEBUG=0
     depends_on:
@@ -44,13 +44,13 @@ services:
     command: "celery -A stagingserver worker -l info"
     container_name: celery-stagingserver
     volumes:
-      # - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
+      - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
-      - "./:/STAGING_APP:rw"         # for easy development, remove during prod
-      - ./configs:/STAGING_APP/configs
+      # - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
+      - "./nginx/configs:/STAGING_APP/nginx/configs"
     environment:
       - DEBUG=1
     depends_on:
@@ -65,8 +65,6 @@ services:
     command: "TCP-LISTEN:2375,reuseaddr,fork UNIX-CONNECT:/var/run/docker.sock"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
-    ports:
-      - "127.0.0.1:2375:2375"
     expose:
       - 2375
     networks:
@@ -82,7 +80,8 @@ services:
     ports:
       - "127.0.0.1:9000:80"
     volumes:
-      - ./configs:/etc/nginx/conf.d
+      - "./nginx/configs:/etc/nginx/conf.d"
+      - "./nginx/nginx.conf:/etc/nginx/nginx.conf"
       - ./assets:/assets
     networks:
       - IRIS

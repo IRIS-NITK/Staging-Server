@@ -114,7 +114,7 @@
     
     DOCKER_IMAGE="git-registry.iris.nitk.ac.in/iris-teams/systems-team/staging-server/dev-iris:4.3.2"
     
-    DOMAIN_PREFIX="staging"
+    SUBDOMAIN_PREFIX="staging"
     
     DOMAIN="iris.nitk.ac.in"
     

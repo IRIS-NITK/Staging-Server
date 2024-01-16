@@ -5,22 +5,8 @@ import os
 import datetime
 import shutil
 import subprocess
-import hashlib
 
-def hash_string_and_time(input_string):
-    """
-    Hashing branch name to shorten domain name
-    """
-    current_time = str(datetime.datetime.now())
-    combined_string = input_string + current_time
-    sha256_hash = hashlib.sha256()
-    sha256_hash.update(combined_string.encode('utf-8'))
-    hex_digest = sha256_hash.hexdigest()
 
-    # Get the first 10 characters of the hash
-    hash_result = hex_digest[:10]
-
-    return hash_result
 
 def pretty_print(logs,
                  text,
@@ -91,3 +77,23 @@ def delete_directory(path):
     except Exception as exception:  # pylint: disable=broad-exception-caught
         return False, f"Error in removing directory : {path}\n" + str(exception)
     return True, ""
+
+
+def generate_deployment_id(org_name, project, branch, domain, subdomain_prefix):
+    """
+    generates deployment id for a specific deployment.
+    """
+    return (f"{org_name.lower()[0:9]}_{project.lower()[0:9]}_{branch.lower()}")[0:63-len(subdomain_prefix)-1-1-len(domain)]
+
+
+def get_app_container_name(prefix, deployment_id):
+    """
+    generates container name for a specific deployment.
+    """
+    return f"{prefix}_{deployment_id}"
+
+def get_db_container_name(prefix, deployment_id):
+    """
+    generates db container name for a specific deployment.
+    """
+    return f"{prefix}_DB_{deployment_id}"

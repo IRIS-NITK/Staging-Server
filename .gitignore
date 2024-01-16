@@ -33,6 +33,7 @@ local_tests.py
 
 # Staging
 STAGING_DIR
+nginx/configs/dev-*.conf
 
 # virtual environment file
 iris_staging_console
