@@ -32,7 +32,7 @@ class RunningInstance(models.Model):
     app_dockerfile = models.TextField(blank=True)
     db_docker_image = models.TextField(blank=True)
     app_env_vars = models.TextField(blank=True, null=True)
-    hashed_branch = models.TextField()
+    deployment_id = models.TextField(max_length=64, unique=True)
 
 class DeployTemplate(models.Model):
     social_type = models.TextField(

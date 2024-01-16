@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 PREFIX = os.getenv("PREFIX", "dev")
-DOMAIN_PREFIX = os.getenv("DOMAIN_PREFIX", "staging")
+SUBDOMAIN_PREFIX = os.getenv("SUBDOMAIN_PREFIX", "staging")
 DOMAIN = os.getenv("DOMAIN","iris.nitk.ac.in")
 AUTH_HEADER = os.getenv("AUTH_HEADER")
 
@@ -202,11 +202,7 @@ def deploy(request, pk):
 @login_required
 def health_check(request, pk):
     instance = RunningInstance.objects.get(pk = pk)
-    if instance.social == "git.iris":
-        url = f"https://{DOMAIN_PREFIX}-{instance.branch.lower()}.{DOMAIN}"
-    else:
-        url = f"https://{DOMAIN_PREFIX}-{instance.organisation.lower()}-{instance.repo_name.lower()}-{instance.branch.lower()}.{DOMAIN}"
-
+    url = instance.deployed_url
     status = main_health_check(url=url, auth_header=f"basic {AUTH_HEADER}")
     if status:
         instance.status = RunningInstance.STATUS_SUCCESS
