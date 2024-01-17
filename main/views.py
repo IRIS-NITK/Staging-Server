@@ -69,6 +69,21 @@ def homepage(request):
     return render(request, "homepage.html")
 
 @login_required
+def health_check(request, pk):
+    try:
+        instance = RunningInstance.objects.get(pk=pk)
+    except:  # pylint: disable=bare-except
+        return render(request, 'homepage.html')
+    status = health_check(url=instance.deployed_url, auth_header=f"basic {AUTH_HEADER}")
+    if status:
+        instance.status = RunningInstance.STATUS_SUCCESS
+    else:
+        instance.status = RunningInstance.STATUS_PENDING
+
+    instance.save()
+    return render(request, 'homepage.html')
+
+@login_required
 def console(request, pk):
     """
     rendering the view for container console.

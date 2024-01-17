@@ -15,13 +15,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
 
 urlpatterns = [
     path("", include("main.urls")),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
-
-    path("iris/", include("iris.urls")),
     path("template/", include("template.urls")),
     path("gitlab_social/", include("gitlab_social.urls")),
 ]
+
+if settings.IRIS_REPOSITORY:
+    urlpatterns.append(path("iris/", include("iris.urls")))

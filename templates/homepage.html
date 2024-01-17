@@ -4,6 +4,7 @@
 
 <div class="container">
   <div class="row row-cols-1 row-cols-md-2 g-4 homepage">
+    {% if IRIS_REPOSITORY %}
     <div class="col">
       <div class="card h-100">
         <div class="custom-card-img">
@@ -18,6 +19,7 @@
       </a>
       </div>
     </div>
+    {% endif %}
     <div class="col">
       <div class="card h-100">
         <div class="custom-card-img">
@@ -26,7 +28,7 @@
         <a href="/gitlab_social">
         <div class="card-body">
           <h5 class="card-title">GITLAB</h5>
-          <p class="card-text">Deploy and Test dockerized branches of any repository on Gitlab Server</p>
+          <p class="card-text">Deploy and Test dockerized branches of any repository from Gitlab Instance</p>
         </div>
       </a>
       </div>
