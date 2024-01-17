@@ -45,7 +45,7 @@ def index(request):
     except:  # pylint: disable=bare-except
         instances = None
 
-    return render(request, 'gitlab_social/index.html', context={'groups': groups, 'instances': instances})
+    return render(request, 'gitlab_social/index.html', context={'groups': groups, 'instances': instances, 'gitlab_url': GITLAB_SERVER})
 
 
 @login_required
