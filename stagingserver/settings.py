@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'template', # app for template type of deployment
     'iris', # app for IRIS repository deployment 
     'main',
-    'git_iris',
+    'gitlab_social',
     'crispy_forms',
     "allauth_ui",
     'allauth',
@@ -193,7 +193,7 @@ SOCIALACCOUNT_PROVIDERS = {
     # https://django-allauth.readthedocs.io/en/latest/providers.html#gitlab
     # https://docs.gitlab.com/ee/integration/oauth_provider.html
     'gitlab': {
-        'GITLAB_URL': 'https://git.iris.nitk.ac.in',
+        'GITLAB_URL': os.getenv("GITLAB_URL", "https://gitlab.com"),
         'SCOPE': ['read_api', 'read_user', 'read_repository', 'read_registry'],
     },
 }

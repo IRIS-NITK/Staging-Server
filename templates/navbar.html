@@ -1,5 +1,5 @@
 {% url 'iris_dashboard' as iris_dashboard_url %}
-{% url 'git_iris_dashboard' as git_iris_dashboard_url %}
+{% url 'gitlab_social_dashboard' as gitlab_social_dashboard_url %}
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid">
@@ -15,7 +15,7 @@
           <a class="nav-link {% if request.path == iris_dashboard_url %} active {%endif%}" aria-current="page" href="{% url 'iris_dashboard' %}">IRIS</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.path == git_iris_dashboard_url %} active {%endif%}" href="{% url 'git_iris_dashboard' %}">Gitlab-IRIS</a>
+          <a class="nav-link {% if request.path == gitlab_social_dashboard_url %} active {%endif%}" href="{% url 'gitlab_social_dashboard' %}">Gitlab</a>
         </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
