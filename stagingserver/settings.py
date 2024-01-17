@@ -41,9 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.sites',
     'django.contrib.staticfiles',
-
     'template', # app for template type of deployment
-    'iris', # app for IRIS repository deployment 
     'main',
     'gitlab_social',
     'crispy_forms',
@@ -57,6 +55,15 @@ INSTALLED_APPS = [
     "django_celery_results",
     "docker",
 ]
+
+IRIS_REPOSITORY = os.path.isdir("iris")
+
+if IRIS_REPOSITORY:
+    INSTALLED_APPS.append("iris")
+def is_iris_repository(request):
+    return {
+        "IRIS_REPOSITORY": IRIS_REPOSITORY,
+    }
 
 # Add channels layer
 CHANNEL_LAYERS = {
@@ -97,6 +104,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.request',
+                'stagingserver.settings.is_iris_repository'
             ],
         },
     },

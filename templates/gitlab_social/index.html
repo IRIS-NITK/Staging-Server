@@ -189,7 +189,7 @@ Gitlab{% endblock %}
             </form>
             <form
               method="post"
-              action="{% url 'iris_healthcheck' instance.pk  %}"
+              action="{% url 'healthcheck' instance.pk  %}"
             >
               {% csrf_token %}
               <button
