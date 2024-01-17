@@ -17,7 +17,6 @@ load_dotenv()
 
 PREFIX = os.getenv("PREFIX", "iris")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
-NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 NGINX_PYTHON_REMOVE_SCRIPT_IRIS = os.getenv("NGINX_PYTHON_REMOVE_SCRIPT_IRIS")
 DOCKER_IMAGE = os.getenv("BASE_IMAGE")
 DOCKER_DB_IMAGE = os.getenv("DOCKER_DB_IMAGE", "mysql:5.7")
@@ -325,10 +324,6 @@ def clean_up(org_name,
         pretty_print(logger,
                      "Removing the nginx config."
                      )
-        # status, err = exec_commands(commands=[
-        #     ["bash", NGINX_REMOVE_CONFIG_SCRIPT, org_name,
-        #      repo_name, branch_name]
-        # ],
         status, err = exec_commands(commands=[
             ["python3", NGINX_PYTHON_REMOVE_SCRIPT_IRIS, 
              str(deployment_id)],

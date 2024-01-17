@@ -1,21 +1,18 @@
-# Staging-Sever
+<br/>
+<p align="center">
+  <h3 align="center">Staging-Server</h3>
 
- - [Setup Instructions](/docs/SETUP.md)
+--------------
 
-    <details><summary>[Setup Instructions For Local](/docs/SETUP.md#setup-instructions-for-local)</summary>
+  <p align="center">
+    Developed by IRIS-NITK, Staging-Server is a Django based web platform designed to streamline the deployment and testing of dockerized applications using Docker and Nginx. This project aims to simplify the testing process for developers and testers, ensuring that applications are thoroughly examined before they go into production.
+    <br/>
+    <br/>
+    <a href="https://github.com/IRIS-NITK/Staging-Server/blob/main/docs/SETUP.md"><strong>Explore the docs »</strong></a>
+    <br/>
+    <br/>
+    <a href="https://github.com/iris-NITK/Staging-Server/issues">Report Bug / Request Feature</a>
+  </p>
+</p>
 
-    - [1. Repository cloning](/docs/SETUP.md#1-repository-cloning)
-    - [2. Create and activate virtual environment](/docs/SETUP.md#2-create-and-activate-virtual-environment)
-    - [3. Install dependencies](/docs/SETUP.md#3-install-dependencies)
-    - [4. Run migrations](/docs/SETUP.md#4-run-migrations)
-    - [5. Create superuser](/docs/SETUP.md#5-create-superuser)
-    - [6. Run the app and log in as superuser](/docs/SETUP.md#6-run-the-app-and-log-in-as-superuser)
-    - [7. Update site name](/docs/SETUP.md#7-update-site-name)
-    - [8. Add social applications](/docs/SETUP.md#8-add-social-applications)
-    - [8.1  Add GitLab SSO](/docs/SETUP.md#81-add-gitlab-sso)
-    - [8.2 Add Github SSO](/docs/SETUP.md#82-add-github-sso)
-    - [9. Celery Setup](/docs/SETUP.md#9-celery-setup)
-    </details>
-
-- [Folder Structure](/docs/FOLDER_STRUCTURE.md)
-- [Using Templates](/docs/TEMPLATES.md)
+![Contributors](https://img.shields.io/github/contributors/iris-NITK/Staging-Server?color=dark-green) ![Issues](https://img.shields.io/github/issues/iris-NITK/Staging-Server) ![License](https://img.shields.io/github/license/iris-NITK/Staging-Server) 
