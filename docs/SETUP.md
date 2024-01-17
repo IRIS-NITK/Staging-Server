@@ -17,6 +17,7 @@
       - [8.2 Add Github SSO](#82-add-github-sso)
     - [9. Celery Setup](#9-celery-setup)
 
+# DEPRECATED INSTRUCTIONS 
 ## Setup Instructions For Local
 ### 1. Repository cloning
 > `git clone https://<your_username>@git.iris.nitk.ac.in/iris-teams/systems-team/staging-server.git`
@@ -117,8 +118,6 @@
     SUBDOMAIN_PREFIX="staging"
     
     DOMAIN="iris.nitk.ac.in"
-    
-    DEFAULT_NETWORK="IRIS"
 
     REDIS_HOST=127.0.0.1
     

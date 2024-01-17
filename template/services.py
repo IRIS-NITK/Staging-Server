@@ -14,8 +14,7 @@ load_dotenv()
 
 PREFIX = os.getenv("PREFIX", "iris_staging")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
-DEFAULT_NETWORK = os.getenv("DEFAULT_NETWORK", "IRIS")
-
+DEPLOYMENT_DOCKER_NETWORK = os.getenv("DEPLOYMENT_DOCKER_NETWORK", "IRIS")
 
 @shared_task(bind=True)
 def deploy(self,
@@ -97,7 +96,7 @@ def deploy(self,
         pretty_print(logger, f"Docker image {docker_image} already provided.")
 
     # Creating docker network for the container
-    network_name=docker_app.get('network', DEFAULT_NETWORK)
+    network_name=docker_app.get('network', DEPLOYMENT_DOCKER_NETWORK)
     if network_name:
         pretty_print(logger, f"Checking if the docker network {network_name} exists.")
         inspect_network = run(
