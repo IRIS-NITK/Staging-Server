@@ -9,7 +9,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
-      # - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
+#      - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
       - ./nginx/configs:/STAGING_APP/nginx/configs
     environment:
       - DEBUG=0
@@ -49,7 +49,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
       - "/etc/nginx/sites-available:/etc/nginx/sites-available"
-      # - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
+#      - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
       - "./nginx/configs:/STAGING_APP/nginx/configs"
     environment:
       - DEBUG=1
