@@ -1,0 +1,209 @@
+{% extends 'base.html' %} 
+
+{% block title %}
+
+IRIS, Gitlab{% endblock %} 
+
+{% block content %}
+    <h5>Deploy from git.iris.nitk.ac.in</h5>
+    <hr>
+    <script>
+      $(document).ready(function() {
+          $("#group_dropdown").change(function() {
+              var group_id = $(this).val();
+              if (group_id) {
+                  $.ajax({
+                      url: '/gitlab_social/get_projects/',
+                      data: {
+                          'group_id': group_id
+                      },
+                      success: function(data) {
+                          $("#project_dropdown").html(data.project_options);
+                          $("#branch_dropdown").html('<option value="">Select a branch</option>');
+                          $(".repo-select").show();
+                      }
+                  });
+              } else {
+                  $("#project_dropdown").html('<option value="">Select a project</option>');
+                  $(".repo-select").hide();
+              }
+          });
+  
+          $("#project_dropdown").change(function() {
+  var project_id = $(this).val();
+  if (project_id) {
+    $.ajax({
+      url: '/gitlab_social/get_branches/',
+      data: {'project_id': project_id},
+      success: function(data) {
+        if (data.branch_options) {
+          $(".branch-select").show();
+          $("#branch_dropdown").html(data.branch_options);
+        } else {
+          $(".branch-select").hide();
+          $("#branch_dropdown").html('<option value="">Select a branch</option>');
+        }
+      }
+    });
+  } else {
+    $(".branch-select").hide().html('');
+  }
+});
+
+      });
+  </script>
+
+<form class="row g-3" method="POST" action="{% url 'gitlab_social_deploy' pk=0 %}">
+  {% csrf_token %}
+  <div class="col-md-4">
+    <label for="group_dropdown" class="form-label">Organization</label>
+    <select id="group_dropdown" name="group" class="form-select" required>
+      <option selected>Select a Organization</option>
+      {% for group in groups %}
+      <option value="{{ group.id }}">{{ group.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-8 repo-select" style="display: none;">
+    <label for="project_dropdown" class="form-label">Repository</label>
+    <select id="project_dropdown" name="project" class="form-select" required>
+      <option selected>Select a Repository</option>
+    </select>
+  </div>
+  <div class="col-md-6 branch-select" style="display: none;">
+    <label for="branch_dropdown" class="form-label">Branch</label>
+    <select id="branch_dropdown" name="branch" class="form-select" required>
+      <option selected>Select a Branch</option>
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label for="dockerfile_input" class="form-label">Dockerfile:</label>
+    <input type="text" class="form-control" id="dockerfile_input" name="dockerfile" placeholder="ex- Dockerfile.Staging">
+  </div>
+  <div class="col-md-4">
+    <label for="docker_image_input" class="form-label">Docker image:</label>
+    <input type="text" class="form-control" id="docker_image_input" name="docker_image" >
+  </div>
+  <div class="col-md-2">
+    <label for="internal_port_input" class="form-label">Internal port:</label>
+    <input type="text" class="form-control" id="internal_port_input" name="internal_port" value="3000" required>
+  </div>
+  <div class="col-12 deploy-btn">
+    <button type="submit" class="btn btn-primary">Deploy</button>
+  </div>
+</form>
+
+<hr>
+
+<table class="table" style="text-align: center">
+    <thead>
+      <tr>
+        <th scope="col">Branch/Repository</th>
+        <th scope="col">Deployment Details</th>
+        <th scope="col">Status</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for instance in instances %}
+      <tr style="vertical-align: middle;">
+        <td>
+          <div>
+            <a href="{{ instance.deployed_url }}">
+              {{ instance.branch }}
+            </a>
+            <br>
+            <span class="text-muted">{{ instance.repo_name }}</span>
+          </div>
+        </td>
+        <td>
+          <div>{{ instance.owner }}<br>{{ instance.update_time }}</div>
+        </td>
+        <td>
+          {% if instance.status == "PENDING" %}
+          <span class="badge bg-secondary">Pending</span>
+          {% elif instance.status == "SUCCESS" %}
+          <span class="badge bg-success">Success</span>
+          {% elif instance.status == "ERROR" %}
+          <span class="badge bg-danger">Error</span>
+          {% elif instance.status == "DEPLOYING" %}
+          <span class="badge bg-warning">Deploying</span>
+          {% elif instance.status == "STOPPED" %}
+          <span class="badge bg-danger">Stopped</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="btn-group">
+            <form method="get" action="{% url 'instance_logs' instance.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-info btn-sm mx-1">
+                Logs
+              </button>
+            </form>
+            <form method="get" action="{% url 'container_logs' instance.pk %}">
+              <button type="submit" class="btn btn-outline-info btn-sm mx-1">
+                Container Logs
+              </button>
+            </form>
+            <form method="post" action="{% url 'archive_logs' instance.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-warning btn-sm mx-1">
+                Clean Logs
+              </button>
+            </form>
+            <form method="post" action="{% url 'gitlab_social_deploy' instance.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-primary btn-sm mx-1">
+                  Redeploy
+                </button>
+              </form>
+              <form method="get" target="_blank" action="{% url 'console' instance.pk  %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-dark btn-sm mx-1">
+                  <i class="fa-solid fa-terminal"></i> Console
+                </button>
+              </form>
+              <form method="get" target="_blank" action="https://systems-portainer.iris.nitk.ac.in/#!/2/docker/containers/{{ instance.app_container_name }}/exec">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-dark btn-sm mx-1">
+                  <i class="fa-solid fa-terminal"></i> Portainer
+                </button>
+              </form>
+            <form method="post" action="{% url 'gitlab_social_stop' instance.pk  %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger btn-sm mx-1">
+                Stop
+              </button>
+            </form>
+            <form method="post" action="{% url 'gitlab_social_stop_with_db' instance.pk  %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger btn-sm mx-1">
+                Stop with DB
+              </button>
+            </form>
+            <form method="post" action="{% url 'template_delete_default' instance.pk  %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger btn-sm mx-1">
+                Delete Default Branch
+              </button>
+            </form>
+            <form
+              method="post"
+              action="{% url 'iris_healthcheck' instance.pk  %}"
+            >
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="btn btn-outline-secondary btn-sm mx-1"
+              >
+                <i class="fa fa-refresh" style="font-size: 20px"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+{% endblock %}

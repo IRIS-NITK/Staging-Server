@@ -106,7 +106,7 @@
     
     HOST_PARENT_WD="/home/w453y/staging-server"
     
-    IRIS_DOCKER_NETWORK="IRIS"
+    DEPLOYMENT_DOCKER_NETWORK="IRIS"
     
     PREFIX="staging"
     
