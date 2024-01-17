@@ -21,10 +21,9 @@ NGINX_REMOVE_CONFIG_SCRIPT = os.getenv("NGINX_REMOVE_SCRIPT")
 NGINX_PYTHON_REMOVE_SCRIPT_IRIS = os.getenv("NGINX_PYTHON_REMOVE_SCRIPT_IRIS")
 DOCKER_IMAGE = os.getenv("BASE_IMAGE")
 DOCKER_DB_IMAGE = os.getenv("DOCKER_DB_IMAGE", "mysql:5.7")
-IRIS_DOCKER_NETWORK = os.getenv("IRIS_DOCKER_NETWORK", "IRIS")
+DEPLOYMENT_DOCKER_NETWORK = os.getenv("DEPLOYMENT_DOCKER_NETWORK", "IRIS")
 SUBDOMAIN_PREFIX = os.getenv("SUBDOMAIN_PREFIX", "staging")
 DOMAIN = os.getenv("DOMAIN", "iris.nitk.ac.in")
-DEFAULT_NETWORK = os.getenv("DEFAULT_NETWORK", "IRIS")
 
 
 def find_free_port():
@@ -191,7 +190,7 @@ def start_container(image_name,
                     internal_port,
                     volumes=None,
                     enviroment_variables=None,
-                    docker_network=DEFAULT_NETWORK,
+                    docker_network=DEPLOYMENT_DOCKER_NETWORK,
                     restart_always=True):
     """
     Generalised function to start a container for any service
