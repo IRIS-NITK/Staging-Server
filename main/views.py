@@ -31,14 +31,17 @@ PREFIX = os.getenv("PREFIX", "staging")
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
 DOCKER_SOCKET_HOST = os.getenv("DOCKER_SOCKET_HOST","127.0.0.1")
 DOCKER_SOCKET_PORT = os.getenv("DOCKER_SOCKET_PORT","2375")
-
+AUTH_HEADER = os.getenv("AUTH_HEADER","")
 response_header = loader.get_template("response_header.html")
 
 @login_required
 def instance_logs(request, pk):
     try:
         instance = RunningInstance.objects.get(pk=pk)
-        log_file_name = f"{PATH_TO_HOME_DIR}/logs/{instance.organisation}/{instance.repo_name}/{instance.branch}/{instance.branch}.txt"
+        if not instance.log_file_path:
+            log_file_name = f"{PATH_TO_HOME_DIR}/logs/{instance.organisation}/{instance.repo_name}/{instance.branch}/{instance.branch}.txt"
+        else:
+            log_file_name = instance.log_file_path
         with open(log_file_name, "r", encoding='UTF-8') as file:
             data = file.read()
         context = {'data': data, 'instance': instance}
@@ -201,7 +204,8 @@ class ConsoleConsumer(WebsocketConsumer):
             instance = RunningInstance.objects.get(
                 pk=self.scope['url_route']['kwargs']['pk'])
             self.container_name = instance.app_container_name
-        except:  # pylint: disable=bare-except
+        # except:  # pylint: disable=bare-except
+        except Exception as error:  # pylint: disable=bare-except
             self.send("Could not find the Instance.")
             return self.disconnect(self)
         cmd = '/bin/bash'

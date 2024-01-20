@@ -23,6 +23,7 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("template/", include("template.urls")),
     path("gitlab_social/", include("gitlab_social.urls")),
+    path("repositories/", include("repositories.urls")),
 ]
 
 if settings.IRIS_REPOSITORY:

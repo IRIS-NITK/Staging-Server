@@ -1,5 +1,5 @@
 from django.db import models
-
+from repositories.models import Repository
 class RunningInstance(models.Model):
     STATUS_PENDING = "PENDING"
     STATUS_SUCCESS = "SUCCESS"
@@ -24,15 +24,19 @@ class RunningInstance(models.Model):
     exposed_port = models.IntegerField(default=3000)
     dockerfile_path = models.TextField(blank=True)
     internal_port = models.IntegerField(default=80)
+    log_file_path = models.TextField(blank=True, null=True)
+    branch_deploy_path = models.TextField(blank=True, null=True)
     deployed_url = models.URLField(max_length=255, blank=True)
     project_url = models.URLField(max_length=255, blank=True)
     app_container_name = models.TextField(blank=True)
     db_container_name = models.TextField(blank=True)
-    app_docker_image = models.TextField(blank=True)
+    app_docker_image = models.TextField(blank=True, null=True)
     app_dockerfile = models.TextField(blank=True)
-    db_docker_image = models.TextField(blank=True)
+    db_docker_image = models.TextField(blank=True, null=True)
     app_env_vars = models.TextField(blank=True, null=True)
+    db_env_vars = models.TextField(blank=True, null=True)
     deployment_id = models.TextField(max_length=64, unique=True)
+    repository = models.ForeignKey(Repository, on_delete=models.CASCADE, null=True)
 
 class DeployTemplate(models.Model):
     social_type = models.TextField(

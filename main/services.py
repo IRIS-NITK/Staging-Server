@@ -56,29 +56,28 @@ def health_check(url, auth_header):
 def clone_repository(clone_url="",
                      org_name=None,
                      repo_name=None,
-                     branch_name='DEFAULT_BRANCH'
+                     branch_name='DEFAULT_BRANCH',
+                     clone_path=None,
+                     log_file_path=None
                      ):
     """
     Clones the Repository if it doesn't exist.
     """
     temp_logging_text = ""
     # Create Org directory if it doesn't exist
-    if not os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}"):
-        temp_logging_text = f'\n{datetime.datetime.now()} : Organization {org_name} does not exist locally, creating it\n'
-        os.makedirs(f"{PATH_TO_HOME_DIR}/{org_name}", exist_ok=True)
+    clone_path = f"{clone_path}/DEFAULT_BRANCH"
+    if not os.path.exists(f"{clone_path}/DEFAULT_BRANCH"):
+        temp_logging_text = f'\n{datetime.datetime.now()} : Default branch folder does not exist locally, creating it\n'
+        os.makedirs(clone_path, exist_ok=True)
 
-    # org exists , repo does not exist , could be a new repo , so clone it
-    os.makedirs(
-        f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH", exist_ok=True)
     temp_logging_text += f'\n{datetime.datetime.now()} : Repository {repo_name} does not exist locally, cloning it\n'
 
-    parent_dir = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH"
-    local_dir = os.path.join(parent_dir, repo_name)
+    local_dir = os.path.join(clone_path, repo_name)
 
     status, err = exec_commands(commands=[
         ['git', 'clone', clone_url, local_dir]
     ],
-        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/",
+        cwd=clone_path,
         logger=temp_logging_text,
         err="Git clone failed",
         logger_not_file=True,
@@ -86,12 +85,15 @@ def clone_repository(clone_url="",
     )
     if not status:
         return False, err
-
+    if log_file_path is None:
+        log_file_path = f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}"
+    else:
+        log_file_path = f"{log_file_path}/{branch_name}"
     os.makedirs(
-        f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}", exist_ok=True)
+        log_file_path, exist_ok=True)
 
     log_file = (
-        f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+        f"{log_file_path}/{branch_name}.txt"
     )
 
     logger = initiate_logger(log_file)
@@ -101,13 +103,14 @@ def clone_repository(clone_url="",
     return True, ""
 
 
-def pull_git_changes(vcs,
-                     url='https://git.iris.nitk.ac.in/',
+def pull_git_changes(url='https://git.iris.nitk.ac.in/',
                      user_name=None,
                      token=None,
                      org_name=None,
                      repo_name=None,
-                     branch_name='master'):
+                     branch_name=None,
+                     clone_path=None,
+                     log_file_path=None):
     """
     Pulls the latest changes from the git repo, if the repo is not present, then it clones the repo
     """
@@ -117,66 +120,69 @@ def pull_git_changes(vcs,
     parsed_url = urllib.parse.urlparse(url)
     clone_url = f'{parsed_url.scheme}://{user_name}:{token}@{parsed_url.hostname}{parsed_url.path}'
     # Check if repository exists
-    if not os.path.exists(f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/.git"):
+    if not clone_path:
+        clone_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"
+    if not os.path.exists(f"{clone_path}/DEFAULT_BRANCH/{repo_name}/.git"):
         status, err = clone_repository(
             clone_url=clone_url,
             org_name=org_name,
             repo_name=repo_name,
             branch_name=branch_name,
+            clone_path=clone_path,
+            log_file_path=log_file_path
         )
         if not status:
             return False, err
+    if branch_name != None:
+        if not log_file_path:
+            log_file = (
+                f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+            )
+        else:
+            log_file = f"{log_file_path}/{branch_name}/{branch_name}.txt"
+        # Initiates Logger and also creates branch_name directory if it doesn't exist.
+        logger = initiate_logger(log_file)
+        default_branch_path = f"{clone_path}/DEFAULT_BRANCH/{repo_name}/."
+        deploy_branch_path = f"{clone_path}/{branch_name}/{repo_name}"
+        os.makedirs(deploy_branch_path, exist_ok=True)
+        # Copy repository to branch's folder.
+        status, err = exec_commands(commands=[
+            ['rm', '-rf', deploy_branch_path],
+            ['cp', '-rf', default_branch_path, deploy_branch_path]
+        ],
+            cwd=None,
+            logger=logger,
+            err=f"Error while copying Repository from Default branch's directory to {branch_name}'s directory",
+            print_stderr=True
+        )
+        if not status:
+            logger.close()
+            return False, err
+        pretty_print(
+            logger, f"Successfully copied the branch {branch_name} to its directory")
 
-    log_file = (
-        f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
-    )
+        # Branch exists , pull latest changes
+        pretty_print(
+            logger, f"Pulling latest changes from branch {branch_name}")
 
-    # Initiates Logger and also creates branch_name directory if it doesn't exist.
-    logger = initiate_logger(log_file)
+        status, err = exec_commands(commands=[
+            ["git", "pull", clone_url],
+            ["git", "checkout", branch_name]
+        ],
+            cwd=f"{clone_path}/{branch_name}/{repo_name}",
+            logger=logger,
+            err=f"Error while pulling latest changes from branch {branch_name}",
+            print_stderr=True
+        )
+        if not status:
+            logger.close()
+            return False, err
 
-    default_branch_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/DEFAULT_BRANCH/{repo_name}/."
-    deploy_branch_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}"
-
-    os.makedirs(deploy_branch_path, exist_ok=True)
-    # Copy repository to branch's folder.
-    status, err = exec_commands(commands=[
-        ['rm', '-rf', deploy_branch_path],
-        ['cp', '-rf', default_branch_path, deploy_branch_path]
-    ],
-        cwd=None,
-        logger=logger,
-        err=f"Error while copying Repository from Default branch's directory to {branch_name}'s directory",
-        print_stderr=True
-    )
-    if not status:
+        pretty_print(
+            logger,
+            f"Successfully pulled all the latest changes from branch {branch_name} to base directory."
+        )
         logger.close()
-        return False, err
-    pretty_print(
-        logger, f"Successfully copied the branch {branch_name} to its directory")
-
-    # Branch exists , pull latest changes
-    pretty_print(
-        logger, f"Pulling latest changes from branch {branch_name}")
-
-    status, err = exec_commands(commands=[
-        ["git", "pull", clone_url],
-        ["git", "checkout", branch_name]
-    ],
-        cwd=f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}/{repo_name}",
-        logger=logger,
-        err=f"Error while pulling latest changes from branch {branch_name}",
-        print_stderr=True
-    )
-    if not status:
-        logger.close()
-        return False, err
-
-    pretty_print(
-        logger,
-        f"Successfully pulled all the latest changes from branch {branch_name} to base directory."
-    )
-
-    logger.close()
     return True, ""
 
 
@@ -274,7 +280,7 @@ def start_db_container(db_image,
     if not status:
         return False, result
     return True, result
-
+    
 
 def clean_up(org_name,
              repo_name,
@@ -288,19 +294,24 @@ def clean_up(org_name,
              remove_branch_dir=False,
              remove_all_dir=False,
              remove_user_dir=False,
-             remove_nginx_conf=True):
+             remove_nginx_conf=True,
+             log_file_path=None,
+             branch_deploy_path=None,
+             ):
     """
     Remove all the containers, volumes, networks and images related to the branch
     """
     errors = ""
     cleanup_status = True
-
-    if branch_name:
-        logger = initiate_logger(
-            f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt")
+    if not log_file_path:
+        if branch_name:
+            logger = initiate_logger(
+                f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt")
+        else:
+            logger = initiate_logger(
+                f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{repo_name}.txt")
     else:
-        logger = initiate_logger(
-            f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{repo_name}.txt")
+        logger = initiate_logger(log_file_path)
 
     if remove_container:
         pretty_print(logger,
@@ -387,11 +398,13 @@ def clean_up(org_name,
             pretty_print(logger, err)
 
     if remove_branch_dir:
+        if not branch_deploy_path:
+            branch_deploy_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}"
         pretty_print(logger,
                      "Deleting the branch directory"
                      )
         status, err = delete_directory(
-            f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}")
+            branch_deploy_path)
         if status:
             pretty_print(logger,
                          f"Successfully deleted the branch {branch_name} directory."
@@ -426,12 +439,15 @@ def clean_up(org_name,
     return cleanup_status, "Clean up complete"
 
 
-def clean_logs(org_name, repo_name, branch_name):
+def clean_logs(org_name, repo_name, branch_name, log_file_path=None):
     """
     Cleans up the main log and archives the text.
     """
-    log_dir = f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/"
-    log_file_path = f"{log_dir}/{branch_name}.txt"
+    if not log_file_path:
+        log_dir = f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/"
+        log_file_path = f"{log_dir}/{branch_name}.txt"
+    else:
+        log_dir = os.path.dirname(log_file_path)
     arhive_file_path = f"{log_dir}/archive.txt"
     if os.path.isfile(log_file_path):
         with open(log_file_path, "r", encoding='UTF-8') as log_file, \

@@ -31,13 +31,18 @@ def deploy(self,
            docker_app=None,
            docker_db=None,
            post_deploy_scripts=None,
-           pre_deploy_scripts=None
+           pre_deploy_scripts=None,
+           log_file_path=None,
+           clone_path=None,
            ):
     """
     Pulls changes, builds/pulls docker image, starts container, configure NGINX
     """
     # logfile where logs for this deployment are stored
-    log_file = f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch}/{branch}.txt"
+    if not log_file_path:
+        log_file = f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch}/{branch}.txt"
+    else: 
+        log_file = f"{log_file_path}/{branch}/{branch}.txt"
     logger = initiate_logger(log_file)
 
     # closing existing container if it exists.
@@ -51,11 +56,12 @@ def deploy(self,
     result, logs = pull_git_changes(
         url=url,
         user_name=user_name,
-        vcs=vcs,
         org_name=org_name,
         repo_name=repo_name,
         branch_name=branch,
-        token=access_token
+        token=access_token,
+        log_file_path=log_file_path,
+        clone_path=clone_path
     )
 
     if not result:
@@ -65,13 +71,16 @@ def deploy(self,
 
     # Building docker image
     docker_image = docker_app.get('image', None)
-    cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch}/{repo_name}/"
+    if not clone_path:
+        cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch}/{repo_name}/"
+    else:
+        cwd = f"{clone_path}/{branch}/{repo_name}"
     if not docker_image:
         pretty_print(logger, "No Docker image provided")
         pretty_print(logger, f"Building image with {docker_app.get('dockerfile_path', 'Dockerfile')} ...")
 
         # building docker image and tagging it
-        docker_image = f"{PREFIX}_{org_name.lower()}_{repo_name.lower()}_{branch.lower()}"
+        docker_image = app_container_name.lower()
         exec_dockerfile = []
         if docker_app.get('dockerfile_path', None):
             exec_dockerfile = ["-f", f"./{docker_app.get('dockerfile_path', '')}"]

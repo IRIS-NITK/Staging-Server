@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "widget_tweaks",
     "django_celery_results",
     "docker",
+    "repositories",
 ]
 
 IRIS_REPOSITORY = os.path.isdir("iris")

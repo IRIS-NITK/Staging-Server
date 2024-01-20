@@ -83,7 +83,9 @@ def generate_deployment_id(org_name, project, branch, domain, subdomain_prefix):
     """
     generates deployment id for a specific deployment.
     """
-    return (f"{org_name.lower()[0:9]}_{project.lower()[0:9]}_{branch.lower()}")[0:63-len(subdomain_prefix)-1-1-len(domain)]
+    id=f"{org_name.lower()[0:9]}_{project.lower()[0:9]}_{branch.lower()}"
+    id= id[0:63-len(subdomain_prefix)-1-1-len(domain)].lower().replace("_", "-")
+    return id
 
 
 def get_app_container_name(prefix, deployment_id):
