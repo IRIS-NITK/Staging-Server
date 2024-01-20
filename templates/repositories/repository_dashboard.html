@@ -1,0 +1,221 @@
+{% extends 'base.html' %} 
+
+{% block title %}
+Repositories | {{ repository.repo_name }}{% endblock %} 
+
+{% block content %}
+  <h5>{{ repository.repo_name }} <span class="text-muted">{{ repository.deployer.username }}</span></h5>
+  <hr>
+  <div class="card my-2 ">
+  <div class="card-body">
+  <form class="row g-3" method="POST" action="{% url 'repositories_update_repository' pk=repository.pk %}">
+    {% csrf_token %}
+    <div class="col-md-5">
+    <label for="access_token_input" class="form-label">Access Token (If required):</label>
+    <input type="text" class="form-control" id="access_token_input" name="access_token" placeholder="">
+    <input class="form-check-input" type="checkbox" value="1" id="update_access_token" name="update_access_token">
+    <label class="form-check-label" for="update_access_token">
+        update access token
+    </label>
+    </div>
+    <div class="col-md-3">
+    <label for="username_input" class="form-label">username <span class="text-muted">(If required to pass with access token):</span></label>
+    <input type="text" class="form-control" id="username_input" name="username" value="{{ repository.repo_username }}"  placeholder="Gaben">
+    </div>
+    <div class="col-md-4">
+    <label for="dockerfile_input" class="form-label">Dockerfile <span class="text-muted">(specify if not Dockerfile or Dockerfile.Staging):</span></label>
+    <input type="text" class="form-control" id="dockerfile_input" name="dockerfile" value="{{ repository.dockerfile_path }}" placeholder="Dockerfile.Staging">
+    </div>
+    <div class="col-md-3">
+      <label for="db_image_input" class="form-label">Database Image:</label>
+      <input type="text" class="form-control" id="db_image_input" name="db_image" value="{{ repository.db_image }}" placeholder="mariadb:latest">
+      </div>
+    <div class="col-md-3">
+      <label for="app_env_db_host_key_input" class="form-label">App env key to DB host:</label>
+      <input type="text" class="form-control" id="app_env_db_host_key_input" name="app_env_db_host_key" value="{{ repository.app_env_db_host_key }}" placeholder="DB_HOST">
+      </div>
+    <div class="col-md-2">
+    <label for="internal_port_input" class="form-label">Internal port:</label>
+    <input type="text" class="form-control" id="internal_port_input" name="internal_port" value="{{ repository.internal_port }}" value="3000" required>
+    </div>
+    <div id="app-env-container" class="mb-0 mt-0 pb-0">
+        {% for key, value in app_env_vars %}
+        <div class="input-group my-2">
+          <label class="input-group-text" for="">app-env</label>
+          <input type="text" class="form-control" name="app_env_key[]" value="{{ key }}" placeholder="Key" required>
+          <input type="text" class="form-control" name="app_env_value[]" value="{{ value }}" placeholder="Value" required>
+          <button class="btn btn-danger remove-env-btn" type="button">Remove</button>
+        </div>
+        {% endfor %}
+    </div>
+    <div id="db-env-container" class="mt-0 mb-0 pt-0">
+        {% for key, value in db_env_vars %}
+        <div class="input-group my-2">
+          <label class="input-group-text" for="">db-env</label>
+          <input type="text" class="form-control" name="db_env_key[]" value="{{ key }}" placeholder="Key" required>
+          <input type="text" class="form-control" name="db_env_value[]" value="{{ value }}" placeholder="Value" required>
+          <button class="btn btn-danger remove-env-btn" type="button">Remove</button>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="input-group">
+    </div>
+    <div class="col-md-12 class-btn">
+    <button class="btn btn-success" type="button" id="add-app-env-btn">+ Add App Env</button>
+    <button class="btn btn-success" type="button" id="add-db-env-btn">+ Add DB Env</button>
+    <button type="submit" class="btn btn-primary">Update</button>
+    </div>
+    </form>
+    </div>
+    </div>
+  <!-- display all branches and get choice -->
+  {% if branches %}
+  <div class="card my-2 ">
+    <div class="card-body">
+      <form class="row row-cols-lg-auto g-3 align-items-center" action="{% url 'repositories_deploy_branch' pk=repository.pk %}" method="post">
+        {% csrf_token %}
+        <div class="input-group">
+          <label class="input-group-text" for="branch">Branch</label>
+          <select class="form-select" name="branch" id="branch">
+            <option value="none" selected disabled hidden>Choose a branch</option>
+                {% for branch in branches %}
+                <option value="{{ branch }}">{{ branch }}</option>
+                {% endfor %}
+              </select>
+          </select>
+          <button class="btn btn-primary" type="submit" id="button-addon2">deploy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Display the deployed branches -->
+
+  <table class="table" style="text-align: center">
+    <thead>
+      <tr>
+        <th scope="col">Branch</th>
+        <th scope="col">Deployment Details</th>
+        <th scope="col">Status</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for instance in repository_instances %}
+      <tr  style="vertical-align: middle;">
+        <td>
+          <a href="{{ instance.deployed_url }}">
+            {{ instance.branch }}
+          </a>
+        </td>
+        <td>
+          <div>{{ instance.owner }}<br>{{ instance.update_time }}</div>
+        </td>
+        <td>
+          {% if instance.status == "PENDING" %}
+          <span class="badge bg-secondary">Pending</span>
+          {% elif instance.status == "SUCCESS" %}
+          <span class="badge bg-success">Success</span>
+          {% elif instance.status == "ERROR" %}
+          <span class="badge bg-danger">Error</span>
+          {% elif instance.status == "DEPLOYING" %}
+          <span class="badge bg-warning">Deploying</span>
+          {% elif instance.status == "STOPPED" %}
+          <span class="badge bg-danger">Stopped</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="btn-group">
+            <form method="get" action="{% url 'instance_logs' instance.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-info btn-sm mx-1">
+                Logs
+              </button>
+            </form>
+            <form method="get" action="{% url 'container_logs' instance.pk %}">
+              <button type="submit" class="btn btn-outline-info btn-sm mx-1">
+                Container Logs
+              </button>
+            </form>
+            <!-- <form method="get" action="{% url 'archive_logs' instance.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-warning btn-sm mx-1">
+                Clean Logs
+              </button>
+            </form> -->
+            <form method="post" action="{% url 'repositories_deploy_branch' pk=repository.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="branch" value="{{ instance.branch }}">
+                <button type="submit" class="btn btn-outline-primary btn-sm mx-1">
+                  Redeploy
+                </button>
+              </form>
+            <form method="post" action="{% url 'gitlab_social_stop' instance.pk  %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger btn-sm mx-1">
+                Stop
+              </button>
+            </form>
+            <form method="post" action="{% url 'gitlab_social_stop_with_db' instance.pk  %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger btn-sm mx-1">
+                Stop with DB
+              </button>
+            </form>
+            <form method="get" target="_blank" action="{% url 'console' instance.pk  %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-dark btn-sm mx-1">
+                <i class="fa-solid fa-terminal"></i> Console
+              </button>
+            </form>
+            <form
+              method="post"
+              action="{% url 'healthcheck' instance.pk  %}"
+            >
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="btn btn-outline-secondary btn-sm mx-1"
+              >
+                <i class="fa fa-refresh" style="font-size: 20px"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+  
+      {% endfor %}
+    </tbody>
+  </table>
+<script>
+  // JavaScript code to dynamically add input boxes for environment variables
+  let addDelEnvBtn = (btnId, envContainerId, key_name, value_name, label_text) => {
+    document.addEventListener("DOMContentLoaded", function() {
+  const addEnvBtn = document.getElementById(btnId);
+  const envContainer = document.getElementById(envContainerId);
+  
+  addEnvBtn.addEventListener("click", function() {
+    const envDiv = document.createElement("div");
+    envDiv.classList.add("input-group", "my-2");
+    envDiv.innerHTML = `
+      <label class="input-group-text" for="">${label_text}</label>
+      <input type="text" class="form-control" name="${key_name}[]" placeholder="Key" required>
+      <input type="text" class="form-control" name="${value_name}[]" placeholder="Value" required>
+      <button class="btn btn-danger remove-env-btn" type="button">Remove</button>
+    `;
+    envContainer.appendChild(envDiv);
+  });
+  
+  envContainer.addEventListener("click", function(event) {
+    if (event.target.classList.contains("remove-env-btn")) {
+      event.target.parentNode.remove();
+    }
+  });
+});
+  } 
+  addDelEnvBtn("add-app-env-btn", "app-env-container", "app_env_key", "app_env_value", "app-env");
+  addDelEnvBtn("add-db-env-btn", "db-env-container", "db_env_key", "db_env_value", "db-env");
+
+</script>
+{% endblock %}

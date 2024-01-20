@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Repositories{% endblock %} 
+
+{% block content %}
+<h5>Deploy Repositories with git URL</h5>
+<hr>
+
+<form class="row g-3" method="POST" action="{% url 'repositories_create' %}">
+{% csrf_token %}
+<div class="col-md-7">
+<label for="giturl_input" class="form-label">Repository's Git URL:</label>
+<input type="text" class="form-control" id="giturl_input" name="repo_git_url" placeholder="https://github.com/IRIS-NITK/Staging-Server.git">
+</div>
+<div class="col-md-5">
+<label for="access_token_input" class="form-label">Access Token (If required):</label>
+<input type="text" class="form-control" id="access_token_input" name="access_token" placeholder="">
+</div>
+<div class="col-md-3">
+<label for="username_input" class="form-label">username <span class="text-muted">(If required to pass with access token):</span></label>
+<input type="text" class="form-control" id="username_input" name="username" placeholder="Gaben">
+</div>
+<div class="col-md-4">
+<label for="dockerfile_input" class="form-label">Dockerfile <span class="text-muted">(specify if not Dockerfile or Dockerfile.Staging):</span></label>
+<input type="text" class="form-control" id="dockerfile_input" name="dockerfile" placeholder="Dockerfile.Staging">
+</div>
+<div class="col-md-3">
+  <label for="db_image_input" class="form-label">Database Image:</label>
+  <input type="text" class="form-control" id="db_image_input" name="db_image" placeholder="mariadb:latest">
+  </div>
+<div class="col-md-2">
+<label for="internal_port_input" class="form-label">Internal port:</label>
+<input type="text" class="form-control" id="internal_port_input" name="internal_port" value="3000" required>
+</div>
+<div class="col-12 clone-btn">
+<button type="submit" class="btn btn-primary">Clone</button>
+</div>
+</form>
+<br>
+<h5>All deployments</h5>
+<hr>
+<div class="row row-cols-3 row-cols-md-3 g-4">
+  {% for repo in repositories %}
+  <div class="col">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="homepage card-title">
+          {% if repo.status == "SUCCESS" %}
+          <a href="{% url 'repositories_repository_dashboard' pk=repo.pk %}">
+          {{ repo.repo_name }}</a>
+        {% else %}
+        {{ repo.repo_name }}
+        {% endif %}
+        </h5>
+        <p class="card-text text-secondary">Last Updated: {{ repo.update_time }}<br>
+          {% if repo.status == "PENDING" %}
+          <span class="badge bg-secondary">Pending</span>
+          {% elif repo.status == "SUCCESS" %}
+          <span class="badge bg-success">Success</span>
+          {% elif repo.status == "ERROR" %}
+          <span class="badge bg-danger">Error</span>
+          {% endif %}</p>
+      </div>
+      <div class="card-footer">
+        <small class="text-muted">{{ repo.deployer.username }} | Active Deployments: {{ repo.deployments }}</small>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<style>
+.custom-card-img {
+  height: 175px;
+}
+
+.custom-card-img img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+}
+
+.homepage a:link {
+    color: black;
+    text-decoration: none;
+  }
+
+  /* visited link */
+  .homepage a:visited {
+    color: black;
+    text-decoration: none;
+  }
+
+  /* mouse over link */
+  .homepage a:hover {
+    color: black;
+    text-decoration: underline;
+  }
+
+</style>
+
+
+{% endblock %}

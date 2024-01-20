@@ -104,12 +104,13 @@ def deploy(url,
     )
 
 
-def stop_db_container(deployment_id, branch):
+def stop_db_container(deployment_id, branch, log_file_path=None):
     """
     stops db container for a specific IRIS branch.
     """
-    log_file = f"{PATH_TO_HOME_DIR}/logs/IRIS-NITK/IRIS/{branch}/{branch}.txt"
-    logger = initiate_logger(log_file)
+    if not log_file_path:
+        log_file_path = f"{PATH_TO_HOME_DIR}/logs/IRIS-NITK/IRIS/{branch}/{branch}.txt"
+    logger = initiate_logger(log_file_path)
     db_container_name = get_db_container_name(PREFIX, deployment_id)
     status, err = stop_containers(
         container_name=db_container_name, logger=logger)

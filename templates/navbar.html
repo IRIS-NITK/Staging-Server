@@ -2,6 +2,7 @@
 {%   url 'iris_dashboard' as iris_dashboard_url %}
 {% endif %}
 {% url 'gitlab_social_dashboard' as gitlab_social_dashboard_url %}
+{% url 'repositories_dashboard' as repositories_dashboard_url %}
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid">
@@ -21,16 +22,8 @@
         <li class="nav-item">
           <a class="nav-link {% if request.path == gitlab_social_dashboard_url %} active {%endif%}" href="{% url 'gitlab_social_dashboard' %}">Gitlab</a>
         </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Templates
-          </a>
-          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <li><a class="dropdown-item" href="/template">Dashboard</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/template/list">List Templates</a></li>
-            <li><a class="dropdown-item" href="/template/new">Add Template</a></li>
-          </ul>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path == repositories_dashboard_url %} active {%endif%}" href="{% url 'repositories_dashboard' %}">Repositories</a>
         </li>
         {% if user.is_authenticated%}
             <li class="nav-item">
