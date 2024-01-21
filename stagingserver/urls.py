@@ -27,4 +27,4 @@ urlpatterns = [
 ]
 
 if settings.IRIS_REPOSITORY:
-    urlpatterns.append(path("iris/", include("iris.urls")))
+    urlpatterns.append(path("iris/", include("staging_server_iris.iris.urls")))

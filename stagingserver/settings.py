@@ -57,10 +57,10 @@ INSTALLED_APPS = [
     "repositories",
 ]
 
-IRIS_REPOSITORY = os.path.isdir("iris")
+IRIS_REPOSITORY = os.path.isdir("staging_server_iris")
 
 if IRIS_REPOSITORY:
-    INSTALLED_APPS.append("iris")
+    INSTALLED_APPS.append("staging_server_iris.iris")
 def is_iris_repository(request):
     return {
         "IRIS_REPOSITORY": IRIS_REPOSITORY,
@@ -111,6 +111,8 @@ TEMPLATES = [
     },
 ]
 
+if IRIS_REPOSITORY:
+    TEMPLATES[0]["DIRS"].append(os.path.join(BASE_DIR, 'staging_server_iris/templates'))
 # WSGI_APPLICATION = 'stagingserver.wsgi.application'
 ASGI_APPLICATION = 'stagingserver.routing.application'
 
