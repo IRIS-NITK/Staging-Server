@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     "repositories",
 ]
 
-IRIS_REPOSITORY = os.path.isdir("staging_server_iris")
+IRIS_REPOSITORY = os.path.isdir("staging_server_iris/iris")
 
 if IRIS_REPOSITORY:
     INSTALLED_APPS.append("staging_server_iris.iris")
