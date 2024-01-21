@@ -8,7 +8,7 @@ from contextlib import closing
 import urllib.parse
 import requests
 from dotenv import load_dotenv
-from main.utils.helpers import pretty_print, initiate_logger
+from main.utils.helpers import pretty_print, initiate_logger, get_db_container_name
 from main.utils.helpers import exec_commands, delete_directory
 from subprocess import PIPE, run
 
@@ -63,6 +63,8 @@ def clone_repository(clone_url="",
     """
     Clones the Repository if it doesn't exist.
     """
+    if not branch_name:
+        branch_name = 'DEFAULT_BRANCH'
     temp_logging_text = ""
     # Create Org directory if it doesn't exist
     clone_path = f"{clone_path}/DEFAULT_BRANCH"
@@ -297,6 +299,8 @@ def clean_up(org_name,
              remove_nginx_conf=True,
              log_file_path=None,
              branch_deploy_path=None,
+             repo_path=None,
+             remove_repo=False,
              ):
     """
     Remove all the containers, volumes, networks and images related to the branch
@@ -412,6 +416,19 @@ def clean_up(org_name,
         else:
             pretty_print(logger, err)
 
+    if remove_repo:
+        pretty_print(logger,
+                     "Deleting the repo directory"
+                     )
+        status, err = delete_directory(
+            repo_path)
+        if status:
+            pretty_print(logger,
+                         f"Successfully deleted the {repo_name}'s directory."
+                         )
+        else:
+            pretty_print(logger, err)
+
     if remove_all_dir:
         status, err = delete_directory(
             f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}")
@@ -488,3 +505,44 @@ def stop_containers(container_name, logger):
         pretty_print(
             logger, f"No existing container {container_name} running.")
     return True, "success"
+
+def stop_db_container(deployment_id, branch, log_file_path=None):
+    """
+    stops db container for a specific IRIS branch.
+    """
+    if not log_file_path:
+        log_file_path = f"{PATH_TO_HOME_DIR}/logs/IRIS-NITK/IRIS/{branch}/{branch}.txt"
+    logger = initiate_logger(log_file_path)
+    db_container_name = get_db_container_name(PREFIX, deployment_id)
+    status, err = stop_containers(
+        container_name=db_container_name, logger=logger)
+    logger.close()
+    return status, err
+
+def delete_instance(instance, stop_db=False, remove_branch_dir=True):
+    """
+    Deletes the instance
+    """
+    container_name = instance.app_container_name
+    # stop container
+    clean_up(
+        org_name=instance.organisation,
+        repo_name=instance.repo_name,
+        branch=instance.branch,
+        deployment_id=instance.deployment_id,
+        branch_name=instance.branch,
+        remove_container=container_name,
+        remove_branch_dir=remove_branch_dir,
+        remove_nginx_conf=True,
+        log_file_path=instance.log_file_path,
+        branch_deploy_path=instance.branch_deploy_path
+    )
+    if stop_db:
+        stop_db_container(instance.deployment_id, instance.branch, log_file_path=instance.log_file_path)
+    clean_logs(org_name=instance.organisation,
+                repo_name=instance.repo_name,
+                branch_name=instance.branch, 
+                log_file_path=instance.log_file_path)
+    # delete the object from database
+    instance.delete()
+    return True

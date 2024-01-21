@@ -4,8 +4,40 @@
 Repositories | {{ repository.repo_name }}{% endblock %} 
 
 {% block content %}
-  <h5>{{ repository.repo_name }} <span class="text-muted">{{ repository.deployer.username }}</span></h5>
+  <h4>{{ repository.repo_name }}
+    <span class="text-muted">{{ repository.deployer.username }}
+    </span></h4>
+    <span class="text-muted text-sm">{{ repository.repo_git_url }}
+       <a href="#" data-bs-toggle="modal" data-bs-target="#repoDeleteConfirmationModal">
+      Delete Repository
+  </a></span>
+  <form id="deleteForm" method="post" action="{% url 'repositories_delete_repository' repository.pk  %}">
+    {% csrf_token %}
+</form>
   <hr>
+
+  <div class="modal" tabindex="-1" id="repoDeleteConfirmationModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Delete the repository?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure that you want to delete the following repository?<br> <code>{{ repository.repo_name }}</code></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" 
+                  onclick="document.getElementById('deleteForm').submit();"
+                  class="btn btn-danger">
+                  Yes
+          </button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="card my-2 ">
   <div class="card-body">
   <form class="row g-3" method="POST" action="{% url 'repositories_update_repository' pk=repository.pk %}">
@@ -151,14 +183,15 @@ Repositories | {{ repository.repo_name }}{% endblock %}
                   Redeploy
                 </button>
               </form>
-            <form method="post" action="{% url 'gitlab_social_stop' instance.pk  %}">
+            <form method="post" action="{% url 'repositories_delete_instance' instance.pk  %}">
               {% csrf_token %}
               <button type="submit" class="btn btn-outline-danger btn-sm mx-1">
                 Stop
               </button>
             </form>
-            <form method="post" action="{% url 'gitlab_social_stop_with_db' instance.pk  %}">
+            <form method="post" action="{% url 'repositories_delete_instance' instance.pk  %}">
               {% csrf_token %}
+              <input type="hidden" name="stop_db" value="True">
               <button type="submit" class="btn btn-outline-danger btn-sm mx-1">
                 Stop with DB
               </button>
