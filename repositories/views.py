@@ -11,12 +11,9 @@ from repositories.models import Repository
 from repositories.utils.helpers import extractRepositoryName, generate_deployment_id
 from repositories.services import create as create_repository, get_branches, deploy as deploy_branch
 
-from main.services import clean_logs, clean_up
-from gitlab_social.services import stop_db_container
-
+from main.services import delete_instance, clean_up
 from main.models import RunningInstance
 from main.utils.helpers import get_app_container_name, get_db_container_name
-
 DEPLOYMENT_DOCKER_NETWORK = os.getenv("DEPLOYMENT_DOCKER_NETWORK", "IRIS") # Docker network for iris containers
 PREFIX = os.getenv("PREFIX", "iris")  # Prefix for docker container names
 SUBDOMAIN_PREFIX = os.getenv("SUBDOMAIN_PREFIX", "staging")  # Prefix for domain name
@@ -144,11 +141,11 @@ def deploy(request, pk, branch=None):
         )
         instance.owner = request.user.username
         instance.update_time = time.time()
-        app_env_vars = dict(json.loads(repository.app_env_vars)) if repository.app_env_vars else {}
+        app_env_vars = repository.app_env_vars if repository.app_env_vars else {}
         app_env_vars.update({
                     repository.app_env_db_host_key: instance.db_container_name
                     })
-        instance.app_env_vars = json.dumps(app_env_vars)
+        instance.app_env_vars = app_env_vars
         instance.db_env_vars = repository.db_env_vars
         instance.dockerfile_path = repository.dockerfile_path
         instance.internal_port = int(repository.internal_port)
@@ -197,32 +194,43 @@ def deploy(request, pk, branch=None):
     return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
 @login_required
+def stop_instance(request, pk):
+    stop_db= request.POST.get('stop_db', False)
+    try:
+        instance = RunningInstance.objects.get(pk=pk)
+        if instance.repository:
+            repository = Repository.objects.get(pk=instance.repository.pk)
+            repository.deployments -= 1
+            repository.save()
+        print("DELETING_INSTANCE")
+        delete_instance(instance, stop_db=stop_db)
+    except ObjectDoesNotExist:
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+
+@login_required
 def delete_repository(request, pk):
     try:
         repository = Repository.objects.get(pk=pk)
         Instances = RunningInstance.objects.filter(repository=repository)
         for instance in Instances:
-            container_name = instance.app_container_name
-            
-            # stop container
-            clean_up(
-                org_name=instance.organisation,
-                repo_name=instance.repo_name,
-                branch=instance.branch,
-                deployment_id=instance.deployment_id,
-                branch_name=instance.branch,
-                remove_container=container_name,
-                remove_branch_dir=instance.branch,
-                remove_nginx_conf=True
-            )
-            stop_db_container(instance.deployment_id, instance.branch, log_file_path=instance.log_file_path)
-            clean_logs(org_name=instance.organisation,
-                        repo_name=instance.repo_name,
-                        branch_name=instance.branch, 
-                        log_file_path=instance.log_file_path)
-            # delete the object from database
-            instance.delete()
-        # DELETE OTHER FILES PLEASE ?????
+            delete_instance(instance, stop_db=True, remove_branch_dir=False)
+        clean_up_dir = f"{PATH_TO_HOME_DIR}/repositories/{repository.deployer.username}/{repository.pk}"
+        log_file_path = f"{PATH_TO_HOME_DIR}/logs/repositories/{repository.deployer.username}/{repository.pk}/DEFAULT_BRANCH/DEFAULT_BRANCH.txt"
+        clean_up(
+        org_name="repositories",
+        repo_name=repository.repo_name,
+        branch=None,
+        deployment_id=None,
+        branch_name=None,
+        remove_container=None,
+        remove_branch_dir=None,
+        remove_nginx_conf=True,
+        log_file_path=log_file_path,
+        branch_deploy_path=None,
+        remove_repo=True,
+        repo_path=clean_up_dir
+        )
         repository.delete()
     except ObjectDoesNotExist:
         return HttpResponseRedirect(request.META.get('HTTP_REFERER'))

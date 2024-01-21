@@ -49,13 +49,16 @@ def create(self, repo_git_url,
     repository.save()
     return True
 
-def get_branches(deployer, repository_pk, repo_name):
+def get_branches(deployer, repository_pk, repo_name, repo_dir=None):
     """
     gets all remote branches list of a repository
     """
+    if not repo_dir:
+        repo_dir = f"{PATH_TO_HOME_DIR}/repositories/{deployer}/{repository_pk}/DEFAULT_BRANCH/{repo_name}"
+
     temp_logging_text=""
     common_args = {
-    "cwd": f"{PATH_TO_HOME_DIR}/repositories/{deployer}/{repository_pk}/DEFAULT_BRANCH/{repo_name}",
+    "cwd": repo_dir,
     "logger": temp_logging_text,
     "err": "repo branch list fetch failed",
     "logger_not_file": True,
@@ -105,8 +108,8 @@ def deploy(branch,
     """
     # repository = Repository.objects.get(pk=repository_pk)
     # instance = RunningInstance.objects.get(pk=instance_pk)
-    app_env_vars = json.loads(instance.app_env_vars) if instance.app_env_vars else {}  
-    db_env_vars = json.loads(instance.db_env_vars) if instance.db_env_vars else {} 
+    app_env_vars = instance.app_env_vars if instance.app_env_vars else {}  
+    db_env_vars = instance.db_env_vars if instance.db_env_vars else {} 
     post_deploy_scripts = {
         'commands': [
             ["python3", NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS,
