@@ -9,10 +9,9 @@ from django import forms
 from django.http import JsonResponse, HttpResponseRedirect
 from allauth.socialaccount.models import SocialToken
 from main.models import RunningInstance
-from main.services import find_free_port, clean_logs, clean_up
-from repositories.models import Repository
+from main.services import delete_instance
 from gitlab_social.services import deploy as deploy_gitlab_social
-from gitlab_social.services import stop_db_container, get_gitlab_token
+from gitlab_social.services import get_gitlab_token
 
 from main.utils.helpers import get_app_container_name, get_db_container_name, generate_deployment_id
 
@@ -205,32 +204,7 @@ def stop(request, pk, stop_db=False):
         instance = RunningInstance.objects.get(pk=pk)
     except:  # pylint: disable=bare-except
         return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
-    container_name = instance.app_container_name
-    
-    # stop container
-    clean_up(
-        org_name=instance.organisation,
-        repo_name=instance.repo_name,
-        branch=instance.branch,
-        deployment_id=instance.deployment_id,
-        branch_name=instance.branch,
-        remove_container=container_name,
-        remove_branch_dir=instance.branch,
-        remove_nginx_conf=True
-    )
-    if stop_db:
-        stop_db_container(instance.deployment_id, instance.branch, log_file_path=instance.log_file_path)
-    clean_logs(org_name=instance.organisation,
-                repo_name=instance.repo_name,
-                branch_name=instance.branch, 
-                log_file_path=instance.log_file_path)
-    
-    if instance.repository:
-        repository = Repository.objects.get(pk=instance.repository.pk)
-        repository.deployments -= 1
-        repository.save()
-    # delete the object from database
-    instance.delete()
+    delete_instance(instance, stop_db)
     return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
 @login_required

@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 import gitlab
 from allauth.socialaccount.models import SocialToken
 from main.utils.helpers import initiate_logger, get_app_container_name, get_db_container_name
-from main.services import stop_containers, clean_up
 from template.services import deploy as deploy_template
 from django.contrib.auth import logout
 gitlab_url = __import__('stagingserver').settings.SOCIALACCOUNT_PROVIDERS['gitlab']['GITLAB_URL']
@@ -102,20 +101,6 @@ def deploy(url,
         docker_db=db_container,
         post_deploy_scripts=post_deploy_scripts
     )
-
-
-def stop_db_container(deployment_id, branch, log_file_path=None):
-    """
-    stops db container for a specific IRIS branch.
-    """
-    if not log_file_path:
-        log_file_path = f"{PATH_TO_HOME_DIR}/logs/IRIS-NITK/IRIS/{branch}/{branch}.txt"
-    logger = initiate_logger(log_file_path)
-    db_container_name = get_db_container_name(PREFIX, deployment_id)
-    status, err = stop_containers(
-        container_name=db_container_name, logger=logger)
-    logger.close()
-    return status, err
 
 def get_gitlab_token(request):
     """
