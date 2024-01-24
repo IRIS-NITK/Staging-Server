@@ -44,7 +44,7 @@
 
 ![](/docs/images/repo_dashboard.png)
 
-#### Interactive Web Terminal to access container
+#### Interactive Web Terminal to access deployment's container
 
 ![](/docs/images/console.png)
 
