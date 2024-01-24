@@ -43,3 +43,11 @@
 #### Repository Dashboard with finer control over deployments
 
 ![](/docs/images/repo_dashboard.png)
+
+#### Interactive Web Terminal to access container
+
+![](/docs/images/console.png)
+
+#### Logs viewer with text search feature
+
+![](/docs/images/logs.png)
