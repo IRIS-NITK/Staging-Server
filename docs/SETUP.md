@@ -45,7 +45,7 @@ create environment file, copy `.env.example` to `.env`.
 - change HOST_PARENT_WD to current working directory on your host.
 - change GITLAB_URL to your instance of gitlab if you want to setup SSO with gitlab and deploy with it.
 
-Important comment out database mount in `docker-compose.yaml` to generate a fresh database file.
+Important: comment out database mount in `docker-compose.yaml` to generate a fresh database file.
 ```yaml
 - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
 ```
