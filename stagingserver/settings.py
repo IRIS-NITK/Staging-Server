@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.sites',
     'django.contrib.staticfiles',
-    'template', # app for template type of deployment
+ # app for template type of deployment
     'main',
     'gitlab_social',
     'crispy_forms',

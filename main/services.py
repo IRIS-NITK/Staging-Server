@@ -8,9 +8,10 @@ from contextlib import closing
 import urllib.parse
 import requests
 from dotenv import load_dotenv
-from main.utils.helpers import pretty_print, initiate_logger, get_db_container_name
+from main.utils.helpers import pretty_print, initiate_logger, get_db_container_name,get_app_container_name, get_db_container_name
 from main.utils.helpers import exec_commands, delete_directory
 from subprocess import PIPE, run
+from celery import shared_task
 
 load_dotenv()
 # environment variables are now loaded
@@ -23,7 +24,6 @@ DOCKER_DB_IMAGE = os.getenv("DOCKER_DB_IMAGE", "mysql:5.7")
 DEPLOYMENT_DOCKER_NETWORK = os.getenv("DEPLOYMENT_DOCKER_NETWORK", "IRIS")
 SUBDOMAIN_PREFIX = os.getenv("SUBDOMAIN_PREFIX", "staging")
 DOMAIN = os.getenv("DOMAIN", "iris.nitk.ac.in")
-
 
 def find_free_port():
     """
@@ -546,3 +546,205 @@ def delete_instance(instance, stop_db=False, remove_branch_dir=True):
     # delete the object from database
     instance.delete()
     return True
+
+@shared_task(bind=True)
+
+def deploy(self,
+           url,
+           user_name,
+           org_name,
+           repo_name,
+           vcs,
+           branch,
+        #    external_port,
+           deployment_id,
+           internal_port=80,
+           access_token=None,
+           docker_app=None,
+           docker_db=None,
+           post_deploy_scripts=None,
+           pre_deploy_scripts=None,
+           log_file_path=None,
+           clone_path=None,
+           ):
+    """
+    Pulls changes, builds/pulls docker image, starts container, configure NGINX
+    """
+    # logfile where logs for this deployment are stored
+    if not log_file_path:
+        log_file = f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch}/{branch}.txt"
+    else: 
+        log_file = f"{log_file_path}/{branch}/{branch}.txt"
+    logger = initiate_logger(log_file)
+
+    # closing existing container if it exists.
+    app_container_name = docker_app.get(
+        'container_name', 
+        str(get_app_container_name(PREFIX, deployment_id)))
+    stop_containers(container_name=app_container_name, logger=logger)
+    logger.close()
+
+    # Pull changes from git based vcs
+    result, logs = pull_git_changes(
+        url=url,
+        user_name=user_name,
+        org_name=org_name,
+        repo_name=repo_name,
+        branch_name=branch,
+        token=access_token,
+        log_file_path=log_file_path,
+        clone_path=clone_path
+    )
+
+    if not result:
+        print(f"git pull failed\n{logs}")
+
+    logger = initiate_logger(log_file)
+
+    # Building docker image
+    docker_image = docker_app.get('image', None)
+    if not clone_path:
+        cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch}/{repo_name}/"
+    else:
+        cwd = f"{clone_path}/{branch}/{repo_name}"
+    if not docker_image:
+        pretty_print(logger, "No Docker image provided")
+        pretty_print(logger, f"Building image with {docker_app.get('dockerfile_path', 'Dockerfile')} ...")
+
+        # building docker image and tagging it
+        docker_image = app_container_name.lower()
+        exec_dockerfile = []
+        if docker_app.get('dockerfile_path', None):
+            exec_dockerfile = ["-f", f"./{docker_app.get('dockerfile_path', '')}"]
+            print(exec_dockerfile)
+        elif os.path.exists(f"{cwd}/Dockerfile.Staging"):
+                exec_dockerfile = ["-f", f"./Dockerfile.Staging"]
+        status, err = exec_commands(commands=[
+            ['docker', 'build', '--tag', docker_image, *exec_dockerfile, '.']
+        ],
+            logger=logger,
+            cwd=cwd, # Not sure rn
+            err=f"Error while building docker image {docker_image}",
+            print_stderr=True
+        )
+        if status:
+            pretty_print(logger,
+                         f"Docker image built: {docker_image}"
+                         )
+        else:
+            return False, err
+    else:
+        pretty_print(logger, f"Docker image {docker_image} already provided.")
+
+    # Creating docker network for the container
+    network_name=docker_app.get('network', DEPLOYMENT_DOCKER_NETWORK)
+    if network_name:
+        pretty_print(logger, f"Checking if the docker network {network_name} exists.")
+        inspect_network = run(
+            ["docker", "network", "inspect", network_name],
+            stderr=PIPE,
+            stdout=PIPE,
+            check=False
+        )
+        if inspect_network.returncode == 0:
+            pretty_print(logger, f"Docker network {network_name} already exists")
+        else:
+            pretty_print(logger, f"Docker network {network_name} does not exist, creating it")
+            status, err = exec_commands(
+                commands=[['docker', 'network', 'create', network_name]],
+                logger=logger,
+                err=f"Error creating docker network {network_name}",
+                print_stderr=False
+            )
+            if status:
+                pretty_print(logger,f"Successfully created docker network {network_name}")
+            else:
+                return status, err
+
+    # start db container if required
+    if docker_db:
+        pretty_print(logger, "checking for existing database container")
+        docker_db_container_name = docker_db.get('container_name',
+                                                  str(get_db_container_name(PREFIX, deployment_id)))
+
+        inspect_container = run(
+            ["docker", "container", "inspect", docker_db_container_name],
+            stderr=PIPE,
+            stdout=PIPE,
+            check=False
+        )
+
+        if inspect_container.returncode == 0:
+            pretty_print(logger, f"{docker_db_container_name} already exists")
+        else:
+            pretty_print(
+                logger, f"Starting database Container : {docker_db_container_name}")
+
+            result, logs = start_db_container(
+                db_image=docker_db.get('image',None),
+                db_name=docker_db_container_name,
+                db_dump_path=docker_db.get('dump_path',None),
+                db_env_variables=docker_db.get('env_variables',None),
+                volume_bind_path=docker_db.get('bind_path',None),
+                volume_name=docker_db.get('volume_name',None),
+                network_name=network_name,
+            )
+
+            if not result:
+                return False, f"Failed to start {docker_db_container_name}, {logs}"
+
+    # Execute Pre Deployment scripts
+    if pre_deploy_scripts:
+        pretty_print(logger, "Executing pre deployment Scripts")
+        status, err = exec_commands(
+            commands=pre_deploy_scripts.get('commands',[]),
+            logger=logger,
+            err=pre_deploy_scripts.get("msg_error",""),
+            print_stderr=True
+        )
+        if status:
+            pretty_print(logger,pre_deploy_scripts.get("msg_success",""))
+
+    # start the container
+    pretty_print(logger, f"Starting app container -> {app_container_name}")
+    pretty_print(logger, f"Base image : {docker_image}")
+
+    result, logs = start_container(
+        image_name=docker_image,
+        org_name=org_name,
+        repo_name=repo_name,
+        branch_name=branch,
+        container_name=app_container_name,
+        # external_port=external_port,
+        internal_port=internal_port,
+        volumes=docker_app.get('volumes', None),
+        enviroment_variables=docker_app.get('env_variables', None),
+        docker_network=network_name
+    )
+
+    if not result:
+        pretty_print(
+            logger, f"Error while starting container : {app_container_name}")
+        pretty_print(logger, logs)
+        logger.close()
+        return False, logs
+
+    if not result:
+        pretty_print(logger, " ⚠️ Error while starting container")
+        pretty_print(logger, logs)
+        logger.close()
+        return False, logs
+    # to execute commands after deployments, like to setup nginx config.
+    if post_deploy_scripts:
+        pretty_print(logger, "Executing post deployment Scripts")
+        status, err = exec_commands(post_deploy_scripts.get('commands',[]),
+            logger=logger,
+            err=post_deploy_scripts.get('msg_error',""),
+            print_stderr=True
+        )
+        if status:
+            pretty_print(logger, post_deploy_scripts.get('msg_success',""))
+
+    pretty_print(logger, "Successully deployed 🥳")
+
+    return True, logs  # log will be container id

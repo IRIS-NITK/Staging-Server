@@ -11,7 +11,7 @@ from main.models import RunningInstance
 
 from repositories.models import Repository
 
-from template.services import deploy as deploy_template
+from main.services import deploy as deploy_template
 
 PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")  # Path to home directory
 NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS = os.getenv("NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS", None) # Path to nginx add config script

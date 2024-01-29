@@ -25,11 +25,11 @@ IRIS NITK
       </div>
     </div>
   </div>
-    <div class="card">
-        <div class="card-body no-horiz-padding">
-          <div id="log" class="log bg-dark border" style="border: 0.3px solid black; width: 100%;"></div>
-        </div>
+  <div class="card">
+    <div class="card-body no-horiz-padding">
+      <div id="log" class="log bg-dark border" style="border: 0.3px solid black; width: 100%;"></div>
     </div>
+  </div>
     <script src="/static/frontail/tinycon.min.js"></script>
     <script src="/static/frontail/ansi_up.js"></script>
     <script src="/static/frontail/app.js"></script>
@@ -37,6 +37,9 @@ IRIS NITK
         let protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         let socket = new WebSocket(protocol + '://' + window.location.host +
             '/websocket/logs/{{ instance.pk }}/');
+        
+      
+
         window.load = App.init({
             socket: socket,
             sourceType: 'socket',
@@ -47,6 +50,8 @@ IRIS NITK
             body: document.getElementsByTagName('body')[0],
             loading: document.getElementById('loading'),
         });
+    
+
     </script>
 
 
