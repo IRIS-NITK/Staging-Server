@@ -21,7 +21,6 @@ urlpatterns = [
     path("", include("main.urls")),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
-    path("template/", include("template.urls")),
     path("gitlab_social/", include("gitlab_social.urls")),
     path("repositories/", include("repositories.urls")),
 ]

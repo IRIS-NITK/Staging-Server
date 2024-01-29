@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import gitlab
 from allauth.socialaccount.models import SocialToken
 from main.utils.helpers import initiate_logger, get_app_container_name, get_db_container_name
-from template.services import deploy as deploy_template
+from main.services import deploy as deploy_template
 from django.contrib.auth import logout
 gitlab_url = __import__('stagingserver').settings.SOCIALACCOUNT_PROVIDERS['gitlab']['GITLAB_URL']
 load_dotenv()
