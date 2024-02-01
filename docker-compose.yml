@@ -7,8 +7,6 @@ services:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
       - "/var/run/docker.sock:/var/run/docker.sock"
-      - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
-      - "/etc/nginx/sites-available:/etc/nginx/sites-available"
 #      - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
       - ./nginx/configs:/STAGING_APP/nginx/configs
     environment:
@@ -47,8 +45,6 @@ services:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
       - "/var/run/docker.sock:/var/run/docker.sock"
-      - "/etc/nginx/sites-enabled:/etc/nginx/sites-enabled"
-      - "/etc/nginx/sites-available:/etc/nginx/sites-available"
 #      - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
       - "./nginx/configs:/STAGING_APP/nginx/configs"
     environment:
@@ -80,7 +76,7 @@ services:
     ports:
       - "127.0.0.1:9000:80"
     volumes:
-      - "./nginx/configs:/etc/nginx/conf.d"
+      - "./nginx/configs:/etc/nginx/sites-enabled"
       - "./nginx/nginx.conf:/etc/nginx/nginx.conf"
       - ./assets:/assets
     networks:
