@@ -57,7 +57,9 @@ services:
     restart: always
 
   socat:
-    image: w453y/socat
+    build:
+      context: .
+      dockerfile: Dockerfile.socat
     container_name: socat-stagingserver
     command: "TCP-LISTEN:2375,reuseaddr,fork,range=172.21.1.5/32 UNIX-CONNECT:/var/run/docker.sock"
     volumes:
