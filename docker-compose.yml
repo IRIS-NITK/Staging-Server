@@ -28,7 +28,8 @@ services:
     expose:
       - 7001
     networks:
-      - staging-network
+      staging-network:
+        ipv4_address: 172.21.1.5
 
   redis:
     container_name: redis-stagingserver
@@ -56,9 +57,11 @@ services:
     restart: always
 
   socat:
-    image: alpine/socat
+    build:
+      context: .
+      dockerfile: Dockerfile.socat
     container_name: socat-stagingserver
-    command: "TCP-LISTEN:2375,reuseaddr,fork UNIX-CONNECT:/var/run/docker.sock"
+    command: "TCP-LISTEN:2375,reuseaddr,fork,range=172.21.1.5/32 UNIX-CONNECT:/var/run/docker.sock"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     expose:
@@ -85,8 +88,13 @@ services:
     restart: always
 
 networks:
+  # staging-network:
+  #   name: staging-network
   staging-network:
-    name: staging-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.1.0/16
   IRIS:
     name: IRIS
 
