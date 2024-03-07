@@ -21,7 +21,7 @@ services:
 
   daphne:
     <<: *app_c
-    command: "daphne stagingserver.asgi:application -b 0.0.0.0 --port 7001"
+    command: "daphne stagingserver.asgi:application -b '[::]' -b 0.0.0.0 --port 7001"
     container_name: daphne-stagingserver
     depends_on:
       - gunicorn
@@ -29,7 +29,7 @@ services:
       - 7001
     networks:
       staging-network:
-        ipv4_address: 172.21.1.5
+        ipv6_address: 2001:0DB8::A0
 
   redis:
     container_name: redis-stagingserver
@@ -57,11 +57,9 @@ services:
     restart: always
 
   socat:
-    build:
-      context: .
-      dockerfile: Dockerfile.socat
+    image: alpine/socat
     container_name: socat-stagingserver
-    command: "TCP-LISTEN:2375,reuseaddr,fork,range=172.21.1.5/32 UNIX-CONNECT:/var/run/docker.sock"
+    command: "TCP6-LISTEN:2375,reuseaddr,fork,range=[2001:0DB8::A0]/128 UNIX-CONNECT:/var/run/docker.sock"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     expose:
@@ -73,30 +71,33 @@ services:
   nginx:
     container_name: nginx-stagingserver
     image: nginx:1.25.2
+    ports:
+      - "[::1]:9000:80"
+      - "127.0.0.1:9000:80"
+    networks:
+      - IRIS
+      - staging-network
     depends_on:
       - daphne
       - celery
-    ports:
-      - "127.0.0.1:9000:80"
     volumes:
       - "./nginx/configs:/etc/nginx/sites-enabled"
       - "./nginx/nginx.conf:/etc/nginx/nginx.conf"
       - ./assets:/assets
-    networks:
-      - IRIS
-      - staging-network
     restart: always
 
 networks:
-  # staging-network:
-  #   name: staging-network
-  staging-network:
-    driver: bridge
+  IRIS: 
+    name: IRIS
+    enable_ipv6: true
     ipam:
       config:
-        - subnet: 172.21.1.0/16
-  IRIS:
-    name: IRIS
-
+       - subnet: 2001:0DB9::/112
+  staging-network:
+    name: staging-network
+    enable_ipv6: true
+    ipam:
+      config:
+       - subnet: 2001:0DB8::/112
 volumes:
   configs:
