@@ -1,0 +1,102 @@
+services:
+  gunicorn: &app_c
+    build: .
+    command: "/bin/bash -c 'chmod +x ./deploy/gunicorn.sh && ./deploy/gunicorn.sh'"
+    container_name: gunicorn-stagingserver
+    volumes:
+      - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
+      - "./STAGING_DIR:/STAGING_DIR"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+#      - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
+      - ./nginx/configs:/STAGING_APP/nginx/configs
+    environment:
+      - DEBUG=0
+    depends_on:
+      - redis
+    expose:
+      - 7000
+    networks:
+      - staging-network
+    restart: always
+
+  daphne:
+    <<: *app_c
+    command: "daphne stagingserver.asgi:application -b '[::]' -b 0.0.0.0 --port 7001"
+    container_name: daphne-stagingserver
+    depends_on:
+      - gunicorn
+    expose:
+      - 7001
+    networks:
+      - staging-network
+
+  redis:
+    container_name: redis-stagingserver
+    image: redis:alpine
+    networks:
+      - staging-network
+    restart: always
+
+  celery:
+    build: .
+    command: "celery -A stagingserver worker -l info"
+    container_name: celery-stagingserver
+    volumes:
+      - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
+      - "./STAGING_DIR:/STAGING_DIR"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+#      - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
+      - "./nginx/configs:/STAGING_APP/nginx/configs"
+    environment:
+      - DEBUG=1
+    depends_on:
+      - redis
+    networks:
+      - staging-network
+    restart: always
+
+  socat:
+    image: alpine/socat
+    container_name: socat-stagingserver
+    command: "TCP6-LISTEN:2375,reuseaddr,fork UNIX-CONNECT:/var/run/docker.sock"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    expose:
+      - 2375
+    networks:
+      - staging-network
+    restart: always
+      
+  nginx:
+    container_name: nginx-stagingserver
+    image: nginx:1.25.2
+    ports:
+      - "[::1]:9000:80"
+      - "127.0.0.1:9000:80"
+    networks:
+      - IRIS
+      - staging-network
+    depends_on:
+      - daphne
+      - celery
+    volumes:
+      - "./nginx/configs:/etc/nginx/sites-enabled"
+      - "./nginx/nginx.conf:/etc/nginx/nginx.conf"
+      - ./assets:/assets
+    restart: always
+
+networks:
+  IRIS: 
+    name: IRIS
+    enable_ipv6: true
+    ipam:
+      config:
+       - subnet: 2001:0DB9::/112
+  staging-network:
+    name: staging-network
+    enable_ipv6: true
+    ipam:
+      config:
+       - subnet: 2001:0DB8::/112
+volumes:
+  configs:
