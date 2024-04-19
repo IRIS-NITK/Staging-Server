@@ -56,6 +56,25 @@ INSTALLED_APPS = [
     "repositories",
 ]
 
+STAGING_CONF = {
+    "PREFIX": os.getenv("PREFIX", "iris"),
+    "PATH_TO_HOME_DIR": os.getenv("PATH_TO_HOME_DIR", None),
+    "NGINX_PYTHON_REMOVE_SCRIPT_IRIS": os.getenv("NGINX_PYTHON_REMOVE_SCRIPT_IRIS"),
+    "NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS": os.getenv("NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS", None),
+    "DOCKER_IMAGE": os.getenv("BASE_IMAGE"),
+    "DOCKER_DB_IMAGE": os.getenv("DOCKER_DB_IMAGE", "mysql:5.7"),
+    "DEPLOYMENT_DOCKER_NETWORK": os.getenv("DEPLOYMENT_DOCKER_NETWORK", "IRIS"),
+    "SUBDOMAIN_PREFIX": os.getenv("SUBDOMAIN_PREFIX", "staging"),
+    "DOMAIN": os.getenv("DOMAIN", "iris.nitk.ac.in"),
+    "DB_DEFAULT_USER": os.getenv("DB_DEFAULT_USER", "rootme"),
+    "DB_DEFAULT_PASSWORD": os.getenv("DB_DEFAULT_PASSWORD", "password"),
+    "DB_DEFAULT_ROOT_PASSWORD": os.getenv("DB_DEFAULT_ROOT_PASSWORD", "password"),
+    "DB_DEFAULT_DATABASE": os.getenv("DB_DEFAULT_DATABASE", "staging"),
+    "ACCESS_TOKEN": os.getenv('GITLAB_ACCESS_TOKEN'),
+    "DOCKER_SOCKET_HOST": os.getenv("DOCKER_SOCKET_HOST","127.0.0.1"),
+    "DOCKER_SOCKET_PORT": os.getenv("DOCKER_SOCKET_PORT","2375"),
+}
+
 IRIS_REPOSITORY = os.path.isdir("staging_server_iris/iris")
 
 if IRIS_REPOSITORY:

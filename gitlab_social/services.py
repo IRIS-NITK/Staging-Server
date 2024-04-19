@@ -10,20 +10,8 @@ from main.utils.helpers import initiate_logger, get_app_container_name, get_db_c
 from main.services import deploy as deploy_template
 from django.contrib.auth import logout
 gitlab_url = __import__('stagingserver').settings.SOCIALACCOUNT_PROVIDERS['gitlab']['GITLAB_URL']
-load_dotenv()
 
-PREFIX = os.getenv("PREFIX", "iris")  # Prefix for docker container names
-PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")  # Path to home directory
-NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS = os.getenv("NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS", None) # Path to nginx add config script
-DOCKER_IMAGE = os.getenv("DOCKER_IMAGE") # Base docker image for iris container
-DOCKER_DB_IMAGE = os.getenv("DOCKER_DB_IMAGE", "mysql:5.7") # Base docker image for iris database container
-DEPLOYMENT_DOCKER_NETWORK = os.getenv("DEPLOYMENT_DOCKER_NETWORK", "IRIS") # Docker network for iris containers
-SUBDOMAIN_PREFIX = os.getenv("SUBDOMAIN_PREFIX", "staging")  # Prefix for domain name
-DOMAIN = os.getenv("DOMAIN", "iris.nitk.ac.in")  # Domain name
-DB_DEFAULT_USER = os.getenv("DB_DEFAULT_USER", "rootme")
-DB_DEFAULT_PASSWORD = os.getenv("DB_DEFAULT_PASSWORD", "password")
-DB_DEFAULT_ROOT_PASSWORD = os.getenv("DB_DEFAULT_ROOT_PASSWORD", "password")
-DB_DEFAULT_DATABASE = os.getenv("DB_DEFAULT_DATABASE", "staging")
+from django.conf import settings
 
 def deploy(url,
            user_name,
@@ -48,22 +36,22 @@ def deploy(url,
     #     remove_branch_dir="DEFAULT_BRANCH",
     # )   
     db_env = {
-        "MYSQL_ROOT_PASSWORD": DB_DEFAULT_ROOT_PASSWORD,
-        "MYSQL_DATABASE": DB_DEFAULT_DATABASE,
-        "MYSQL_USER": DB_DEFAULT_USER,
-        "MYSQL_PASSWORD": DB_DEFAULT_PASSWORD,
+        "MYSQL_ROOT_PASSWORD": settings.STAGING_CONF['DB_DEFAULT_ROOT_PASSWORD'],
+        "MYSQL_DATABASE": settings.STAGING_CONF['DB_DEFAULT_DATABASE'],
+        "MYSQL_USER": settings.STAGING_CONF['DB_DEFAULT_USER'],
+        "MYSQL_PASSWORD": settings.STAGING_CONF['DB_DEFAULT_PASSWORD'],
     }
 
-    app_container_name = get_app_container_name(PREFIX, deployment_id)
-    db_container_name = get_db_container_name(PREFIX, deployment_id)
+    app_container_name = get_app_container_name(settings.STAGING_CONF['PREFIX'], deployment_id)
+    db_container_name = get_db_container_name(settings.STAGING_CONF['PREFIX'], deployment_id)
     app_env = {
         "RAILS_ENV": "development",
         "DEV_DB_HOST": db_container_name
     }
     post_deploy_scripts = {
         'commands': [
-            ["python3", NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS,
-            str(internal_port), str(SUBDOMAIN_PREFIX), str(deployment_id), str(app_container_name)],
+            ["python3", settings.STAGING_CONF['NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS'],
+            str(internal_port), str(settings.STAGING_CONF['SUBDOMAIN_PREFIX']), str(deployment_id), str(app_container_name)],
             ["docker", "exec", "nginx-stagingserver", "nginx", "-s", "reload"]
             ],
         'msg_error': "Error while adding nginx config",
@@ -71,7 +59,7 @@ def deploy(url,
     }
 
     db_container = {
-        'image':DOCKER_DB_IMAGE,
+        'image':settings.STAGING_CONF['DOCKER_DB_IMAGE'],
         'env_variables':db_env,
         'container_name':db_container_name,
         'dump_path': None,
@@ -80,7 +68,7 @@ def deploy(url,
     }
     app_container = {
         'image': docker_image,
-        'network': DEPLOYMENT_DOCKER_NETWORK,
+        'network': settings.STAGING_CONF['DEPLOYMENT_DOCKER_NETWORK'],
         'container_name': app_container_name,
         'env_variables': app_env,
         'volumes': None,

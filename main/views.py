@@ -18,6 +18,7 @@ from channels.generic.websocket import WebsocketConsumer
 from main.models import RunningInstance
 from main.services import clean_logs
 import time
+from main.services import clean_up
 
 # import the logging library
 import logging
@@ -26,12 +27,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-load_dotenv()
-PREFIX = os.getenv("PREFIX", "staging")
-PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
-DOCKER_SOCKET_HOST = os.getenv("DOCKER_SOCKET_HOST","127.0.0.1")
-DOCKER_SOCKET_PORT = os.getenv("DOCKER_SOCKET_PORT","2375")
-AUTH_HEADER = os.getenv("AUTH_HEADER","")
+from django.conf import settings
+
 response_header = loader.get_template("response_header.html")
 
 @login_required
@@ -39,7 +36,7 @@ def instance_logs(request, pk):
     try:
         instance = RunningInstance.objects.get(pk=pk)
         if not instance.log_file_path:
-            log_file_name = f"{PATH_TO_HOME_DIR}/logs/{instance.organisation}/{instance.repo_name}/{instance.branch}/{instance.branch}.txt"
+            log_file_name = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/{instance.organisation}/{instance.repo_name}/{instance.branch}/{instance.branch}.txt"
         else:
             log_file_name = instance.log_file_path
         with open(log_file_name, "r", encoding='UTF-8') as file:
@@ -77,7 +74,7 @@ def health_check(request, pk):
         instance = RunningInstance.objects.get(pk=pk)
     except:  # pylint: disable=bare-except
         return render(request, 'homepage.html')
-    status = health_check(url=instance.deployed_url, auth_header=f"basic {AUTH_HEADER}")
+    status = health_check(url=instance.deployed_url, auth_header=f"basic {settings.STAGING_CONF['AUTH_HEADER']}")
     if status:
         instance.status = RunningInstance.STATUS_SUCCESS
     else:
@@ -85,6 +82,25 @@ def health_check(request, pk):
 
     instance.save()
     return render(request, 'homepage.html')
+
+@login_required
+def delete_default(request, pk):
+    """
+    Deletes default branch directory.
+    """
+    # stop container
+    try:
+        instance = RunningInstance.objects.get(pk=pk)
+    except:  # pylint: disable=bare-except
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+    status, err = clean_up(
+        org_name=instance.organisation,
+        repo_name=instance.repo_name,
+        branch=instance.branch,
+        branch_name="DEFAULT_BRANCH",
+        remove_branch_dir="DEFAULT_BRANCH",
+    )
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
 @login_required
 def console(request, pk):
@@ -182,8 +198,8 @@ class ConsoleConsumer(WebsocketConsumer):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.host=DOCKER_SOCKET_HOST
-        self.port=DOCKER_SOCKET_PORT
+        self.host=settings.STAGING_CONF['DOCKER_SOCKET_HOST']
+        self.port=settings.STAGING_CONF['DOCKER_SOCKET_PORT']
         self.socket_url=f'tcp://{self.host}:{self.port}'
         self.client = docker.APIClient(base_url=self.socket_url)
         self.exec_id = None

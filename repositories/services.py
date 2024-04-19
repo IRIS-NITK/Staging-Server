@@ -13,10 +13,7 @@ from repositories.models import Repository
 
 from main.services import deploy as deploy_template
 
-PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")  # Path to home directory
-NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS = os.getenv("NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS", None) # Path to nginx add config script
-SUBDOMAIN_PREFIX = os.getenv("SUBDOMAIN_PREFIX", "staging")  # Prefix for domain name
-DEPLOYMENT_DOCKER_NETWORK = os.getenv("DEPLOYMENT_DOCKER_NETWORK", "IRIS") # Docker network for iris containers
+from django.conf import settings
 
 @shared_task(bind=True)
 def create(self, repo_git_url,
@@ -28,8 +25,8 @@ def create(self, repo_git_url,
     """
     clone and setup new repository instance
     """
-    log_file_path = f"{PATH_TO_HOME_DIR}/logs/repositories/{deployer}/{repository_pk}"
-    clone_path = f"{PATH_TO_HOME_DIR}/repositories/{deployer}/{repository_pk}"
+    log_file_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/repositories/{deployer}/{repository_pk}"
+    clone_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/repositories/{deployer}/{repository_pk}"
     result, logs = pull_git_changes(
         url=repo_git_url,
         user_name=repo_username,
@@ -54,7 +51,7 @@ def get_branches(deployer, repository_pk, repo_name, repo_dir=None):
     gets all remote branches list of a repository
     """
     if not repo_dir:
-        repo_dir = f"{PATH_TO_HOME_DIR}/repositories/{deployer}/{repository_pk}/DEFAULT_BRANCH/{repo_name}"
+        repo_dir = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/repositories/{deployer}/{repository_pk}/DEFAULT_BRANCH/{repo_name}"
 
     temp_logging_text=""
     common_args = {
@@ -112,8 +109,8 @@ def deploy(branch,
     db_env_vars = instance.db_env_vars if instance.db_env_vars else {} 
     post_deploy_scripts = {
         'commands': [
-            ["python3", NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS,
-            str(repository.internal_port), str(SUBDOMAIN_PREFIX), str(instance.deployment_id), str(instance.app_container_name)],
+            ["python3", settings.STAGING_CONF['NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS'],
+            str(repository.internal_port), str(settings.STAGING_CONF['SUBDOMAIN_PREFIX']), str(instance.deployment_id), str(instance.app_container_name)],
             ["docker", "exec", "nginx-stagingserver", "nginx", "-s", "reload"]
             ],
         'msg_error': "Error while adding nginx config",
@@ -129,15 +126,15 @@ def deploy(branch,
     }
     app_container = {
         'image': None,
-        'network': DEPLOYMENT_DOCKER_NETWORK,
+        'network': settings.STAGING_CONF['DEPLOYMENT_DOCKER_NETWORK'],
         'container_name': instance.app_container_name,
         'env_variables': app_env_vars,
         'volumes': None,
         'dockerfile_path': instance.dockerfile_path,
     }
 
-    log_file_path = f"{PATH_TO_HOME_DIR}/logs/repositories/{repository.deployer.username}/{repository.pk}"
-    clone_path = f"{PATH_TO_HOME_DIR}/repositories/{repository.deployer.username}/{repository.pk}"
+    log_file_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/repositories/{repository.deployer.username}/{repository.pk}"
+    clone_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/repositories/{repository.deployer.username}/{repository.pk}"
     return deploy_template.delay(
         url=repository.repo_git_url,
         user_name=repository.repo_username,

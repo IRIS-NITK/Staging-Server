@@ -24,7 +24,8 @@ urlpatterns = [
     path('logs/<int:pk>', views.instance_logs, name = "instance_logs"),
     path('console/<int:pk>', views.console, name='console'),
     path('container_logs/<int:pk>', views.container_logs, name = "container_logs"),
-    path("healhcheck/<int:pk>", views.health_check, name = "healthcheck")
+    path("healhcheck/<int:pk>", views.health_check, name = "healthcheck"),
+    path("delete_default/<int:pk>", views.delete_default, name = "delete_default")
 ]
 
 websocket_urlpatterns = [

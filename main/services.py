@@ -12,18 +12,9 @@ from main.utils.helpers import pretty_print, initiate_logger, get_db_container_n
 from main.utils.helpers import exec_commands, delete_directory
 from subprocess import PIPE, run
 from celery import shared_task
-
+from django.conf import settings
 load_dotenv()
 # environment variables are now loaded
-
-PREFIX = os.getenv("PREFIX", "iris")
-PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")
-NGINX_PYTHON_REMOVE_SCRIPT_IRIS = os.getenv("NGINX_PYTHON_REMOVE_SCRIPT_IRIS")
-DOCKER_IMAGE = os.getenv("BASE_IMAGE")
-DOCKER_DB_IMAGE = os.getenv("DOCKER_DB_IMAGE", "mysql:5.7")
-DEPLOYMENT_DOCKER_NETWORK = os.getenv("DEPLOYMENT_DOCKER_NETWORK", "IRIS")
-SUBDOMAIN_PREFIX = os.getenv("SUBDOMAIN_PREFIX", "staging")
-DOMAIN = os.getenv("DOMAIN", "iris.nitk.ac.in")
 
 def find_free_port():
     """
@@ -88,7 +79,7 @@ def clone_repository(clone_url="",
     if not status:
         return False, err
     if log_file_path is None:
-        log_file_path = f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}"
+        log_file_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/{org_name}/{repo_name}/{branch_name}"
     else:
         log_file_path = f"{log_file_path}/{branch_name}"
     os.makedirs(
@@ -123,7 +114,7 @@ def pull_git_changes(url='https://git.iris.nitk.ac.in/',
     clone_url = f'{parsed_url.scheme}://{user_name}:{token}@{parsed_url.hostname}{parsed_url.path}'
     # Check if repository exists
     if not clone_path:
-        clone_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}"
+        clone_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/{org_name}/{repo_name}"
     if not os.path.exists(f"{clone_path}/DEFAULT_BRANCH/{repo_name}/.git"):
         status, err = clone_repository(
             clone_url=clone_url,
@@ -138,7 +129,7 @@ def pull_git_changes(url='https://git.iris.nitk.ac.in/',
     if branch_name != None:
         if not log_file_path:
             log_file = (
-                f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
+                f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt"
             )
         else:
             log_file = f"{log_file_path}/{branch_name}/{branch_name}.txt"
@@ -197,7 +188,7 @@ def start_container(image_name,
                     internal_port,
                     volumes=None,
                     enviroment_variables=None,
-                    docker_network=DEPLOYMENT_DOCKER_NETWORK,
+                    docker_network=settings.STAGING_CONF['DEPLOYMENT_DOCKER_NETWORK'],
                     restart_always=True):
     """
     Generalised function to start a container for any service
@@ -310,10 +301,10 @@ def clean_up(org_name,
     if not log_file_path:
         if branch_name:
             logger = initiate_logger(
-                f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt")
+                f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/{org_name}/{repo_name}/{branch_name}/{branch_name}.txt")
         else:
             logger = initiate_logger(
-                f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{repo_name}.txt")
+                f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/{org_name}/{repo_name}/{repo_name}.txt")
     else:
         logger = initiate_logger(log_file_path)
 
@@ -340,7 +331,7 @@ def clean_up(org_name,
                      "Removing the nginx config."
                      )
         status, err = exec_commands(commands=[
-            ["python3", NGINX_PYTHON_REMOVE_SCRIPT_IRIS, 
+            ["python3", settings.STAGING_CONF['NGINX_PYTHON_REMOVE_SCRIPT_IRIS'], 
              str(deployment_id)],
             ["docker", "exec", "nginx-stagingserver", "/bin/sh", "rm", f"etc/nginx/conf.d/dev-{deployment_id}.conf"],
             ["docker", "exec", "nginx-stagingserver", "nginx", "-s", "reload"]
@@ -403,7 +394,7 @@ def clean_up(org_name,
 
     if remove_branch_dir:
         if not branch_deploy_path:
-            branch_deploy_path = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch_name}"
+            branch_deploy_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/{org_name}/{repo_name}/{branch_name}"
         pretty_print(logger,
                      "Deleting the branch directory"
                      )
@@ -431,7 +422,7 @@ def clean_up(org_name,
 
     if remove_all_dir:
         status, err = delete_directory(
-            f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}")
+            f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/{org_name}/{repo_name}")
         if status:
             pretty_print(logger,
                          f"Successfully deleted all directories of the {remove_all_dir} repository."
@@ -440,7 +431,7 @@ def clean_up(org_name,
             pretty_print(logger, err)
 
     if remove_user_dir:
-        status, err = delete_directory(f"{PATH_TO_HOME_DIR}/{org_name}")
+        status, err = delete_directory(f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/{org_name}")
         if status:
             pretty_print(logger,
                          f"Successfully deleted {remove_all_dir} user directory."
@@ -461,7 +452,7 @@ def clean_logs(org_name, repo_name, branch_name, log_file_path=None):
     Cleans up the main log and archives the text.
     """
     if not log_file_path:
-        log_dir = f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch_name}/"
+        log_dir = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/{org_name}/{repo_name}/{branch_name}/"
         log_file_path = f"{log_dir}/{branch_name}.txt"
     else:
         log_dir = os.path.dirname(log_file_path)
@@ -511,9 +502,9 @@ def stop_db_container(deployment_id, branch, log_file_path=None):
     stops db container for a specific IRIS branch.
     """
     if not log_file_path:
-        log_file_path = f"{PATH_TO_HOME_DIR}/logs/IRIS-NITK/IRIS/{branch}/{branch}.txt"
+        log_file_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/IRIS-NITK/IRIS/{branch}/{branch}.txt"
     logger = initiate_logger(log_file_path)
-    db_container_name = get_db_container_name(PREFIX, deployment_id)
+    db_container_name = get_db_container_name(settings.STAGING_CONF['PREFIX'], deployment_id)
     status, err = stop_containers(
         container_name=db_container_name, logger=logger)
     logger.close()
@@ -572,7 +563,7 @@ def deploy(self,
     """
     # logfile where logs for this deployment are stored
     if not log_file_path:
-        log_file = f"{PATH_TO_HOME_DIR}/logs/{org_name}/{repo_name}/{branch}/{branch}.txt"
+        log_file = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/{org_name}/{repo_name}/{branch}/{branch}.txt"
     else: 
         log_file = f"{log_file_path}/{branch}/{branch}.txt"
     logger = initiate_logger(log_file)
@@ -580,7 +571,7 @@ def deploy(self,
     # closing existing container if it exists.
     app_container_name = docker_app.get(
         'container_name', 
-        str(get_app_container_name(PREFIX, deployment_id)))
+        str(get_app_container_name(settings.STAGING_CONF['PREFIX'], deployment_id)))
     stop_containers(container_name=app_container_name, logger=logger)
     logger.close()
 
@@ -604,7 +595,7 @@ def deploy(self,
     # Building docker image
     docker_image = docker_app.get('image', None)
     if not clone_path:
-        cwd = f"{PATH_TO_HOME_DIR}/{org_name}/{repo_name}/{branch}/{repo_name}/"
+        cwd = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/{org_name}/{repo_name}/{branch}/{repo_name}/"
     else:
         cwd = f"{clone_path}/{branch}/{repo_name}"
     if not docker_image:
@@ -637,7 +628,7 @@ def deploy(self,
         pretty_print(logger, f"Docker image {docker_image} already provided.")
 
     # Creating docker network for the container
-    network_name=docker_app.get('network', DEPLOYMENT_DOCKER_NETWORK)
+    network_name=docker_app.get('network', settings.STAGING_CONF['DEPLOYMENT_DOCKER_NETWORK'])
     if network_name:
         pretty_print(logger, f"Checking if the docker network {network_name} exists.")
         inspect_network = run(
@@ -665,7 +656,7 @@ def deploy(self,
     if docker_db:
         pretty_print(logger, "checking for existing database container")
         docker_db_container_name = docker_db.get('container_name',
-                                                  str(get_db_container_name(PREFIX, deployment_id)))
+                                                  str(get_db_container_name(settings.STAGING_CONF['PREFIX'], deployment_id)))
 
         inspect_container = run(
             ["docker", "container", "inspect", docker_db_container_name],

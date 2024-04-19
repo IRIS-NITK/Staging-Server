@@ -14,11 +14,8 @@ from repositories.services import create as create_repository, get_branches, dep
 from main.services import delete_instance, clean_up
 from main.models import RunningInstance
 from main.utils.helpers import get_app_container_name, get_db_container_name
-DEPLOYMENT_DOCKER_NETWORK = os.getenv("DEPLOYMENT_DOCKER_NETWORK", "IRIS") # Docker network for iris containers
-PREFIX = os.getenv("PREFIX", "iris")  # Prefix for docker container names
-SUBDOMAIN_PREFIX = os.getenv("SUBDOMAIN_PREFIX", "staging")  # Prefix for domain name
-DOMAIN = os.getenv("DOMAIN", "iris.nitk.ac.in")  # Domain name
-PATH_TO_HOME_DIR = os.getenv("PATH_TO_HOME_DIR")  # Path to home directory
+
+from django.conf import settings
 
 def index(request):
     repositories = Repository.objects.all()
@@ -133,8 +130,8 @@ def deploy(request, pk, branch=None):
     deployment_id = generate_deployment_id(repository_pk=repository.pk,
                                                repo_name=repository.repo_name,
                                                branch=branch,
-                                               domain=DOMAIN,
-                                               subdomain_prefix=SUBDOMAIN_PREFIX)
+                                               domain=settings.STAGING_CONF['DOMAIN'],
+                                               subdomain_prefix=settings.STAGING_CONF['SUBDOMAIN_PREFIX'])
     try:
         instance = RunningInstance.objects.get(
             deployment_id=deployment_id
@@ -150,12 +147,12 @@ def deploy(request, pk, branch=None):
         instance.dockerfile_path = repository.dockerfile_path
         instance.internal_port = int(repository.internal_port)
         instance.repository = repository
-        instance.log_file_path = f"{PATH_TO_HOME_DIR}/logs/repositories/{repository.deployer.username}/{repository.pk}/{branch}/{branch}.txt"
-        instance.branch_deploy_path = f"{PATH_TO_HOME_DIR}/repositories/{repository.deployer.username}/{repository.pk}/{branch}"
+        instance.log_file_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/repositories/{repository.deployer.username}/{repository.pk}/{branch}/{branch}.txt"
+        instance.branch_deploy_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/repositories/{repository.deployer.username}/{repository.pk}/{branch}"
         instance.save()
     except ObjectDoesNotExist:
-        app_container_name = get_app_container_name(PREFIX, deployment_id)
-        db_container_name = get_db_container_name(PREFIX, deployment_id)
+        app_container_name = get_app_container_name(settings.STAGING_CONF['PREFIX'], deployment_id)
+        db_container_name = get_db_container_name(settings.STAGING_CONF['PREFIX'], deployment_id)
         app_env_vars = dict(json.loads(repository.app_env_vars)) if repository.app_env_vars else {}
         db_env_vars = dict(json.loads(repository.db_env_vars)) if repository.db_env_vars else {}
         app_env_vars.update({
@@ -179,8 +176,8 @@ def deploy(request, pk, branch=None):
             app_env_vars = app_env_vars,
             db_env_vars = db_env_vars,
             repository = repository,
-            log_file_path = f"{PATH_TO_HOME_DIR}/logs/repositories/{repository.deployer.username}/{repository.pk}/{branch}/{branch}.txt",
-            branch_deploy_path = f"{PATH_TO_HOME_DIR}/repositories/{repository.deployer.username}/{repository.pk}/{branch}"
+            log_file_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/repositories/{repository.deployer.username}/{repository.pk}/{branch}/{branch}.txt",
+            branch_deploy_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/repositories/{repository.deployer.username}/{repository.pk}/{branch}"
         )
         instance.save()
         repository.deployments += 1
@@ -215,8 +212,8 @@ def delete_repository(request, pk):
         Instances = RunningInstance.objects.filter(repository=repository)
         for instance in Instances:
             delete_instance(instance, stop_db=True, remove_branch_dir=False)
-        clean_up_dir = f"{PATH_TO_HOME_DIR}/repositories/{repository.deployer.username}/{repository.pk}"
-        log_file_path = f"{PATH_TO_HOME_DIR}/logs/repositories/{repository.deployer.username}/{repository.pk}/DEFAULT_BRANCH/DEFAULT_BRANCH.txt"
+        clean_up_dir = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/repositories/{repository.deployer.username}/{repository.pk}"
+        log_file_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/repositories/{repository.deployer.username}/{repository.pk}/DEFAULT_BRANCH/DEFAULT_BRANCH.txt"
         clean_up(
         org_name="repositories",
         repo_name=repository.repo_name,

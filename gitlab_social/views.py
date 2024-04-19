@@ -15,13 +15,9 @@ from gitlab_social.services import get_gitlab_token
 
 from main.utils.helpers import get_app_container_name, get_db_container_name, generate_deployment_id
 
-load_dotenv()
 
-GITLAB_SERVER = __import__('stagingserver').settings.SOCIALACCOUNT_PROVIDERS['gitlab']['GITLAB_URL']
-DOMAIN = os.getenv("DOMAIN", "iris.nitk.ac.in")
-SUBDOMAIN_PREFIX = os.getenv("SUBDOMAIN_PREFIX", "staging")
-ACCESS_TOKEN = os.getenv('GITLAB_ACCESS_TOKEN')
-PREFIX = os.getenv("PREFIX", "iris")
+from django.conf import settings
+
 
 @login_required
 def index(request):
@@ -44,7 +40,7 @@ def index(request):
     except:  # pylint: disable=bare-except
         instances = None
 
-    return render(request, 'gitlab_social/index.html', context={'groups': groups, 'instances': instances, 'gitlab_url': GITLAB_SERVER})
+    return render(request, 'gitlab_social/index.html', context={'groups': groups, 'instances': instances, 'gitlab_url': settings.SOCIALACCOUNT_PROVIDERS['gitlab']['GITLAB_URL']})
 
 
 @login_required
@@ -54,7 +50,7 @@ def get_projects(request):
         gl_access_token_set = SocialToken.objects.filter(
             account__user=request.user, account__provider='gitlab')
         gl = gitlab.Gitlab(
-            url=GITLAB_SERVER,
+            url=settings.SOCIALACCOUNT_PROVIDERS['gitlab']['GITLAB_URL'],
             oauth_token=gl_access_token_set.first().__str__()
         )
 
@@ -64,7 +60,7 @@ def get_projects(request):
         except:  # pylint: disable=bare-except
             return redirect("account_logout")
 
-       # gl = gitlab.Gitlab(GITLAB_SERVER, private_token=ACCESS_TOKEN)
+       # gl = gitlab.Gitlab(settings.SOCIALACCOUNT_PROVIDERS['gitlab']['GITLAB_URL'], private_token=settings.STAGING_CONF['ACCESS_TOKEN'])
         group = gl.groups.get(group_id)
         projects = gl.projects.list(get_all=True)
         project_options = '<option selected disabled>Choose...</option>'
@@ -83,7 +79,7 @@ def get_branches(request):
         gl_access_token_set = SocialToken.objects.filter(
             account__user=request.user, account__provider='gitlab')
         gl = gitlab.Gitlab(
-            url=GITLAB_SERVER,
+            url=settings.SOCIALACCOUNT_PROVIDERS['gitlab']['GITLAB_URL'],
             oauth_token=gl_access_token_set.first().__str__()
         )
 
@@ -92,7 +88,7 @@ def get_branches(request):
             gl.auth()
         except:  # pylint: disable=bare-except
             return redirect("account_logout")
-        # gl = gitlab.Gitlab(GITLAB_SERVER, private_token=ACCESS_TOKEN)
+        # gl = gitlab.Gitlab(GITLAB_SERVER, private_token=settings.STAGING_CONF['ACCESS_TOKEN'])
         project = gl.projects.get(project_id)
         branches = project.branches.list()
         branch_options = '<option selected disabled>Choose...</option>'
@@ -153,9 +149,9 @@ def deploy(request, pk=0):
         instance.save()
 
     except ObjectDoesNotExist:
-        deployment_id = generate_deployment_id(group_name, project_name, branch, DOMAIN, SUBDOMAIN_PREFIX)
-        app_container_name = get_app_container_name(PREFIX, deployment_id)
-        db_container_name = get_db_container_name(PREFIX, deployment_id)
+        deployment_id = generate_deployment_id(group_name, project_name, branch, settings.STAGING_CONF['DOMAIN'], settings.STAGING_CONF['SUBDOMAIN_PREFIX'])
+        app_container_name = get_app_container_name(settings.STAGING_CONF['PREFIX'], deployment_id)
+        db_container_name = get_db_container_name(settings.STAGING_CONF['PREFIX'], deployment_id)
         instance = RunningInstance(
             # exposed_port=external_port,
             social='git.iris',

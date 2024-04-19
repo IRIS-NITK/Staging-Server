@@ -181,7 +181,7 @@ Gitlab{% endblock %}
                 Stop with DB
               </button>
             </form>
-            <form method="post" action="{% url 'template_delete_default' instance.pk  %}">
+            <form method="post" action="{% url 'delete_default' instance.pk  %}">
               {% csrf_token %}
               <button type="submit" class="btn btn-outline-danger btn-sm mx-1">
                 Delete Default Branch
