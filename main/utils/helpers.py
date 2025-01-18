@@ -78,6 +78,17 @@ def delete_directory(path):
         return False, f"Error in removing directory : {path}\n" + str(exception)
     return True, ""
 
+def write_file(file_path, content):
+    """
+    writes content to a file
+    """
+    try:
+        with open(file_path, "w") as file:
+            file.write(content)
+    except Exception as exception:  # pylint: disable=broad-exception-caught
+        return False, f"Error in writing to file : {file_path}\n" + str(exception)
+    return True, ""
+
 
 def generate_deployment_id(org_name, project, branch, domain, subdomain_prefix):
     """
