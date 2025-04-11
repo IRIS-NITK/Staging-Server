@@ -12,6 +12,7 @@ urlpatterns = [
     path('', views.index, name='gitlab_social_dashboard'),
     path('get_projects/', views.get_projects, name='get_projects'),
     path('get_branches/', views.get_branches, name='get_branches'),
+    path('delete_default/<int:pk>', views.delete_default, name='template_delete_default')
 
     # TO DO : logs , container logs, attach portainer, 
 ]
