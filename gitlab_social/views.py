@@ -9,7 +9,7 @@ from django import forms
 from django.http import JsonResponse, HttpResponseRedirect
 from allauth.socialaccount.models import SocialToken
 from main.models import RunningInstance
-from main.services import delete_instance
+from main.services import delete_instance, clean_up
 from gitlab_social.services import deploy as deploy_gitlab_social
 from gitlab_social.services import get_gitlab_token
 
@@ -216,3 +216,21 @@ def health_check(request, pk):
     res = f"Health Check...\nPK: {pk}\n"
     return HttpResponse(res)
 
+@login_required
+def delete_default(request, pk):
+    """
+    Deletes default branch directory.
+    """
+    # stop container
+    try:
+        instance = RunningInstance.objects.get(pk=pk)
+    except:  # pylint: disable=bare-except
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+    status, err = clean_up(
+        org_name=instance.organisation,
+        repo_name=instance.repo_name,
+        branch=instance.branch,
+        branch_name="DEFAULT_BRANCH",
+        remove_branch_dir="DEFAULT_BRANCH",
+    )
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
