@@ -159,8 +159,8 @@ def pull_git_changes(url='https://git.iris.nitk.ac.in/',
             logger, f"Pulling latest changes from branch {branch_name}")
 
         status, err = exec_commands(commands=[
-            ["git", "pull", clone_url],
-            ["git", "checkout", branch_name]
+            ["git", "fetch", clone_url, branch_name],
+            ["git", "checkout", "-B", branch_name, "FETCH_HEAD"]
         ],
             cwd=f"{clone_path}/{branch_name}/{repo_name}",
             logger=logger,
