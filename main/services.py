@@ -9,7 +9,7 @@ import urllib.parse
 import requests
 from dotenv import load_dotenv
 from main.utils.helpers import pretty_print, initiate_logger, get_db_container_name,get_app_container_name, get_db_container_name
-from main.utils.helpers import exec_commands, delete_directory
+from main.utils.helpers import exec_commands, delete_directory, write_file
 from subprocess import PIPE, run
 from celery import shared_task
 from django.conf import settings
@@ -557,6 +557,7 @@ def deploy(self,
            pre_deploy_scripts=None,
            log_file_path=None,
            clone_path=None,
+           file_writes=None
            ):
     """
     Pulls changes, builds/pulls docker image, starts container, configure NGINX
@@ -695,6 +696,19 @@ def deploy(self,
         )
         if status:
             pretty_print(logger,pre_deploy_scripts.get("msg_success",""))
+
+    if file_writes:
+        for file_write in file_writes:
+            pretty_print(logger, f"Writing {file_write.get('content', None)} to {file_write.get('file_path', None)}")
+            status, err = write_file(
+                file_path=file_write.get("file_path", None),
+                content=file_write.get("content", None)
+            )
+            if not status:
+                pretty_print(logger, err)
+                return False, err
+        
+        pretty_print(logger, "File writes successfull")
 
     # start the container
     pretty_print(logger, f"Starting app container -> {app_container_name}")
