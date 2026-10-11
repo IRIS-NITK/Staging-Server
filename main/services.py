@@ -160,8 +160,8 @@ def pull_git_changes(url='https://github.com/',
             logger, f"Pulling latest changes from branch {branch_name}")
 
         status, err = exec_commands(commands=[
-            ["git", "pull", clone_url],
-            ["git", "checkout", branch_name]
+            ["git", "fetch", "origin", branch_name],
+            ["git", "checkout", "-B", branch_name, f"origin/{branch_name}"]
         ],
             cwd=f"{clone_path}/{branch_name}/{repo_name}",
             logger=logger,
