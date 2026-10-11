@@ -1,7 +1,7 @@
 {% extends 'base.html' %} 
 
 {% block title %}
-IRIS NITK
+Staging Server
 {% endblock %} 
 
 {% block content %}
@@ -37,6 +37,16 @@ IRIS NITK
         let protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         let socket = new WebSocket(protocol + '://' + window.location.host +
             '/websocket/logs/{{ instance.pk }}/');
+
+        socket.onopen = function() {
+          document.getElementById('loading').textContent = 'Connected. Waiting for container output...';
+        };
+        socket.onerror = function() {
+          document.getElementById('loading').textContent = 'Unable to connect to the container log stream.';
+        };
+        socket.onclose = function() {
+          document.getElementById('loading').textContent = 'Container log stream closed.';
+        };
         
       
 

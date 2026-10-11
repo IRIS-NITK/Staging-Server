@@ -163,12 +163,6 @@ Gitlab{% endblock %}
                   <i class="fa-solid fa-terminal"></i> Console
                 </button>
               </form>
-              <form method="get" target="_blank" action="https://systems-portainer.iris.nitk.ac.in/#!/2/docker/containers/{{ instance.app_container_name }}/exec">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-outline-dark btn-sm mx-1">
-                  <i class="fa-solid fa-terminal"></i> Portainer
-                </button>
-              </form>
             <form method="post" action="{% url 'gitlab_social_stop' instance.pk  %}">
               {% csrf_token %}
               <button type="submit" class="btn btn-outline-danger btn-sm mx-1">

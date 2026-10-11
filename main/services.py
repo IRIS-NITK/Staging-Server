@@ -13,6 +13,7 @@ from main.utils.helpers import exec_commands, delete_directory, write_file
 from subprocess import PIPE, run
 from celery import shared_task
 from django.conf import settings
+from main.models import RunningInstance
 load_dotenv()
 # environment variables are now loaded
 
@@ -96,7 +97,7 @@ def clone_repository(clone_url="",
     return True, ""
 
 
-def pull_git_changes(url='https://git.iris.nitk.ac.in/',
+def pull_git_changes(url='https://github.com/',
                      user_name=None,
                      token=None,
                      org_name=None,
@@ -204,7 +205,7 @@ def start_container(image_name,
     #     command.extend(["-p", f"{ext_port}:{int_port}"])
 
     # command.extend(["-p", f"{external_port}:{internal_port}"])
-    command.extend([f"-expose={internal_port}"])
+    command.extend([f"--expose={internal_port}"])
     if volumes:
         for src, dest in volumes.items():
             command.extend(["-v", f"{src}:{dest}"])
@@ -331,7 +332,7 @@ def clean_up(org_name,
                      "Removing the nginx config."
                      )
         status, err = exec_commands(commands=[
-            ["python3", settings.STAGING_CONF['NGINX_PYTHON_REMOVE_SCRIPT_IRIS'], 
+            ["python3", settings.STAGING_CONF['NGINX_PYTHON_REMOVE_SCRIPT'],
              str(deployment_id)],
             ["docker", "exec", "nginx-stagingserver", "/bin/sh", "rm", f"etc/nginx/conf.d/dev-{deployment_id}.conf"],
             ["docker", "exec", "nginx-stagingserver", "nginx", "-s", "reload"]
@@ -502,7 +503,7 @@ def stop_db_container(deployment_id, branch, log_file_path=None):
     stops db container for a specific IRIS branch.
     """
     if not log_file_path:
-        log_file_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/IRIS-NITK/IRIS/{branch}/{branch}.txt"
+            log_file_path = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/database/{branch}/{branch}.txt"
     logger = initiate_logger(log_file_path)
     db_container_name = get_db_container_name(settings.STAGING_CONF['PREFIX'], deployment_id)
     status, err = stop_containers(
@@ -538,6 +539,34 @@ def delete_instance(instance, stop_db=False, remove_branch_dir=True):
     instance.delete()
     return True
 
+
+def stop_instance(instance, stop_db=False):
+    """Stop deployment containers while retaining the deployment record."""
+    clean_up(
+        org_name=instance.organisation,
+        repo_name=instance.repo_name,
+        branch=instance.branch,
+        deployment_id=instance.deployment_id,
+        branch_name=instance.branch,
+        remove_container=instance.app_container_name,
+        remove_nginx_conf=True,
+        log_file_path=instance.log_file_path,
+        branch_deploy_path=instance.branch_deploy_path,
+    )
+    if stop_db:
+        stop_db_container(
+            instance.deployment_id,
+            instance.branch,
+            log_file_path=instance.log_file_path,
+        )
+    instance.status = instance.STATUS_STOPPED
+    instance.save(update_fields=["status", "update_time"])
+    return True
+
+
+def update_deployment_status(deployment_id, status):
+    RunningInstance.objects.filter(deployment_id=deployment_id).update(status=status)
+
 @shared_task(bind=True)
 
 def deploy(self,
@@ -562,6 +591,7 @@ def deploy(self,
     """
     Pulls changes, builds/pulls docker image, starts container, configure NGINX
     """
+    update_deployment_status(deployment_id, RunningInstance.STATUS_ONGOING)
     # logfile where logs for this deployment are stored
     if not log_file_path:
         log_file = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/{org_name}/{repo_name}/{branch}/{branch}.txt"
@@ -590,6 +620,8 @@ def deploy(self,
 
     if not result:
         print(f"git pull failed\n{logs}")
+        update_deployment_status(deployment_id, RunningInstance.STATUS_ERROR)
+        return False, logs
 
     logger = initiate_logger(log_file)
 
@@ -624,6 +656,8 @@ def deploy(self,
                          f"Docker image built: {docker_image}"
                          )
         else:
+            logger.close()
+            update_deployment_status(deployment_id, RunningInstance.STATUS_ERROR)
             return False, err
     else:
         pretty_print(logger, f"Docker image {docker_image} already provided.")
@@ -651,6 +685,8 @@ def deploy(self,
             if status:
                 pretty_print(logger,f"Successfully created docker network {network_name}")
             else:
+                logger.close()
+                update_deployment_status(deployment_id, RunningInstance.STATUS_ERROR)
                 return status, err
 
     # start db container if required
@@ -683,6 +719,8 @@ def deploy(self,
             )
 
             if not result:
+                logger.close()
+                update_deployment_status(deployment_id, RunningInstance.STATUS_ERROR)
                 return False, f"Failed to start {docker_db_container_name}, {logs}"
 
     # Execute Pre Deployment scripts
@@ -732,12 +770,14 @@ def deploy(self,
             logger, f"Error while starting container : {app_container_name}")
         pretty_print(logger, logs)
         logger.close()
+        update_deployment_status(deployment_id, RunningInstance.STATUS_ERROR)
         return False, logs
 
     if not result:
         pretty_print(logger, " ⚠️ Error while starting container")
         pretty_print(logger, logs)
         logger.close()
+        update_deployment_status(deployment_id, RunningInstance.STATUS_ERROR)
         return False, logs
     # to execute commands after deployments, like to setup nginx config.
     if post_deploy_scripts:
@@ -751,5 +791,7 @@ def deploy(self,
             pretty_print(logger, post_deploy_scripts.get('msg_success',""))
 
     pretty_print(logger, "Successully deployed 🥳")
+    logger.close()
+    update_deployment_status(deployment_id, RunningInstance.STATUS_SUCCESS)
 
     return True, logs  # log will be container id

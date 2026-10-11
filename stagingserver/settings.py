@@ -24,10 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', "django-my_ranom_secret_key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", False)
+DEBUG = os.getenv("DEBUG", "False").lower() in {"1", "true", "yes", "on"}
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_ALLOWED_HOSTS').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',')
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_ALLOWED_HOSTS', 'http://localhost:8000,http://127.0.0.1:8000,http://0.0.0.0:8000').split(',')
 REDIS_HOST=os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT=os.getenv("REDIS_PORT", "6379")
 # Application definition
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'main',
     'gitlab_social',
+    'github_social',
     'crispy_forms',
     "allauth_ui",
     'allauth',
@@ -57,15 +58,29 @@ INSTALLED_APPS = [
 ]
 
 STAGING_CONF = {
-    "PREFIX": os.getenv("PREFIX", "iris"),
-    "PATH_TO_HOME_DIR": os.getenv("PATH_TO_HOME_DIR", None),
-    "NGINX_PYTHON_REMOVE_SCRIPT_IRIS": os.getenv("NGINX_PYTHON_REMOVE_SCRIPT_IRIS"),
-    "NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS": os.getenv("NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS", None),
+    "PREFIX": os.getenv("PREFIX", "staging"),
+    "PATH_TO_HOME_DIR": os.getenv("PATH_TO_HOME_DIR", str(BASE_DIR / "runtime")),
+    "NGINX_PYTHON_REMOVE_SCRIPT": os.getenv(
+        "NGINX_PYTHON_REMOVE_SCRIPT",
+        os.getenv(
+            "NGINX_PYTHON_REMOVE_SCRIPT_IRIS",
+            str(BASE_DIR / "nginx" / "nginx_remove_config.py"),
+        ),
+    ),
+    "NGINX_PYTHON_ADD_CONFIG_SCRIPT": os.getenv(
+        "NGINX_PYTHON_ADD_CONFIG_SCRIPT",
+        os.getenv(
+            "NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS",
+            str(BASE_DIR / "nginx" / "nginx_add_config.py"),
+        ),
+    ),
     "DOCKER_IMAGE": os.getenv("DOCKER_IMAGE"),
-    "DOCKER_DB_IMAGE": os.getenv("DOCKER_DB_IMAGE", "mysql:5.7"),
-    "DEPLOYMENT_DOCKER_NETWORK": os.getenv("DEPLOYMENT_DOCKER_NETWORK", "IRIS"),
+    "DOCKER_DB_IMAGE": os.getenv("DOCKER_DB_IMAGE", "mysql:8.0"),
+    "DEPLOYMENT_DOCKER_NETWORK": os.getenv("DEPLOYMENT_DOCKER_NETWORK", "deployment-network"),
     "SUBDOMAIN_PREFIX": os.getenv("SUBDOMAIN_PREFIX", "staging"),
-    "DOMAIN": os.getenv("DOMAIN", "iris.nitk.ac.in"),
+    "DOMAIN": os.getenv("DOMAIN", "localhost:9000"),
+    "DEPLOYMENT_SCHEME": os.getenv("DEPLOYMENT_SCHEME", "http"),
+    "PROJECT_ISSUES_URL": os.getenv("PROJECT_ISSUES_URL", ""),
     "DB_DEFAULT_USER": os.getenv("DB_DEFAULT_USER", "rootme"),
     "DB_DEFAULT_PASSWORD": os.getenv("DB_DEFAULT_PASSWORD", "password"),
     "DB_DEFAULT_ROOT_PASSWORD": os.getenv("DB_DEFAULT_ROOT_PASSWORD", "password"),
@@ -83,6 +98,7 @@ if IRIS_REPOSITORY:
 def is_iris_repository(request):
     return {
         "IRIS_REPOSITORY": IRIS_REPOSITORY,
+        "PROJECT_ISSUES_URL": STAGING_CONF["PROJECT_ISSUES_URL"],
     }
 
 # Add channels layer

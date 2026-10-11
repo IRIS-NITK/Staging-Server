@@ -50,7 +50,7 @@ def deploy(url,
     }
     post_deploy_scripts = {
         'commands': [
-            ["python3", settings.STAGING_CONF['NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS'],
+            ["python3", settings.STAGING_CONF['NGINX_PYTHON_ADD_CONFIG_SCRIPT'],
             str(internal_port), str(settings.STAGING_CONF['SUBDOMAIN_PREFIX']), str(deployment_id), str(app_container_name)],
             ["docker", "exec", "nginx-stagingserver", "nginx", "-s", "reload"]
             ],
