@@ -13,7 +13,7 @@ from repositories.services import create as create_repository, get_branches, dep
 
 from main.services import delete_instance, clean_up
 from main.models import RunningInstance
-from main.utils.helpers import get_app_container_name, get_db_container_name
+from main.utils.helpers import get_app_container_name, get_db_container_name, get_deployed_url
 
 from django.conf import settings
 
@@ -170,7 +170,7 @@ def deploy(request, pk, branch=None):
             db_container_name = db_container_name,
             dockerfile_path = repository.dockerfile_path,
             deployment_id = deployment_id,
-            deployed_url = f"https://staging-{deployment_id}.iris.nitk.ac.in",
+            deployed_url = get_deployed_url(deployment_id),
             app_docker_image = None,
             db_docker_image = repository.db_image,
             app_env_vars = app_env_vars,

@@ -7,10 +7,14 @@ services:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
       - "/var/run/docker.sock:/var/run/docker.sock"
-#      - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
+      #      - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
       - ./nginx/configs:/STAGING_APP/nginx/configs
+    env_file:
+      - .env
     environment:
       - DEBUG=0
+      - REDIS_HOST=redis
+      - PATH_TO_HOME_DIR=/STAGING_DIR
     depends_on:
       - redis
     expose:
@@ -46,10 +50,14 @@ services:
       - "./db.sqlite3:/STAGING_APP/db.sqlite3:rw"
       - "./STAGING_DIR:/STAGING_DIR"
       - "/var/run/docker.sock:/var/run/docker.sock"
-#      - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
+      #      - "./:/STAGING_APP:rw"         # for easy development, uncomment before commiting.
       - "./nginx/configs:/STAGING_APP/nginx/configs"
+    env_file:
+      - .env
     environment:
       - DEBUG=1
+      - REDIS_HOST=redis
+      - PATH_TO_HOME_DIR=/STAGING_DIR
     depends_on:
       - redis
     networks:
@@ -67,7 +75,7 @@ services:
     networks:
       - staging-network
     restart: always
-      
+
   nginx:
     container_name: nginx-stagingserver
     image: nginx:1.25.2
@@ -75,7 +83,7 @@ services:
       - "[::1]:9000:80"
       - "127.0.0.1:9000:80"
     networks:
-      - IRIS
+      - deployment-network
       - staging-network
     depends_on:
       - daphne
@@ -87,17 +95,14 @@ services:
     restart: always
 
 networks:
-  IRIS: 
-    name: IRIS
-    enable_ipv6: true
-    ipam:
-      config:
-       - subnet: 2001:0DB9::/112
+  deployment-network:
+    name: deployment-network
+    external: true
   staging-network:
     name: staging-network
     enable_ipv6: true
     ipam:
       config:
-       - subnet: 2001:0DB8::/112
+        - subnet: 2001:0DB8::/112
 volumes:
   configs:

@@ -2,13 +2,14 @@
 {%   url 'iris_dashboard' as iris_dashboard_url %}
 {% endif %}
 {% url 'gitlab_social_dashboard' as gitlab_social_dashboard_url %}
+{% url 'github_social_dashboard' as github_social_dashboard_url %}
 {% url 'repositories_dashboard' as repositories_dashboard_url %}
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid">
     <a class="navbar-brand" href="{% url 'homepage' %}">
       <i class="fa-brands fa-docker"></i>
-      IRIS Staging Server</a>
+      Staging Server</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -21,6 +22,9 @@
         {% endif %}
         <li class="nav-item">
           <a class="nav-link {% if request.path == gitlab_social_dashboard_url %} active {%endif%}" href="{% url 'gitlab_social_dashboard' %}">Gitlab</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path == github_social_dashboard_url %} active {%endif%}" href="{% url 'github_social_dashboard' %}">GitHub</a>
         </li>
         <li class="nav-item">
           <a class="nav-link {% if request.path == repositories_dashboard_url %} active {%endif%}" href="{% url 'repositories_dashboard' %}">Repositories</a>

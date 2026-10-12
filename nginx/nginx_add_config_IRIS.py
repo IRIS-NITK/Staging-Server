@@ -5,6 +5,7 @@ port = sys.argv[1]
 prefix = sys.argv[2]
 suffix = sys.argv[3]    # will be of format staging_iris-nitk_iris_*
 container = sys.argv[4]
+domain = os.getenv("NGINX_DOMAIN", os.getenv("DOMAIN", "localhost")).split(":", 1)[0]
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 template_path  = os.path.join(current_path,'dev-template.conf')
@@ -16,6 +17,7 @@ template_content = template_content.replace('<PORT>', port)
 template_content = template_content.replace('<PREFIX>', prefix)
 template_content = template_content.replace('<SUFFIX>', suffix)
 template_content = template_content.replace('<CONTAINER>', container)
+template_content = template_content.replace('<DOMAIN>', domain)
 
 config_directory = f'{current_path}/configs/'
 if not os.path.exists(config_directory):

@@ -109,7 +109,7 @@ def deploy(branch,
     db_env_vars = instance.db_env_vars if instance.db_env_vars else {} 
     post_deploy_scripts = {
         'commands': [
-            ["python3", settings.STAGING_CONF['NGINX_PYTHON_ADD_CONFIG_SCRIPT_IRIS'],
+            ["python3", settings.STAGING_CONF['NGINX_PYTHON_ADD_CONFIG_SCRIPT'],
             str(repository.internal_port), str(settings.STAGING_CONF['SUBDOMAIN_PREFIX']), str(instance.deployment_id), str(instance.app_container_name)],
             ["docker", "exec", "nginx-stagingserver", "nginx", "-s", "reload"]
             ],

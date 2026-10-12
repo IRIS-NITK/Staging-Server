@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+
+{% block title %}
+GitHub{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">Deploy from {{ github_url }}</h5>
+      <div class="d-flex gap-2">
+        <button type="button" id="new-deployment-button" class="btn btn-primary">
+          <i class="fa-solid fa-plus"></i> New deployment
+        </button>
+        <a class="btn btn-outline-secondary" href="{{ github_url }}" target="_blank" rel="noreferrer">
+          <i class="fa-brands fa-github"></i> Open GitHub
+        </a>
+      </div>
+    </div>
+    <script>
+      $(document).ready(function() {
+          $('#owner_dropdown').change(function() {
+              var owner = $(this).val();
+              if (owner) {
+                $('#project_dropdown')
+                  .prop('disabled', true)
+                  .html('<option selected>Loading repositories...</option>');
+                  $.ajax({
+                      url: '/github_social/get_projects/',
+                      data: {'owner': owner},
+                      success: function(data) {
+                    if (data.project_options) {
+                      $('#project_dropdown').html(data.project_options);
+                      $('#project_dropdown').prop('disabled', false);
+                    } else {
+                      $('#project_dropdown').html('<option selected disabled>Unable to load repositories</option>');
+                    }
+                            $('#branch_dropdown')
+                              .prop('disabled', true)
+                              .html('<option selected disabled>Choose a repository first</option>');
+                  },
+                  error: function() {
+                    $('#project_dropdown').html('<option selected disabled>Unable to load repositories</option>');
+                      }
+                  });
+              } else {
+                        $('#project_dropdown').html('<option value="">Choose an owner first</option>');
+                        $('#project_dropdown').prop('disabled', true);
+              }
+          });
+
+          $('#project_dropdown').change(function() {
+              var owner = $('#owner_dropdown').val();
+              var project = $(this).val();
+              if (owner && project) {
+                $('#branch_dropdown')
+                  .prop('disabled', true)
+                  .html('<option selected>Loading branches...</option>');
+                  $.ajax({
+                      url: '/github_social/get_branches/',
+                      data: {'owner': owner, 'project': project},
+                      success: function(data) {
+                          if (data.branch_options) {
+                              $('#branch_dropdown').html(data.branch_options);
+                      $('#branch_dropdown').prop('disabled', false);
+                          } else {
+                      $('#branch_dropdown').html('<option selected disabled>Unable to load branches</option>');
+                          }
+                  },
+                  error: function() {
+                    $('#branch_dropdown').html('<option selected disabled>Unable to load branches</option>');
+                      }
+                  });
+              } else {
+                $('#branch_dropdown')
+                  .prop('disabled', true)
+                  .html('<option selected disabled>Choose a repository first</option>');
+              }
+          });
+
+              $('#new-deployment-button').click(function() {
+                $('#new-deployment-panel').prop('hidden', function(_, hidden) {
+                  return !hidden;
+                });
+              });
+      });
+    </script>
+
+    <section id="new-deployment-panel" class="card mb-4" hidden>
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fa-solid fa-rocket"></i> New deployment</h5>
+      </div>
+      <div class="card-body">
+      <form class="row g-3" method="POST" action="{% url 'github_social_deploy' pk=0 %}">
+      {% csrf_token %}
+      <div class="col-md-4">
+        <label for="owner_dropdown" class="form-label">Owner</label>
+        <select id="owner_dropdown" name="owner" class="form-select" required>
+          <option selected disabled>Choose an owner</option>
+          {% for owner in owners %}
+          <option value="{{ owner }}">{{ owner }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-8 repo-select">
+        <label for="project_dropdown" class="form-label">Repository</label>
+        <select id="project_dropdown" name="project" class="form-select" required disabled>
+          <option selected disabled>Choose an owner first</option>
+        </select>
+      </div>
+
+      <div class="col-md-6 branch-select">
+        <label for="branch_dropdown" class="form-label">Branch</label>
+        <select id="branch_dropdown" name="branch" class="form-select" required disabled>
+          <option selected disabled>Choose a repository first</option>
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label for="dockerfile_input" class="form-label">Dockerfile:</label>
+        <input type="text" class="form-control" id="dockerfile_input" name="dockerfile" placeholder="ex- Dockerfile.Staging">
+      </div>
+      <div class="col-md-4">
+        <label for="docker_image_input" class="form-label">Docker image:</label>
+        <input type="text" class="form-control" id="docker_image_input" name="docker_image">
+      </div>
+      <div class="col-md-2">
+        <label for="internal_port_input" class="form-label">Internal port:</label>
+        <input type="text" class="form-control" id="internal_port_input" name="internal_port" value="5000" required>
+      </div>
+      <div class="col-12 deploy-btn d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary px-4"><i class="fa-solid fa-rocket"></i> Deploy branch</button>
+      </div>
+      </form>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fa-solid fa-layer-group"></i> Deployments</h5>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Branch/Repository</th>
+            <th scope="col">Deployment Details</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for instance in instances %}
+          <tr style="vertical-align: middle;">
+            <td>
+              <div>
+                <a href="{{ instance.deployed_url }}">
+                  {{ instance.branch }}
+                </a>
+                <br>
+                <span class="text-muted">{{ instance.repo_name }}</span>
+              </div>
+            </td>
+            <td>
+              <div>{{ instance.owner }}<br>{{ instance.update_time }}</div>
+            </td>
+            <td>
+              {% if instance.status == "PENDING" %}
+              <span class="badge bg-secondary">Pending</span>
+              {% elif instance.status == "SUCCESS" %}
+              <span class="badge bg-success">Success</span>
+              {% elif instance.status == "ERROR" %}
+              <span class="badge bg-danger">Error</span>
+              {% elif instance.status == "DEPLOYING" %}
+              <span class="badge bg-warning">Deploying</span>
+              {% elif instance.status == "STOPPED" %}
+              <span class="badge bg-dark">Stopped</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex flex-wrap justify-content-center gap-1">
+                <form method="get" action="{% url 'instance_logs' instance.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-info btn-sm"><i class="fa-solid fa-file-lines"></i> Logs</button>
+                </form>
+                <form method="get" action="{% url 'container_logs' instance.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-info btn-sm"><i class="fa-solid fa-scroll"></i> Container logs</button>
+                </form>
+                <form method="post" action="{% url 'archive_logs' instance.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-broom"></i> Clean logs</button>
+                </form>
+                <form method="post" action="{% url 'github_social_deploy' instance.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-rotate"></i> Redeploy</button>
+                </form>
+                <form method="get" target="_blank" action="{% url 'console' instance.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-dark btn-sm"><i class="fa-solid fa-terminal"></i> Console</button>
+                </form>
+                <form method="post" action="{% url 'github_social_stop' instance.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-stop"></i> Stop</button>
+                </form>
+                <form method="post" action="{% url 'github_social_stop_with_db' instance.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-database"></i> Stop with DB</button>
+                </form>
+                <form method="post" action="{% url 'github_social_delete' instance.pk %}" onsubmit="return confirm('Permanently delete this deployment record and its containers?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-dark btn-sm" title="Delete deployment" aria-label="Delete deployment">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+{% endblock %}

@@ -60,7 +60,7 @@ Repositories | {{ repository.repo_name }}{% endblock %}
     </div>
     <div class="col-md-3">
       <label for="db_image_input" class="form-label">Database Image:</label>
-      <input type="text" class="form-control" id="db_image_input" name="db_image" value="{{ repository.db_image }}" placeholder="mariadb:latest">
+      <input type="text" class="form-control" id="db_image_input" name="db_image" value="{{ repository.db_image }}" placeholder="mysql:8.0">
       </div>
     <div class="col-md-3">
       <label for="app_env_db_host_key_input" class="form-label">App env key to DB host:</label>

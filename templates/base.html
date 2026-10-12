@@ -35,11 +35,11 @@
       <div class="body-c d-flex text-center bg-dark text-white">
         <div class="container-md d-flex w-100 h-100 p-3 mx-auto flex-column">
           <footer class="mt-auto text-white-75">
-            <p> In case you face any Issues, Please Report it <a href="{% if IRIS_REPOSITORY %}https://git.iris.nitk.ac.in/iris-teams/systems-team/staging-server/-/issues{% else %}https://github.com/iris-NITK/Staging-Server/issues{% endif %}">Here</a>.</p>
+            {% if PROJECT_ISSUES_URL %}<p>In case you face any issues, please report them <a href="{{ PROJECT_ISSUES_URL }}">here</a>.</p>{% endif %}
             <p>
               Copyright &copy; All rights reserved
               <script>document.write(new Date().getFullYear());</script>
-              | Made with <i class="fa fa-heart-o" aria-hidden="true"></i> by Team IRIS.
+              | Made with <i class="fa fa-heart-o" aria-hidden="true"></i> by the IRIS, NITK.
             </p>
           </div>
         </footer>

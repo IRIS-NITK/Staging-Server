@@ -39,12 +39,28 @@ def instance_logs(request, pk):
             log_file_name = f"{settings.STAGING_CONF['PATH_TO_HOME_DIR']}/logs/{instance.organisation}/{instance.repo_name}/{instance.branch}/{instance.branch}.txt"
         else:
             log_file_name = instance.log_file_path
-        with open(log_file_name, "r", encoding='UTF-8') as file:
-            data = file.read()
+        log_files = [
+            os.path.join(os.path.dirname(log_file_name), "archive.txt"),
+            log_file_name,
+        ]
+        existing_log_files = [path for path in log_files if os.path.isfile(path)]
+        if not existing_log_files:
+            raise FileNotFoundError(log_file_name)
+        log_contents = []
+        for path in existing_log_files:
+            with open(path, "r", encoding="UTF-8") as file:
+                log_contents.append(file.read())
+        data = "".join(log_contents)
         context = {'data': data, 'instance': instance}
         return render(request, 'logs.html', context)
-    except:  # pylint: disable=bare-except
-        return render(request, 'error_log.html')
+    except RunningInstance.DoesNotExist:
+        return render(request, 'error_log.html', {
+            'message': 'The deployment record could not be found.'
+        })
+    except OSError as error:
+        return render(request, 'error_log.html', {
+            'message': f'Unable to read deployment logs: {error}'
+        })
 
 
 @login_required
@@ -170,9 +186,15 @@ class LogsConsumer(WebsocketConsumer):
         try:
             current_time = int(time.time())
             initial_logs = self.client.logs(self.container_name, stream=False, follow=False, until=current_time)
-            self.send(initial_logs.decode())
+            if initial_logs:
+                self.send(initial_logs.decode())
+            else:
+                self.send("Container is running. No logs have been emitted yet.\n")
             self.stream = self.client.logs(self.container_name, stream=True, follow=True, since=current_time)
-        except  Exception as error:  # pylint: disable=bare-except
+        except docker.errors.NotFound:
+            self.send("Container is not running; no container logs are available.\n")
+            return self.disconnect(None)
+        except Exception as error:  # pylint: disable=bare-except
             self.send(f'An Error occurred:{type(error).__name__} – {redact_url(str(error))}')
             return self.disconnect(self)
         for data in self.stream:
@@ -210,6 +232,7 @@ class ConsoleConsumer(WebsocketConsumer):
         self.thread = None
         self.RESIZE_PREFIX = "CONSOLE_RESIZE:"
         self.RESIZE_PREFIX_LEN = len(self.RESIZE_PREFIX)
+        self.local_socket_mode = self.host in {"127.0.0.1", "localhost"} and str(self.port) == "2375"
     def connect(self):
         self.user = self.scope['user']
         if not self.user.is_authenticated:
@@ -226,22 +249,27 @@ class ConsoleConsumer(WebsocketConsumer):
             return self.disconnect(self)
         cmd = '/bin/bash'
         try:
-            self.exec_id = self.client.exec_create(self.container_name, cmd, stdout=True, stderr=True, stdin=True, tty=True)
-            self.socket = socket.create_connection((self.host, self.port))
-            http_conn = http.client.HTTPConnection(self.host, self.port)
-            http_conn.sock = self.socket
-            params = json.dumps({
-                'Detach': False,
-                'Tty': True
-                })
-            headers = {
-                'User-Agent': 'Docker-Client',
-                'Content-Type': 'application/json',
-                'Connection': 'Upgrade',
-                'Upgrade': 'tcp'
-            }
-            http_conn.request('POST', f'/exec/{self.exec_id["Id"]}/start', body=params, headers=headers)
-            _ = http_conn.getresponse()
+            if self.local_socket_mode:
+                self.client = docker.APIClient()
+                self.exec_id = self.client.exec_create(self.container_name, cmd, stdout=True, stderr=True, stdin=True, tty=True)
+                self.socket = self.client.exec_start(self.exec_id["Id"], tty=True, socket=True)
+            else:
+                self.exec_id = self.client.exec_create(self.container_name, cmd, stdout=True, stderr=True, stdin=True, tty=True)
+                self.socket = socket.create_connection((self.host, self.port))
+                http_conn = http.client.HTTPConnection(self.host, self.port)
+                http_conn.sock = self.socket
+                params = json.dumps({
+                    'Detach': False,
+                    'Tty': True
+                    })
+                headers = {
+                    'User-Agent': 'Docker-Client',
+                    'Content-Type': 'application/json',
+                    'Connection': 'Upgrade',
+                    'Upgrade': 'tcp'
+                }
+                http_conn.request('POST', f'/exec/{self.exec_id["Id"]}/start', body=params, headers=headers)
+                _ = http_conn.getresponse()
         except  Exception as error:  # pylint: disable=bare-except
             self.send(f'An Error occurred:{type(error).__name__} := {redact_url(str(error))}')
             return self.disconnect(self)
@@ -265,7 +293,11 @@ class ConsoleConsumer(WebsocketConsumer):
             except Exception as error:  # pylint: disable=bare-except
                 logger.error(f"Error resizing console: {type(error).__name__} := {redact_url(str(error))}")
         else:
-            self.socket.sendall(text_data.encode('utf-8'))
+            data = text_data.encode('utf-8')
+            if hasattr(self.socket, 'sendall'):
+                self.socket.sendall(data)
+            else:
+                self.socket.write(data)
 
     def disconnect(self, code):
         """
@@ -285,5 +317,8 @@ class ConsoleConsumer(WebsocketConsumer):
         while True:
             if self.stop_thread:
                 break
-            msg = self.socket.recv(1024)
+            if hasattr(self.socket, 'recv'):
+                msg = self.socket.recv(1024)
+            else:
+                msg = self.socket.read(1024)
             self.send(msg.decode('ISO-8859-1'))

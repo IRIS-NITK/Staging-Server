@@ -28,11 +28,7 @@
                     {% endif %}
                 </td>
                 <td>
-			{% if instance.social == "git.iris" %}
-			<a href="http://staging-{{ instance.branch | lower }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
-			{% else %}
-            <a href="http://staging-{{ instance.organisation | lower }}-{{ instance.repo_name | lower }}-{{ instance.branch | lower }}.iris.nitk.ac.in">{{ instance.organisation }}/{{ instance.repo_name }}</a>
-			{% endif %}		
+            <a href="{{ instance.deployed_url }}">{{ instance.organisation }}/{{ instance.repo_name }}</a>
 		</td>
                 <td>{{ instance.branch }}</td>
                 <td>{{ instance.owner }}</td>

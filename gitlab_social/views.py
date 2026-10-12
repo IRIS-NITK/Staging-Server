@@ -13,7 +13,7 @@ from main.services import delete_instance, clean_up
 from gitlab_social.services import deploy as deploy_gitlab_social
 from gitlab_social.services import get_gitlab_token
 
-from main.utils.helpers import get_app_container_name, get_db_container_name, generate_deployment_id
+from main.utils.helpers import get_app_container_name, get_db_container_name, generate_deployment_id, get_deployed_url
 
 
 from django.conf import settings
@@ -129,7 +129,7 @@ def deploy(request, pk=0):
     else:
         project_name = gl.projects.get(project_id).name.lower().replace(" ", "-")
         project_url = gl.projects.get(project_id).http_url_to_repo
-    group_name = "IRIS-NITK"
+    group_name = gl.projects.get(project_id).namespace.get('full_path', 'gitlab')
 
     # external_port = find_free_port()
     try:
@@ -162,7 +162,7 @@ def deploy(request, pk=0):
             owner=request.user.username,
             update_time=time.time(),
             status=RunningInstance.STATUS_PENDING,
-            deployed_url = f"https://staging-{deployment_id}.iris.nitk.ac.in",
+            deployed_url = get_deployed_url(deployment_id),
             project_url = project_url,
             app_container_name = app_container_name,
             db_container_name = db_container_name,

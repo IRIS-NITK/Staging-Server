@@ -6,6 +6,7 @@ import datetime
 import shutil
 import subprocess
 
+from django.conf import settings
 
 
 def pretty_print(logs,
@@ -44,8 +45,6 @@ def exec_commands(commands,
     Executes commands given in as an array.
     """
 
-    print(commands) # Log the commands being executed
-    
     result = ""
     for command in commands:
         res = subprocess.run(
@@ -110,3 +109,11 @@ def get_db_container_name(prefix, deployment_id):
     generates db container name for a specific deployment.
     """
     return f"{prefix}_DB_{deployment_id}"
+
+
+def get_deployed_url(deployment_id):
+    """Build the public URL from deployment configuration."""
+    scheme = settings.STAGING_CONF['DEPLOYMENT_SCHEME']
+    prefix = settings.STAGING_CONF['SUBDOMAIN_PREFIX']
+    domain = settings.STAGING_CONF['DOMAIN']
+    return f"{scheme}://{prefix}-{deployment_id}.{domain}"

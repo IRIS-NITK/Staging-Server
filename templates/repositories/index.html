@@ -10,7 +10,7 @@
 {% csrf_token %}
 <div class="col-md-7">
 <label for="giturl_input" class="form-label">Repository's Git URL:</label>
-<input type="text" class="form-control" id="giturl_input" name="repo_git_url" placeholder="https://github.com/IRIS-NITK/Staging-Server.git">
+<input type="text" class="form-control" id="giturl_input" name="repo_git_url" placeholder="https://github.com/owner/repository.git">
 </div>
 <div class="col-md-5">
 <label for="access_token_input" class="form-label">Access Token (If required):</label>
@@ -26,7 +26,7 @@
 </div>
 <div class="col-md-3">
   <label for="db_image_input" class="form-label">Database Image:</label>
-  <input type="text" class="form-control" id="db_image_input" name="db_image" placeholder="mariadb:latest">
+  <input type="text" class="form-control" id="db_image_input" name="db_image" placeholder="mysql:8.0">
   </div>
 <div class="col-md-2">
 <label for="internal_port_input" class="form-label">Internal port:</label>
